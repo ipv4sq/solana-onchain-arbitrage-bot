@@ -13,13 +13,14 @@ use solana_sdk::{
     address_lookup_table::state::AddressLookupTable, compute_budget::ComputeBudgetInstruction,
 };
 use spl_associated_token_account::{
-    get_associated_token_address, get_associated_token_address_with_program_id,
+    get_associated_token_address_with_program_id,
 };
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
+use crate::constants;
 
 pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
     let config = Config::load(config_path)?;
@@ -149,7 +150,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
         let wallet_bytes = wallet_kp.to_bytes();
         let wallet_kp_clone = Keypair::from_bytes(&wallet_bytes)?;
         let mut lookup_table_accounts = mint_config_clone.lookup_table_accounts.unwrap_or_default();
-        lookup_table_accounts.push("4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_string());
+        lookup_table_accounts.push(constants::DEFAULT_LOOKUP_TABLE.to_string());
 
         let mut lookup_table_accounts_list = vec![];
 

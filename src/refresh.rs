@@ -110,7 +110,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (amm_info.quote_mint, amm_info.base_mint)
                             };
-                            
+
                             pool_data.add_pump_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -211,7 +211,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (amm_info.pc_mint, amm_info.coin_mint)
                             };
-                            
+
                             pool_data.add_raydium_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -298,7 +298,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (amm_info.token_1_mint, amm_info.token_0_mint)
                             };
-                            
+
                             pool_data.add_raydium_cp_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -381,7 +381,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (amm_info.token_y_mint, amm_info.token_x_mint)
                             };
-                            
+
                             pool_data.add_dlmm_pool(
                                 pool_address,
                                 &token_vault.to_string(),
@@ -499,7 +499,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (whirlpool.token_mint_b, whirlpool.token_mint_a)
                             };
-                            
+
                             pool_data.add_whirlpool_pool(
                                 pool_address,
                                 &whirlpool_oracle.to_string(),
@@ -597,12 +597,13 @@ pub async fn initialize_pool_data(
                                 tick_array_strings.iter().map(|s| s.as_str()).collect();
 
                             // Determine token_mint and base_mint
-                            let (token_mint, base_mint) = if mint_pubkey == raydium_clmm.token_mint_0 {
-                                (raydium_clmm.token_mint_0, raydium_clmm.token_mint_1)
-                            } else {
-                                (raydium_clmm.token_mint_1, raydium_clmm.token_mint_0)
-                            };
-                            
+                            let (token_mint, base_mint) =
+                                if mint_pubkey == raydium_clmm.token_mint_0 {
+                                    (raydium_clmm.token_mint_0, raydium_clmm.token_mint_1)
+                                } else {
+                                    (raydium_clmm.token_mint_1, raydium_clmm.token_mint_0)
+                                };
+
                             pool_data.add_raydium_clmm_pool(
                                 pool_address,
                                 &raydium_clmm.amm_config.to_string(),
@@ -740,7 +741,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (pool.token_b_mint, pool.token_a_mint)
                             };
-                            
+
                             pool_data.add_meteora_damm_pool(
                                 pool_address,
                                 &x_vault.to_string(),
@@ -831,12 +832,19 @@ pub async fn initialize_pool_data(
                                 meteora_damm_v2_info.quote_vault
                             };
                             // Determine token_mint and base_mint
-                            let (token_mint, base_mint) = if mint_pubkey == meteora_damm_v2_info.base_mint {
-                                (meteora_damm_v2_info.base_mint, meteora_damm_v2_info.quote_mint)
-                            } else {
-                                (meteora_damm_v2_info.quote_mint, meteora_damm_v2_info.base_mint)
-                            };
-                            
+                            let (token_mint, base_mint) =
+                                if mint_pubkey == meteora_damm_v2_info.base_mint {
+                                    (
+                                        meteora_damm_v2_info.base_mint,
+                                        meteora_damm_v2_info.quote_mint,
+                                    )
+                                } else {
+                                    (
+                                        meteora_damm_v2_info.quote_mint,
+                                        meteora_damm_v2_info.base_mint,
+                                    )
+                                };
+
                             pool_data.add_meteora_damm_v2_pool(
                                 pool_address,
                                 &token_x_vault.to_string(),
@@ -905,7 +913,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (solfi_info.quote_mint, solfi_info.base_mint)
                             };
-                            
+
                             pool_data.add_solfi_pool(
                                 pool_address,
                                 &token_x_vault.to_string(),
@@ -985,7 +993,7 @@ pub async fn initialize_pool_data(
                             } else {
                                 (vertigo_info.mint_b, vertigo_info.mint_a)
                             };
-                            
+
                             pool_data.add_vertigo_pool(
                                 pool_address,
                                 &vertigo_info.pool.to_string(),

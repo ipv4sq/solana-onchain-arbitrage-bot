@@ -4,4 +4,5 @@ pub mod constants;
 pub mod dex;
 pub mod pools;
 pub mod refresh;
+pub mod service;
 pub mod transaction;
