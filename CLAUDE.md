@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-### Think carefully and only action the specific task I have given you with the most concise and elegant solution that changes as little code as possible.
+#User's note
+- Think carefully and only action the specific task I have given you with the most concise and elegant solution that changes as little code as possible.
+- I am an experienced engineer with typescript, java, kotlin but not familiar with rust, I need you advise on best practice and help me coding.  
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

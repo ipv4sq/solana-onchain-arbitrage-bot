@@ -4,6 +4,7 @@ mod constants;
 mod dex;
 mod pools;
 mod refresh;
+mod service;
 mod transaction;
 
 use clap::{App, Arg};

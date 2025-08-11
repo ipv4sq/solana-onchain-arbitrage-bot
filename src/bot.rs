@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::refresh::initialize_pool_data;
+use crate::service::assemble_create_ata_account_ix;
 use crate::transaction::build_and_send_transaction;
 use anyhow::Context;
 use solana_client::rpc_client::RpcClient;
@@ -32,7 +33,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
                 .sending_rpc_urls
                 .iter()
                 .map(|url| Arc::new(RpcClient::new(url.clone())))
-                .collect::<Vec<_>>()
+                .collect()
         } else {
             vec![rpc_client.clone()]
         }
@@ -50,6 +51,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
     let refresh_interval = Duration::from_secs(10);
     let blockhash_client = rpc_client.clone();
     let blockhash_cache = cached_blockhash.clone();
+
     tokio::spawn(async move {
         blockhash_refresher(blockhash_client, blockhash_cache, refresh_interval).await;
     });
@@ -57,12 +59,11 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
     for mint_config in &config.routing.mint_config_list {
         // Get the mint account info to check owner
         let mint_owner = rpc_client
-            .get_account(&Pubkey::from_str(&mint_config.mint).unwrap())
-            .unwrap()
+            .get_account(&Pubkey::from_str(&mint_config.mint)?)?
             .owner;
         let wallet_token_account = get_associated_token_address_with_program_id(
             &wallet_kp.pubkey(),
-            &Pubkey::from_str(&mint_config.mint).unwrap(),
+            &Pubkey::from_str(&mint_config.mint)?,
             &mint_owner,
         );
 
@@ -80,13 +81,11 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
                     println!("   token account does not exist. Creating it...");
 
                     // Create the instruction to create the associated token account
-                    let create_ata_ix =
-                            spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-                                &wallet_kp.pubkey(), // Funding account
-                                &wallet_kp.pubkey(), // Wallet account
-                                &Pubkey::from_str(&mint_config.mint).unwrap(),   // Token mint
-                                &spl_token::ID,      // Token program
-                            );
+                    let create_ata_ix = assemble_create_ata_account_ix(
+                        &wallet_kp.pubkey(),
+                        &Pubkey::from_str(&mint_config.mint)?,
+                        &spl_token::ID,
+                    );
 
                     // Get a recent blockhash
                     let blockhash = rpc_client.get_latest_blockhash()?;
@@ -148,7 +147,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
         let sending_rpc_clients_clone = sending_rpc_clients.clone();
         let cached_blockhash_clone = cached_blockhash.clone();
         let wallet_bytes = wallet_kp.to_bytes();
-        let wallet_kp_clone = Keypair::from_bytes(&wallet_bytes).unwrap();
+        let wallet_kp_clone = Keypair::from_bytes(&wallet_bytes)?;
         let mut lookup_table_accounts = mint_config_clone.lookup_table_accounts.unwrap_or_default();
         lookup_table_accounts.push("4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_string());
 
@@ -285,4 +284,39 @@ fn load_keypair(private_key: &str) -> anyhow::Result<Keypair> {
     }
 
     anyhow::bail!("Failed to load keypair from: {}", private_key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_keypair_from_base58() {
+        let test_keypair = Keypair::new();
+        let base58_string = bs58::encode(test_keypair.to_bytes()).into_string();
+
+        let loaded = load_keypair(&base58_string).unwrap();
+        assert_eq!(loaded.pubkey(), test_keypair.pubkey());
+    }
+
+    #[test]
+    fn test_load_keypair_from_file() {
+        use std::fs;
+
+        // Create a test keypair and save it to a test file
+        let test_keypair = Keypair::new();
+        let keypair_bytes = test_keypair.to_bytes();
+        let keypair_json = serde_json::to_string(&keypair_bytes.to_vec()).unwrap();
+
+        // Use a safe test file name that won't conflict with real files
+        let test_file = "test_keypair_temp_for_testing_only.json";
+        fs::write(test_file, keypair_json).unwrap();
+
+        // Load from the file
+        let loaded = load_keypair(test_file).unwrap();
+        assert_eq!(loaded.pubkey(), test_keypair.pubkey());
+
+        // Only delete our test file, not any real keypair files!
+        fs::remove_file(test_file).unwrap();
+    }
 }

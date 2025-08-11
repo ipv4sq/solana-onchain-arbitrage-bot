@@ -4,5 +4,3 @@ use std::str::FromStr;
 pub fn solfi_program_id() -> Pubkey {
     Pubkey::from_str("SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe").unwrap()
 }
-
-const KEY: Pubkey = Pubkey::from_str("SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe").unwrap();

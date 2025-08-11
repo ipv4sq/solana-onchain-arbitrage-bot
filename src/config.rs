@@ -74,13 +74,19 @@ pub fn serde_string_or_env<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let value_or_env = String::deserialize(deserializer)?;
-    let value = match value_or_env.chars().next() {
-        Some('$') => env::var(&value_or_env[1..])
-            .unwrap_or_else(|_| panic!("reading `{}` from env", &value_or_env[1..])),
-        _ => value_or_env,
-    };
-    Ok(value)
+    let toml_value = String::deserialize(deserializer)?;
+    match toml_value.starts_with( "$") {
+        true => env::var(&toml_value[1..]).map_err(serde::de::Error::custom),
+        false => Ok(toml_value)
+    }
+
+    // let value_or_env = String::deserialize(deserializer)?;
+    // let value = match value_or_env.chars().next() {
+    //     Some('$') => env::var(&value_or_env[1..])
+    //         .unwrap_or_else(|_| panic!("reading `{}` from env", &value_or_env[1..])),
+    //     _ => value_or_env,
+    // };
+    // Ok(value)
 }
 
 impl Config {
