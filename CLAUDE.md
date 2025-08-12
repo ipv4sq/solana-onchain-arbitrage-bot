@@ -96,3 +96,16 @@ The `config.toml` must include:
 - Lookup table accounts required for transaction compression
 - Each DEX module contains specific instruction building logic
 - Transaction size optimization critical for success
+
+## Coding Principles
+
+### Pubkey Creation
+- **Always use `.to_pubkey()` helper method** instead of `Pubkey::from_str().unwrap()`
+- This provides cleaner, more readable code and consistent error handling
+- Example: `"So11111111111111111111111111111111111111112".to_pubkey()`
+
+### Pump.fun Specific Notes
+- **Coin Creator Fee Mechanism**: Pump.fun charges fees that go to the original token creator
+- Every swap transaction must include the coin creator's vault authority account
+- This is derived using PDA: `["creator_vault", coin_creator_pubkey]`
+- Part of the trading fees automatically flow to the token creator's vault

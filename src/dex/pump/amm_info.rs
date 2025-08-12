@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
 use solana_program::pubkey::Pubkey;
+use crate::constants::helpers::ToPubkey;
 
 #[derive(Debug)]
 pub struct PumpAmmInfo {
@@ -58,8 +57,7 @@ impl PumpAmmInfo {
             Pubkey::new_from_array(pool_data.coin_creator)
         };
 
-        let pump_program_id =
-            Pubkey::from_str("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA").unwrap();
+        let pump_program_id = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA".to_pubkey();
 
         let (coin_creator_vault_authority, _) = Pubkey::find_program_address(
             &[b"creator_vault", coin_creator.as_ref()],
@@ -74,13 +72,24 @@ impl PumpAmmInfo {
             coin_creator_vault_authority,
         })
     }
+
+    /// Returns (sol_vault, token_vault) based on which position SOL is in
+    pub fn get_vaults_for_sol(&self, sol_mint: &Pubkey) -> Option<(Pubkey, Pubkey)> {
+        if *sol_mint == self.base_mint {
+            Some((self.pool_base_token_account, self.pool_quote_token_account))
+        } else if *sol_mint == self.quote_mint {
+            Some((self.pool_quote_token_account, self.pool_base_token_account))
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test::test_utils::{get_test_rpc_client, pool_addresses};
     use super::*;
     use crate::constants::helpers::ToPubkey;
+    use crate::test::test_utils::{get_test_rpc_client, pool_addresses};
 
     #[test]
     fn test_pump_amm_info_parsing_with_rpc() {
@@ -100,14 +109,10 @@ mod tests {
             PumpAmmInfo::load_checked(&account.data).expect("Failed to parse PumpAmmInfo");
 
         // Expected values from the JSON data provided
-        let expected_base_mint =
-            Pubkey::from_str("34HDZNbUkTyTrgYKy2ox43yp2f8PJ5hoM7xsrfNApump").unwrap();
-        let expected_quote_mint =
-            Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
-        let expected_pool_base_token =
-            Pubkey::from_str("A3m372MVEeNqyH4PcRBwU4ocoBFEd9vUhFnPL2fgvjeT").unwrap();
-        let expected_pool_quote_token =
-            Pubkey::from_str("DQf9F5ou9ut1SJ9T4umEGbYzxUrBG4DRPAG9E7Ejg1Mh").unwrap();
+        let expected_base_mint = "34HDZNbUkTyTrgYKy2ox43yp2f8PJ5hoM7xsrfNApump".to_pubkey();
+        let expected_quote_mint = "So11111111111111111111111111111111111111112".to_pubkey();
+        let expected_pool_base_token = "A3m372MVEeNqyH4PcRBwU4ocoBFEd9vUhFnPL2fgvjeT".to_pubkey();
+        let expected_pool_quote_token = "DQf9F5ou9ut1SJ9T4umEGbYzxUrBG4DRPAG9E7Ejg1Mh".to_pubkey();
 
         // Verify all parsed values match expected
         assert_eq!(amm_info.base_mint, expected_base_mint, "Base mint mismatch");
@@ -124,10 +129,8 @@ mod tests {
             "Pool quote token account mismatch"
         );
 
-        let pump_program_id =
-            Pubkey::from_str("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA").unwrap();
-        let coin_creator =
-            Pubkey::from_str("8bQWTNarKfF7yLa1EMuoNCVZCCgKeB9DonF5u8JciCP4").unwrap();
+        let pump_program_id = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA".to_pubkey();
+        let coin_creator = "8bQWTNarKfF7yLa1EMuoNCVZCCgKeB9DonF5u8JciCP4".to_pubkey();
         let (expected_vault_authority, _) = Pubkey::find_program_address(
             &[b"creator_vault", coin_creator.as_ref()],
             &pump_program_id,

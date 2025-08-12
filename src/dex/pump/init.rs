@@ -15,9 +15,9 @@ pub fn fetch_pump_pool(
     let pump_pool = pool_address.to_pubkey();
     let pump_program_id = PUMP_PROGRAM_ID.to_pubkey();
 
-    let account = rpc_client.get_account(&pump_pool).map_err(|e| {
-        anyhow::anyhow!("Error fetching Pump pool account {pump_pool}: {e:?}")
-    })?;
+    let account = rpc_client
+        .get_account(&pump_pool)
+        .map_err(|e| anyhow::anyhow!("Error fetching Pump pool account {pump_pool}: {e:?}"))?;
 
     expect_owner(&pump_pool, &account, &pump_program_id)?;
 
@@ -30,24 +30,16 @@ pub fn fetch_pump_pool(
     })?;
 
     let sol_mint = TokenMint::SOL.to_pubkey();
-    let (sol_vault, token_vault) = if sol_mint == amm_info.base_mint {
-        (
-            amm_info.pool_base_token_account,
-            amm_info.pool_quote_token_account,
-        )
-    } else if sol_mint == amm_info.quote_mint {
-        (
-            amm_info.pool_quote_token_account,
-            amm_info.pool_base_token_account,
-        )
-    } else {
-        return Err(anyhow::anyhow!(
-            "Pump pool {} does not contain SOL. Base: {}, Quote: {}",
-            pump_pool,
-            amm_info.base_mint,
-            amm_info.quote_mint
-        ));
-    };
+    let (sol_vault, token_vault) = amm_info
+        .get_vaults_for_sol(&sol_mint)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Pump pool {} does not contain SOL. Base: {}, Quote: {}",
+                pump_pool,
+                amm_info.base_mint,
+                amm_info.quote_mint
+            )
+        })?;
 
     let pump_fee_wallet = PUMP_FEE_WALLET.to_pubkey();
     let fee_token_wallet = spl_associated_token_account::get_associated_token_address(
@@ -65,26 +57,6 @@ pub fn fetch_pump_pool(
     } else {
         (amm_info.quote_mint, amm_info.base_mint)
     };
-
-    info!(
-        "
-Pump pool fetched: {}
-        Base mint: {}
-        Quote mint: {}
-        Token vault: {}
-        Sol vault: {}
-        Fee token wallet: {}
-        Coin creator vault ata: {}
-        Coin creator vault authority: {}",
-        pool_address,
-        amm_info.base_mint,
-        amm_info.quote_mint,
-        token_vault,
-        sol_vault,
-        fee_token_wallet,
-        coin_creator_vault_ata,
-        amm_info.coin_creator_vault_authority
-    );
 
     Ok(PumpPool {
         pool: pump_pool,
@@ -107,7 +79,18 @@ pub fn initialize_pump_pools(
 ) -> anyhow::Result<()> {
     for pool_address in pools {
         let pump_pool = fetch_pump_pool(pool_address, mint_pubkey, rpc_client)?;
-        
+
+        info!("Pump pool fetched: {{\n  pool_address: {},\n  token_vault: {},\n  sol_vault: {},\n  fee_token_wallet: {},\n  coin_creator_vault_ata: {},\n  coin_creator_vault_authority: {},\n  token_mint: {},\n  base_mint: {}\n}}", 
+            pool_address,
+            pump_pool.token_vault,
+            pump_pool.sol_vault,
+            pump_pool.fee_token_wallet,
+            pump_pool.coin_creator_vault_ata,
+            pump_pool.coin_creator_vault_authority,
+            pump_pool.token_mint,
+            pump_pool.base_mint
+        );
+
         pool_data.add_pump_pool(
             pool_address,
             &pump_pool.token_vault.to_string(),
@@ -126,22 +109,22 @@ pub fn initialize_pump_pools(
 
 #[cfg(test)]
 mod tests {
-    use crate::test::test_utils::{get_test_rpc_client, pool_addresses};
     use super::*;
+    use crate::test::test_utils::{get_test_rpc_client, pool_addresses};
 
     #[test]
     fn test_fetch_pump_pool() {
         let rpc_client = get_test_rpc_client();
-        
+
         // 这个是池子的地址
         let pool_address = pool_addresses::PUMP_TEST_POOL;
         // 这个是土狗币的地址
         let mint_pubkey = pool_addresses::PUMP_TEST_TOKEN_MINT.to_pubkey();
-        
+
         // Now you can test the fetch_pump_pool function directly
         let result = fetch_pump_pool(pool_address, &mint_pubkey, &rpc_client).unwrap();
-        
+
         assert_eq!(result.pool.to_string(), pool_address);
-        
+        assert_eq!(result.base_mint, TokenMint::SOL.to_pubkey());
     }
 }
