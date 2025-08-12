@@ -3,6 +3,7 @@ use crate::dex::raydium::{raydium_authority, raydium_cp_authority};
 use crate::dex::solfi::constants::solfi_program_id;
 use crate::dex::vertigo::constants::vertigo_program_id;
 use crate::pools::MintPoolData;
+use crate::util::random_select;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
@@ -16,6 +17,9 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
+use crate::constants::mev_bot::{
+    FLASHLOAN_ACCOUNT_ID, MevBotFeeCollector, MEV_BOT_ONCHAIN_PROGRAM_ID,
+};
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
@@ -26,6 +30,7 @@ use crate::dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
 };
 use crate::dex::whirlpool::constants::whirlpool_program_id;
+use clap::Error;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
@@ -42,7 +47,7 @@ pub async fn build_and_send_transaction(
     address_lookup_table_accounts: &[AddressLookupTableAccount],
 ) -> anyhow::Result<Vec<Signature>> {
     let enable_flashloan = config.flashloan.as_ref().map_or(false, |k| k.enabled);
-    
+
     let compute_unit_limit = config.bot.compute_unit_limit;
     let mut instructions = vec![];
     // Add a random number here to make each transaction unique
@@ -109,6 +114,43 @@ pub async fn build_and_send_transaction(
     Ok(signatures)
 }
 
+fn build_tx(
+    config: &Config,
+    wallet_kp: &Keypair,
+    mint_pool_data: &MintPoolData,
+    address_lookup_table_accounts: &[AddressLookupTableAccount],
+    blockhash: Hash,
+) -> anyhow::Result<VersionedTransaction> {
+    let (mut instructions, limit) = gas_instructions(config);
+    let use_flashloan = config.flashloan.as_ref().map_or(false, |k| k.enabled);
+    let swap_ix = create_swap_instruction(wallet_kp, mint_pool_data, limit, use_flashloan)?;
+
+    instructions.push(swap_ix);
+
+    let message = Message::try_compile(
+        &wallet_kp.pubkey(),
+        &instructions,
+        address_lookup_table_accounts,
+        blockhash,
+    )?;
+
+    let tx = VersionedTransaction::try_new(
+        solana_sdk::message::VersionedMessage::V0(message),
+        &[wallet_kp],
+    )?;
+    Ok(tx)
+}
+
+fn gas_instructions(config: &Config) -> (Vec<Instruction>, u32) {
+    let compute_limit = config.bot.compute_unit_limit;
+    let unit_price = config.spam.as_ref().map_or(1000, |s| s.compute_unit_price);
+    let seed = rand::random::<u32>() % 1000;
+    let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(compute_limit + seed);
+    let unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
+
+    (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
+}
+
 async fn send_transaction_with_retries(
     client: &RpcClient,
     tx: &VersionedTransaction,
@@ -139,31 +181,28 @@ fn create_swap_instruction(
 ) -> anyhow::Result<Instruction> {
     debug!("Creating swap instruction for all DEX types");
 
-    let executor_program_id =
-        Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap();
+    let executor_program_id = MEV_BOT_ONCHAIN_PROGRAM_ID.to_pubkey();
 
     let fee_collector = if use_flashloan {
-        Pubkey::from_str("6AGB9kqgSp2mQXwYpdrV4QVV8urvCaDS35U1wsLssy6H").unwrap()
+        MevBotFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
     } else {
         let fee_accounts = [
-            Pubkey::from_str("GPpkDpzCDmYJY5qNhYmM14c7rct1zmkjWc2CjR5g7RZ1").unwrap(),
-            Pubkey::from_str("J6c7noBHvWju4mMA3wXt3igbBSp2m9ATbA6cjMtAUged").unwrap(),
-            Pubkey::from_str("BjsfwxDu7GX7RRW6oSRTpMkASdXAgCcHnXEcatqSfuuY").unwrap(),
+            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
+            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
+            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
         ];
-        fee_accounts[rand::random::<usize>() % fee_accounts.len()]
+        *random_select(&fee_accounts).expect("fee_accounts should not be empty")
     };
 
-    let pump_global_config =
-        Pubkey::from_str("ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw").unwrap();
-    let pump_authority = Pubkey::from_str("GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR").unwrap();
-    let sysvar_instructions =
-        Pubkey::from_str("Sysvar1nstructions1111111111111111111111111").unwrap();
-    let memo_program = Pubkey::from_str("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr").unwrap();
+    let pump_global_config = Pubkey::from_str("ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw")?;
+    let pump_authority = Pubkey::from_str("GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR")?;
+    let sysvar_instructions = Pubkey::from_str("Sysvar1nstructions1111111111111111111111111")?;
+    let memo_program = Pubkey::from_str("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr")?;
 
     let wallet = wallet_kp.pubkey();
     let sol_mint_pubkey = TokenMint::SOL.to_pubkey();
     let wallet_sol_account = mint_pool_data.wallet_wsol_account;
-    let usdc_mint = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+    let usdc_mint = TokenMint::USDC.to_pubkey();
 
     let mut accounts = vec![
         AccountMeta::new(wallet, true), // 0. Wallet (signer)
@@ -215,11 +254,11 @@ fn create_swap_instruction(
 
     if use_flashloan {
         accounts.push(AccountMeta::new_readonly(
-            Pubkey::from_str("5LFpzqgsxrSfhKwbaFiAEJ2kbc9QyimjKueswsyU4T3o").unwrap(),
+            FLASHLOAN_ACCOUNT_ID.to_pubkey(),
             false,
         ));
         let token_pda = derive_vault_token_account(
-            &Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap(),
+            &MEV_BOT_ONCHAIN_PROGRAM_ID.to_pubkey(),
             &flashloan_base_mint,
         );
         accounts.push(AccountMeta::new(token_pda.0, false));
@@ -448,4 +487,18 @@ fn create_swap_instruction(
         accounts,
         data,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_derive_vault_token_account() {
+        let program_id = Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap();
+        let sol_mint = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+        
+        let (pda, bump) = derive_vault_token_account(&program_id, &sol_mint);
+        println!("PDA: {}, Bump: {}", pda, bump);
+    }
 }

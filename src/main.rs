@@ -8,7 +8,7 @@ mod service;
 mod transaction;
 #[cfg(test)]
 pub mod test;
-
+pub mod util;
 
 use clap::{App, Arg};
 use tracing::{info, Level};
