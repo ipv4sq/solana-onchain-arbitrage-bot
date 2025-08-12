@@ -1,12 +1,19 @@
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
-use crate::constants::addresses::{DEFAULT_LOOKUP_TABLE, SOL_MINT};
-
-pub fn sol_mint() -> Pubkey {
-    Pubkey::from_str(SOL_MINT).unwrap()
+/// Extension trait for &str to easily convert to Pubkey
+pub trait ToPubkey {
+    fn to_pubkey(&self) -> Pubkey;
 }
 
-pub fn default_lookup_table() -> Pubkey {
-    Pubkey::from_str(DEFAULT_LOOKUP_TABLE).unwrap()
+impl ToPubkey for &str {
+    fn to_pubkey(&self) -> Pubkey {
+        Pubkey::from_str(self).unwrap()
+    }
+}
+
+impl ToPubkey for String {
+    fn to_pubkey(&self) -> Pubkey {
+        Pubkey::from_str(self).unwrap()
+    }
 }

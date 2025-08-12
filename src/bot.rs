@@ -150,7 +150,7 @@ pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
         let wallet_bytes = wallet_kp.to_bytes();
         let wallet_kp_clone = Keypair::from_bytes(&wallet_bytes)?;
         let mut lookup_table_accounts = mint_config_clone.lookup_table_accounts.unwrap_or_default();
-        lookup_table_accounts.push(constants::DEFAULT_LOOKUP_TABLE.to_string());
+        lookup_table_accounts.push(constants::addresses::LookupTable::DEFAULT.to_string());
 
         let mut lookup_table_accounts_list = vec![];
 

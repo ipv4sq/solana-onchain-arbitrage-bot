@@ -1,5 +1,5 @@
 use crate::{
-    constants::SOL_MINT,
+    constants::addresses::TokenMint,
     dex::raydium::{clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
 };
 use solana_program::instruction::AccountMeta;
@@ -141,7 +141,7 @@ pub struct MintPoolData {
 
 impl MintPoolData {
     pub fn new(mint: &str, wallet_account: &str, token_program: Pubkey) -> anyhow::Result<Self> {
-        let sol_mint = Pubkey::from_str(SOL_MINT)?;
+        let sol_mint = Pubkey::from_str(TokenMint::SOL)?;
         let wallet_pk = Pubkey::from_str(wallet_account)?;
         let wallet_wsol_pk =
             spl_associated_token_account::get_associated_token_address(&wallet_pk, &sol_mint);

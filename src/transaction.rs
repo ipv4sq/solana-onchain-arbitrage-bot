@@ -16,7 +16,7 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
-use crate::constants::sol_mint;
+use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,
@@ -160,7 +160,7 @@ fn create_swap_instruction(
     let memo_program = Pubkey::from_str("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr").unwrap();
 
     let wallet = wallet_kp.pubkey();
-    let sol_mint_pubkey = sol_mint();
+    let sol_mint_pubkey = TokenMint::SOL.to_pubkey();
     let wallet_sol_account = mint_pool_data.wallet_wsol_account;
     let usdc_mint = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
 
