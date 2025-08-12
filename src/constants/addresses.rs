@@ -1,10 +1,3 @@
-//! Solana addresses constants organized by namespace
-//! All strings in this file are valid Solana addresses (base58 encoded public keys)
-
-#![allow(clippy::all)]
-// Suppress IDE typo warnings for base58 addresses
-//noinspection SpellCheckingInspection
-
 // Token mint addresses
 pub struct TokenMint;
 impl TokenMint {
