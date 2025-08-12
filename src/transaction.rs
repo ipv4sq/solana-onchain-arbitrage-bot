@@ -21,7 +21,7 @@ use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,
 };
-use crate::dex::pump::constants::{pump_fee_wallet, pump_program_id};
+use crate::dex::pump::{PUMP_FEE_WALLET, PUMP_PROGRAM_ID};
 use crate::dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
 };
@@ -301,13 +301,15 @@ fn create_swap_instruction(
         accounts.push(AccountMeta::new(pool.observation, false));
     }
 
+    let pump_program_id = PUMP_PROGRAM_ID.to_pubkey();
+    let pump_fee_wallet = PUMP_FEE_WALLET.to_pubkey();
     // Add Pump pools
     for pool in &mint_pool_data.pump_pools {
-        accounts.push(AccountMeta::new_readonly(pump_program_id(), false));
+        accounts.push(AccountMeta::new_readonly(pump_program_id, false));
         accounts.push(AccountMeta::new_readonly(pool.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(pump_global_config, false));
         accounts.push(AccountMeta::new_readonly(pump_authority, false));
-        accounts.push(AccountMeta::new(pump_fee_wallet(), false));
+        accounts.push(AccountMeta::new(pump_fee_wallet, false));
         accounts.push(AccountMeta::new(pool.pool, false));
         accounts.push(AccountMeta::new(pool.token_vault, false));
         accounts.push(AccountMeta::new(pool.sol_vault, false));

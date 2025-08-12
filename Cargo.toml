@@ -6,10 +6,6 @@ description = "A simple Solana onchain arbitrage bot"
 repository = "https://github.com/cetipo/solana-onchain-arbitrage-bot"
 license = "MIT"
 
-[lib]
-name = "solana_onchain_arbitrage_bot"
-path = "src/lib.rs"
-
 [dependencies]
 # Core Solana dependencies
 solana-sdk = "1.17"
