@@ -6,3 +6,7 @@ pub mod pools;
 pub mod refresh;
 pub mod service;
 pub mod transaction;
+
+#[cfg(test)]
+pub mod test;
+

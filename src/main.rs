@@ -6,6 +6,9 @@ mod pools;
 mod refresh;
 mod service;
 mod transaction;
+#[cfg(test)]
+pub mod test;
+
 
 use clap::{App, Arg};
 use tracing::{info, Level};
