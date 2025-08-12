@@ -42,6 +42,7 @@ pub async fn build_and_send_transaction(
     address_lookup_table_accounts: &[AddressLookupTableAccount],
 ) -> anyhow::Result<Vec<Signature>> {
     let enable_flashloan = config.flashloan.as_ref().map_or(false, |k| k.enabled);
+    
     let compute_unit_limit = config.bot.compute_unit_limit;
     let mut instructions = vec![];
     // Add a random number here to make each transaction unique
