@@ -4,7 +4,7 @@ use crate::constants::{
 };
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
-use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
+use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::MeteoraDlmmInfo};
 use crate::dex::pool_fetch::fetch_pool;
 use crate::dex::raydium::{
     _get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
@@ -14,7 +14,7 @@ use crate::dex::solfi::constants::solfi_program_id;
 use crate::dex::solfi::pool_info::SolfiInfo;
 use crate::dex::vertigo::{derive_vault_address, vertigo_program_id, VertigoInfo};
 use crate::dex::whirlpool::{
-    constants::whirlpool_program_id, pool_clmm::Whirlpool, update_tick_array_accounts_for_onchain,
+    constants::whirlpool_program_id, pool_clmm::WhirlpoolInfo, get_tick_arrays,
 };
 use crate::pools::*;
 use futures::StreamExt;
@@ -29,8 +29,8 @@ pub async fn initialize_pool_data(
     raydium_pools_config: Option<&Vec<String>>,
     raydium_cp_pools_config: Option<&Vec<String>>,
     pump_pools_config: Option<&Vec<String>>,
-    dlmm_pools: Option<&Vec<String>>,
-    whirlpool_pools: Option<&Vec<String>>,
+    meteora_dlmm_pools_config: Option<&Vec<String>>,
+    whirlpool_pools_config: Option<&Vec<String>>,
     raydium_clmm_pools_config: Option<&Vec<String>>,
     meteora_damm_pools: Option<&Vec<String>>,
     solfi_pools: Option<&Vec<String>>,
@@ -94,18 +94,25 @@ pub async fn initialize_pool_data(
             Err(e) => error!("Failed to fetch raydium clmm pool: {}", e),
         });
 
+    
+    meteora_dlmm_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.meteora_dlmm_pools.push(pool),
+            Err(e) => error!("Failed to fetch meteor pool: {}", e),
+        });
 
-    dlmm_pools
-        .map(|pools| {
-            initialize_dlmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
-        })
-        .transpose()?;
+    whirlpool_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.whirlpool_pools.push(pool),
+            Err(e) => error!("Failed to fetch whirlpool pool: {}", e),
+        });
 
-    whirlpool_pools
-        .map(|pools| {
-            initialize_whirlpool_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
-        })
-        .transpose()?;
 
     meteora_damm_pools
         .map(|pools| {
@@ -137,222 +144,6 @@ pub async fn initialize_pool_data(
         .transpose()?;
 
     Ok(global_pool_config)
-}
-
-fn initialize_dlmm_pools(
-    pools: &Vec<String>,
-    mint_pubkey: &Pubkey,
-    pool_data: &mut MintPoolData,
-    rpc_client: &RpcClient,
-) -> anyhow::Result<()> {
-    for pool_address in pools {
-        let dlmm_pool_pubkey = pool_address.to_pubkey();
-
-        match rpc_client.get_account(&dlmm_pool_pubkey) {
-            Ok(account) => {
-                if account.owner != dlmm_program_id() {
-                    error!(
-                        "Error: DLMM pool account is not owned by the DLMM program. Expected: {}, Actual: {}",
-                        dlmm_program_id(), account.owner
-                    );
-                    return Err(anyhow::anyhow!(
-                        "DLMM pool account is not owned by the DLMM program"
-                    ));
-                }
-
-                match DlmmInfo::load_checked(&account.data) {
-                    Ok(amm_info) => {
-                        let sol_mint = TokenMint::SOL.to_pubkey();
-                        let (token_vault, sol_vault) =
-                            amm_info.get_token_and_sol_vaults(&pool_data.mint, &sol_mint);
-
-                        let bin_arrays = match amm_info.calculate_bin_arrays(&dlmm_pool_pubkey) {
-                            Ok(arrays) => arrays,
-                            Err(e) => {
-                                error!(
-                                    "Error calculating bin arrays for DLMM pool {}: {:?}",
-                                    dlmm_pool_pubkey, e
-                                );
-                                return Err(e);
-                            }
-                        };
-
-                        let bin_array_strings: Vec<String> =
-                            bin_arrays.iter().map(|pubkey| pubkey.to_string()).collect();
-                        let bin_array_str_refs: Vec<&str> =
-                            bin_array_strings.iter().map(|s| s.as_str()).collect();
-
-                        let (token_mint, base_mint) = if mint_pubkey == &amm_info.token_x_mint {
-                            (amm_info.token_x_mint, amm_info.token_y_mint)
-                        } else {
-                            (amm_info.token_y_mint, amm_info.token_x_mint)
-                        };
-
-                        pool_data.add_dlmm_pool(
-                            pool_address,
-                            &token_vault.to_string(),
-                            &sol_vault.to_string(),
-                            &amm_info.oracle.to_string(),
-                            bin_array_str_refs,
-                            None,
-                            &token_mint.to_string(),
-                            &base_mint.to_string(),
-                        )?;
-
-                        info!("DLMM pool added: {}", pool_address);
-                        info!("    Token X Mint: {}", amm_info.token_x_mint.to_string());
-                        info!("    Token Y Mint: {}", amm_info.token_y_mint.to_string());
-                        info!("    Token vault: {}", token_vault.to_string());
-                        info!("    Sol vault: {}", sol_vault.to_string());
-                        info!("    Oracle: {}", amm_info.oracle.to_string());
-                        info!("    Active ID: {}", amm_info.active_id);
-
-                        for (i, array) in bin_array_strings.iter().enumerate() {
-                            info!("    Bin Array {}: {}", i, array);
-                        }
-                        info!("");
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error parsing AmmInfo from DLMM pool {}: {:?}",
-                            dlmm_pool_pubkey, e
-                        );
-                        return Err(e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Error fetching DLMM pool account {}: {:?}",
-                    dlmm_pool_pubkey, e
-                );
-                return Err(anyhow::anyhow!("Error fetching DLMM pool account"));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn initialize_whirlpool_pools(
-    pools: &Vec<String>,
-    mint_pubkey: &Pubkey,
-    pool_data: &mut MintPoolData,
-    rpc_client: &RpcClient,
-) -> anyhow::Result<()> {
-    for pool_address in pools {
-        let whirlpool_pool_pubkey = pool_address.to_pubkey();
-
-        match rpc_client.get_account(&whirlpool_pool_pubkey) {
-            Ok(account) => {
-                if account.owner != whirlpool_program_id() {
-                    error!(
-                        "Error: Whirlpool pool account is not owned by the Whirlpool program. Expected: {}, Actual: {}",
-                        whirlpool_program_id(), account.owner
-                    );
-                    return Err(anyhow::anyhow!(
-                        "Whirlpool pool account is not owned by the Whirlpool program"
-                    ));
-                }
-
-                match Whirlpool::try_deserialize(&account.data) {
-                    Ok(whirlpool) => {
-                        if whirlpool.token_mint_a != pool_data.mint
-                            && whirlpool.token_mint_b != pool_data.mint
-                        {
-                            error!(
-                                "Mint {} is not present in Whirlpool pool {}, skipping",
-                                pool_data.mint, whirlpool_pool_pubkey
-                            );
-                            return Err(anyhow::anyhow!(
-                                "Invalid Whirlpool pool: {}",
-                                whirlpool_pool_pubkey
-                            ));
-                        }
-
-                        let sol_mint = TokenMint::SOL.to_pubkey();
-                        let (sol_vault, token_vault) = if sol_mint == whirlpool.token_mint_a {
-                            (whirlpool.token_vault_a, whirlpool.token_vault_b)
-                        } else if sol_mint == whirlpool.token_mint_b {
-                            (whirlpool.token_vault_b, whirlpool.token_vault_a)
-                        } else {
-                            error!(
-                                "SOL is not present in Whirlpool pool {}",
-                                whirlpool_pool_pubkey
-                            );
-                            return Err(anyhow::anyhow!(
-                                "SOL is not present in Whirlpool pool: {}",
-                                whirlpool_pool_pubkey
-                            ));
-                        };
-
-                        let whirlpool_oracle = Pubkey::find_program_address(
-                            &[b"oracle", whirlpool_pool_pubkey.as_ref()],
-                            &whirlpool_program_id(),
-                        )
-                        .0;
-
-                        let whirlpool_tick_arrays = update_tick_array_accounts_for_onchain(
-                            &whirlpool,
-                            &whirlpool_pool_pubkey,
-                            &whirlpool_program_id(),
-                        );
-
-                        let tick_array_strings: Vec<String> = whirlpool_tick_arrays
-                            .iter()
-                            .map(|meta| meta.pubkey.to_string())
-                            .collect();
-
-                        let tick_array_str_refs: Vec<&str> =
-                            tick_array_strings.iter().map(|s| s.as_str()).collect();
-
-                        let (token_mint, base_mint) = if mint_pubkey == &whirlpool.token_mint_a {
-                            (whirlpool.token_mint_a, whirlpool.token_mint_b)
-                        } else {
-                            (whirlpool.token_mint_b, whirlpool.token_mint_a)
-                        };
-
-                        pool_data.add_whirlpool_pool(
-                            pool_address,
-                            &whirlpool_oracle.to_string(),
-                            &token_vault.to_string(),
-                            &sol_vault.to_string(),
-                            tick_array_str_refs,
-                            None,
-                            &token_mint.to_string(),
-                            &base_mint.to_string(),
-                        )?;
-
-                        info!("Whirlpool pool added: {}", pool_address);
-                        info!("    Token mint A: {}", whirlpool.token_mint_a.to_string());
-                        info!("    Token mint B: {}", whirlpool.token_mint_b.to_string());
-                        info!("    Token vault: {}", token_vault.to_string());
-                        info!("    Sol vault: {}", sol_vault.to_string());
-                        info!("    Oracle: {}", whirlpool_oracle.to_string());
-
-                        for (i, array) in tick_array_strings.iter().enumerate() {
-                            info!("    Tick Array {}: {}", i, array);
-                        }
-                        info!("");
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error parsing Whirlpool data from pool {}: {:?}",
-                            whirlpool_pool_pubkey, e
-                        );
-                        return Err(anyhow::anyhow!("Error parsing Whirlpool data"));
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Error fetching Whirlpool pool account {}: {:?}",
-                    whirlpool_pool_pubkey, e
-                );
-                return Err(anyhow::anyhow!("Error fetching Whirlpool pool account"));
-            }
-        }
-    }
-    Ok(())
 }
 
 

@@ -1,12 +1,12 @@
+pub mod config;
 pub mod constants;
 pub mod pool_clmm;
-pub mod config;
 
-use crate::dex::whirlpool::pool_clmm::{Whirlpool, TICK_ARRAY_SIZE};
+use crate::dex::whirlpool::config::*;
 use crate::dex::whirlpool::constants::{MAX_TICK_INDEX, MIN_TICK_INDEX};
+use crate::dex::whirlpool::pool_clmm::{WhirlpoolInfo, TICK_ARRAY_SIZE};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use crate::dex::whirlpool::config::*;
 
 pub type TickArrayStartIndexes = (i32, Option<i32>, Option<i32>);
 
@@ -74,23 +74,20 @@ pub fn get_tick_array_address(
     Pubkey::find_program_address(seeds, program_id).0
 }
 
-pub fn update_tick_array_accounts_for_onchain(
-    whirlpool: &Whirlpool,
-    whirlpool_pk: &Pubkey,
+pub fn get_tick_arrays(
+    info: &WhirlpoolInfo,
+    pool: &Pubkey,
     whirlpool_program_id: &Pubkey,
 ) -> Vec<AccountMeta> {
     let tick_array_starts =
-        derive_tick_array_start_indexes(whirlpool.tick_current_index, whirlpool.tick_spacing, true);
-    let tick_array_reverse_starts = derive_tick_array_start_indexes(
-        whirlpool.tick_current_index,
-        whirlpool.tick_spacing,
-        false,
-    );
+        derive_tick_array_start_indexes(info.tick_current_index, info.tick_spacing, true);
+    let tick_array_reverse_starts =
+        derive_tick_array_start_indexes(info.tick_current_index, info.tick_spacing, false);
 
     let tick_array_pks = vec![
         AccountMeta::new(
             get_tick_array_address(
-                whirlpool_pk,
+                pool,
                 tick_array_reverse_starts
                     .1
                     .unwrap_or(tick_array_reverse_starts.0),
@@ -99,12 +96,12 @@ pub fn update_tick_array_accounts_for_onchain(
             false,
         ),
         AccountMeta::new(
-            get_tick_array_address(whirlpool_pk, tick_array_starts.0, whirlpool_program_id),
+            get_tick_array_address(pool, tick_array_starts.0, whirlpool_program_id),
             false,
         ),
         AccountMeta::new(
             get_tick_array_address(
-                whirlpool_pk,
+                pool,
                 tick_array_starts.1.unwrap_or(tick_array_starts.0),
                 whirlpool_program_id,
             ),

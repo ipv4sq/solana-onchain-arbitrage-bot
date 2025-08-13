@@ -3,7 +3,7 @@ use solana_program::pubkey::Pubkey;
 pub const NUM_REWARDS: usize = 3;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Whirlpool {
+pub struct WhirlpoolInfo {
     pub whirlpools_config: Pubkey, // 32
     pub whirlpool_bump: [u8; 1],   // 1
 
@@ -37,7 +37,25 @@ pub struct Whirlpool {
     pub reward_infos: [WhirlpoolRewardInfo; NUM_REWARDS], // 384
 }
 
-impl Whirlpool {
+impl PoolChecker for WhirlpoolInfo {
+    fn get_base_mint(&self) -> Pubkey {
+        self.token_mint_a
+    }
+
+    fn get_token_mint(&self) -> Pubkey {
+        self.token_mint_b
+    }
+
+    fn get_base_vault(&self) -> Pubkey {
+        self.token_vault_a
+    }
+
+    fn get_token_vault(&self) -> Pubkey {
+        self.token_vault_b
+    }
+}
+
+impl WhirlpoolInfo {
     pub const LEN: usize = 8 + 261 + 384;
 }
 
@@ -75,100 +93,113 @@ impl Tick {
 
 pub const TICK_ARRAY_SIZE: usize = 88;
 
+use crate::constants::helpers::ToPubkey;
+use crate::dex::pool_checker::PoolChecker;
+use crate::dex::whirlpool::constants::{whirlpool_program_id, WHIRLPOOL_PROGRAM_ID};
 use std::io::{Error, ErrorKind, Result};
 
-impl Whirlpool {
+impl WhirlpoolInfo {
+    pub fn get_oracle(pool: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[b"oracle", pool.as_ref()],
+            &WHIRLPOOL_PROGRAM_ID.to_pubkey(),
+        )
+        .0
+    }
     pub fn try_deserialize(data: &[u8]) -> Result<Self> {
         if data.len() < Self::LEN {
-            return Err(Error::new(ErrorKind::InvalidData, "data too short for Whirlpool"));
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "data too short for Whirlpool",
+            ));
         }
 
         let data = &data[8..];
-        
+
         let mut offset = 0;
-        
+
         let mut whirlpools_config = [0u8; 32];
-        whirlpools_config.copy_from_slice(&data[offset..offset+32]);
+        whirlpools_config.copy_from_slice(&data[offset..offset + 32]);
         let whirlpools_config = Pubkey::new_from_array(whirlpools_config);
         offset += 32;
-        
+
         let mut whirlpool_bump = [0u8; 1];
-        whirlpool_bump.copy_from_slice(&data[offset..offset+1]);
+        whirlpool_bump.copy_from_slice(&data[offset..offset + 1]);
         offset += 1;
-        
-        let tick_spacing = u16::from_le_bytes([data[offset], data[offset+1]]);
+
+        let tick_spacing = u16::from_le_bytes([data[offset], data[offset + 1]]);
         offset += 2;
-        
+
         let mut tick_spacing_seed = [0u8; 2];
-        tick_spacing_seed.copy_from_slice(&data[offset..offset+2]);
+        tick_spacing_seed.copy_from_slice(&data[offset..offset + 2]);
         offset += 2;
-        
-        let fee_rate = u16::from_le_bytes([data[offset], data[offset+1]]);
+
+        let fee_rate = u16::from_le_bytes([data[offset], data[offset + 1]]);
         offset += 2;
-        
-        let protocol_fee_rate = u16::from_le_bytes([data[offset], data[offset+1]]);
+
+        let protocol_fee_rate = u16::from_le_bytes([data[offset], data[offset + 1]]);
         offset += 2;
-        
+
         let mut liquidity_bytes = [0u8; 16];
-        liquidity_bytes.copy_from_slice(&data[offset..offset+16]);
+        liquidity_bytes.copy_from_slice(&data[offset..offset + 16]);
         let liquidity = u128::from_le_bytes(liquidity_bytes);
         offset += 16;
-        
+
         let mut sqrt_price_bytes = [0u8; 16];
-        sqrt_price_bytes.copy_from_slice(&data[offset..offset+16]);
+        sqrt_price_bytes.copy_from_slice(&data[offset..offset + 16]);
         let sqrt_price = u128::from_le_bytes(sqrt_price_bytes);
         offset += 16;
-        
+
         let mut tick_current_index_bytes = [0u8; 4];
-        tick_current_index_bytes.copy_from_slice(&data[offset..offset+4]);
+        tick_current_index_bytes.copy_from_slice(&data[offset..offset + 4]);
         let tick_current_index = i32::from_le_bytes(tick_current_index_bytes);
         offset += 4;
-        
+
         let mut protocol_fee_owed_a_bytes = [0u8; 8];
-        protocol_fee_owed_a_bytes.copy_from_slice(&data[offset..offset+8]);
+        protocol_fee_owed_a_bytes.copy_from_slice(&data[offset..offset + 8]);
         let protocol_fee_owed_a = u64::from_le_bytes(protocol_fee_owed_a_bytes);
         offset += 8;
-        
+
         let mut protocol_fee_owed_b_bytes = [0u8; 8];
-        protocol_fee_owed_b_bytes.copy_from_slice(&data[offset..offset+8]);
+        protocol_fee_owed_b_bytes.copy_from_slice(&data[offset..offset + 8]);
         let protocol_fee_owed_b = u64::from_le_bytes(protocol_fee_owed_b_bytes);
         offset += 8;
-        
+
         let mut token_mint_a_bytes = [0u8; 32];
-        token_mint_a_bytes.copy_from_slice(&data[offset..offset+32]);
+        token_mint_a_bytes.copy_from_slice(&data[offset..offset + 32]);
         let token_mint_a = Pubkey::new_from_array(token_mint_a_bytes);
         offset += 32;
-        
+
         let mut token_vault_a_bytes = [0u8; 32];
-        token_vault_a_bytes.copy_from_slice(&data[offset..offset+32]);
+        token_vault_a_bytes.copy_from_slice(&data[offset..offset + 32]);
         let token_vault_a = Pubkey::new_from_array(token_vault_a_bytes);
         offset += 32;
-        
+
         let mut fee_growth_global_a_bytes = [0u8; 16];
-        fee_growth_global_a_bytes.copy_from_slice(&data[offset..offset+16]);
+        fee_growth_global_a_bytes.copy_from_slice(&data[offset..offset + 16]);
         let fee_growth_global_a = u128::from_le_bytes(fee_growth_global_a_bytes);
         offset += 16;
-        
+
         let mut token_mint_b_bytes = [0u8; 32];
-        token_mint_b_bytes.copy_from_slice(&data[offset..offset+32]);
+        token_mint_b_bytes.copy_from_slice(&data[offset..offset + 32]);
         let token_mint_b = Pubkey::new_from_array(token_mint_b_bytes);
         offset += 32;
-        
+
         let mut token_vault_b_bytes = [0u8; 32];
-        token_vault_b_bytes.copy_from_slice(&data[offset..offset+32]);
+        token_vault_b_bytes.copy_from_slice(&data[offset..offset + 32]);
         let token_vault_b = Pubkey::new_from_array(token_vault_b_bytes);
         offset += 32;
-        
+
         let mut fee_growth_global_b_bytes = [0u8; 16];
-        fee_growth_global_b_bytes.copy_from_slice(&data[offset..offset+16]);
+        fee_growth_global_b_bytes.copy_from_slice(&data[offset..offset + 16]);
         let fee_growth_global_b = u128::from_le_bytes(fee_growth_global_b_bytes);
         offset += 16;
-        
+
         let mut reward_last_updated_timestamp_bytes = [0u8; 8];
-        reward_last_updated_timestamp_bytes.copy_from_slice(&data[offset..offset+8]);
+        reward_last_updated_timestamp_bytes.copy_from_slice(&data[offset..offset + 8]);
         let reward_last_updated_timestamp = u64::from_le_bytes(reward_last_updated_timestamp_bytes);
         offset += 8;
-        
+
         let mut reward_infos = [WhirlpoolRewardInfo {
             mint: Pubkey::default(),
             vault: Pubkey::default(),
@@ -176,35 +207,35 @@ impl Whirlpool {
             emissions_per_second_x64: 0,
             growth_global_x64: 0,
         }; NUM_REWARDS];
-        
+
         for i in 0..NUM_REWARDS {
             let mut mint_bytes = [0u8; 32];
-            mint_bytes.copy_from_slice(&data[offset..offset+32]);
+            mint_bytes.copy_from_slice(&data[offset..offset + 32]);
             reward_infos[i].mint = Pubkey::new_from_array(mint_bytes);
             offset += 32;
-            
+
             let mut vault_bytes = [0u8; 32];
-            vault_bytes.copy_from_slice(&data[offset..offset+32]);
+            vault_bytes.copy_from_slice(&data[offset..offset + 32]);
             reward_infos[i].vault = Pubkey::new_from_array(vault_bytes);
             offset += 32;
-            
+
             let mut authority_bytes = [0u8; 32];
-            authority_bytes.copy_from_slice(&data[offset..offset+32]);
+            authority_bytes.copy_from_slice(&data[offset..offset + 32]);
             reward_infos[i].authority = Pubkey::new_from_array(authority_bytes);
             offset += 32;
-            
+
             let mut emissions_bytes = [0u8; 16];
-            emissions_bytes.copy_from_slice(&data[offset..offset+16]);
+            emissions_bytes.copy_from_slice(&data[offset..offset + 16]);
             reward_infos[i].emissions_per_second_x64 = u128::from_le_bytes(emissions_bytes);
             offset += 16;
-            
+
             let mut growth_bytes = [0u8; 16];
-            growth_bytes.copy_from_slice(&data[offset..offset+16]);
+            growth_bytes.copy_from_slice(&data[offset..offset + 16]);
             reward_infos[i].growth_global_x64 = u128::from_le_bytes(growth_bytes);
             offset += 16;
         }
-        
-        Ok(Whirlpool {
+
+        Ok(WhirlpoolInfo {
             whirlpools_config,
             whirlpool_bump,
             tick_spacing,

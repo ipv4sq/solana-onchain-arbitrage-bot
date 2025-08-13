@@ -1,3 +1,5 @@
+use solana_program::pubkey::Pubkey;
+
 // Token mint addresses
 pub struct TokenMint;
 impl TokenMint {
@@ -5,6 +7,34 @@ impl TokenMint {
     pub const SOL: &'static str = "So11111111111111111111111111111111111111112";
     
     pub const USDC: &'static str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+}
+
+// 方案1: 简短的辅助函数（最简单）
+#[inline]
+pub fn sol() -> Pubkey {
+    use crate::constants::helpers::ToPubkey;
+    TokenMint::SOL.to_pubkey()
+}
+
+#[inline]
+pub fn usdc() -> Pubkey {
+    use crate::constants::helpers::ToPubkey;
+    TokenMint::USDC.to_pubkey()
+}
+
+// 方案2: 使用宏创建常量（如果你更喜欢大写）
+#[macro_export]
+macro_rules! SOL {
+    () => {
+        $crate::constants::helpers::ToPubkey::to_pubkey($crate::constants::addresses::TokenMint::SOL)
+    };
+}
+
+#[macro_export]
+macro_rules! USDC {
+    () => {
+        $crate::constants::helpers::ToPubkey::to_pubkey($crate::constants::addresses::TokenMint::USDC)
+    };
 }
 
 // Token program addresses

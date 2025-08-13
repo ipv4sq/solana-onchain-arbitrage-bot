@@ -1,4 +1,5 @@
 use crate::dex::meteora::constants::{dlmm_program_id, BIN_ARRAY};
+use crate::dex::pool_checker::PoolChecker;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
@@ -87,7 +88,7 @@ pub struct LbPair {
 }
 
 #[derive(Debug)]
-pub struct DlmmInfo {
+pub struct MeteoraDlmmInfo {
     pub token_x_mint: Pubkey,
     pub token_y_mint: Pubkey,
     pub token_x_vault: Pubkey,
@@ -97,7 +98,25 @@ pub struct DlmmInfo {
     pub lb_pair: LbPair,
 }
 
-impl DlmmInfo {
+impl PoolChecker for MeteoraDlmmInfo {
+    fn get_base_mint(&self) -> Pubkey {
+        self.token_x_mint
+    }
+
+    fn get_token_mint(&self) -> Pubkey {
+        self.token_y_mint
+    }
+
+    fn get_base_vault(&self) -> Pubkey {
+        self.token_x_vault
+    }
+
+    fn get_token_vault(&self) -> Pubkey {
+        self.token_y_vault
+    }
+}
+
+impl MeteoraDlmmInfo {
     pub fn load_checked(data: &[u8]) -> Result<Self> {
         if data.len() < 8 + size_of::<LbPair>() {
             return Err(anyhow::anyhow!("Invalid data length for DlmmInfo"));

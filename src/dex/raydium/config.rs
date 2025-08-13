@@ -149,18 +149,17 @@ impl PoolFetch for RaydiumClmmPool {
         expect_owner(pool, &account, &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey())?;
 
         let info = RaydiumClmmPoolInfo::load_checked(&account.data)?;
-        info.must_include_sol(Some(pool))?;
+        let sol = TokenMint::SOL.to_pubkey();
+        info.consists_of(mint, &sol, Some(pool))?;
 
         Ok(RaydiumClmmPool {
             pool: *pool,
             amm_config: info.amm_config,
             observation_state: info.observation_key,
             bitmap_extension: info.get_bitmap_extensions(pool),
-            // TODO I think there might be some bug
-            // X always point to token, Y always point to sol
-            // but it's just for accounts, so leave it for now.
-            x_vault: info.get_token_vault(),
-            y_vault: info.get_sol_vault()?,
+            // I think there might be some bug in the original implementation
+            x_vault: info.get_base_vault(),
+            y_vault: info.get_token_vault(),
             tick_arrays: info.get_tick_arrays(pool)?,
             memo_program: None,
             token_mint: info.get_not_sol_mint()?,

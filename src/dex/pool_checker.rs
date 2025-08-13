@@ -15,23 +15,41 @@ pub trait PoolChecker: Sized {
         in_list!(sol, self.get_base_mint(), self.get_token_mint())
     }
 
-    fn must_include_sol(&self, pool_address: Option<&Pubkey>) -> anyhow::Result<bool> {
-        if !self.include_sol() {
-            let address = match pool_address {
-                Some(pool_address) => pool_address.to_string(),
-                None => { "Unknown" }.parse()?,
-            };
+    // orders doesn't matter here
+    fn consists_of(
+        &self,
+        mint1: &Pubkey,
+        mint2: &Pubkey,
+        pool: Option<&Pubkey>,
+    ) -> anyhow::Result<()> {
+        if self.get_base_mint() == *mint1 && self.get_token_mint() == *mint2 {
+            return Ok(());
+        }
+        if self.get_token_mint() == *mint1 && self.get_base_mint() == *mint2 {
+            return Ok(());
+        }
+        Err(anyhow::anyhow!(
+            "Pool {} doesn't contain {} and {}, instead, it's {} and {}",
+            pool.map_or_else(|| "unknown".to_string(), |t| t.to_string()),
+            mint1,
+            mint2,
+            self.get_base_mint(),
+            self.get_token_mint()
+        ))
+    }
 
+    fn shall_include_sol(&self, pool: Option<&Pubkey>) -> anyhow::Result<()> {
+        if !self.include_sol() {
             return Err(anyhow::anyhow!(
                 "This pool {} doesn't include sol!",
-                address
+                pool.map_or_else(|| "unknown".to_string(), |t| t.to_string()),
             ));
         }
-        Ok(true)
+        Ok(())
     }
 
     fn get_sol_mint(&self) -> anyhow::Result<Pubkey> {
-        self.must_include_sol(None)?;
+        self.shall_include_sol(None)?;
         if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
             Ok(self.get_base_mint())
         } else {
@@ -40,7 +58,7 @@ pub trait PoolChecker: Sized {
     }
 
     fn get_sol_vault(&self) -> anyhow::Result<Pubkey> {
-        self.must_include_sol(None)?;
+        self.shall_include_sol(None)?;
         if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
             Ok(self.get_base_vault())
         } else {
@@ -49,7 +67,7 @@ pub trait PoolChecker: Sized {
     }
 
     fn get_not_sol_mint(&self) -> anyhow::Result<Pubkey> {
-        self.must_include_sol(None)?;
+        self.shall_include_sol(None)?;
         if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
             Ok(self.get_token_mint())
         } else {
