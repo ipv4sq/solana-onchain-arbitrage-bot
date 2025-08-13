@@ -1,2 +1,3 @@
 pub mod tx_parser;
-mod types;
+pub mod types;
+pub mod constants;

@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::constants::mev_bot::{
-    FLASHLOAN_ACCOUNT_ID, MevBotFeeCollector, MEV_BOT_ONCHAIN_PROGRAM_ID,
+    FLASHLOAN_ACCOUNT_ID, SmbFeeCollector, SMB_ONCHAIN_PROGRAM_ID,
 };
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
@@ -181,15 +181,15 @@ fn create_swap_instruction(
 ) -> anyhow::Result<Instruction> {
     debug!("Creating swap instruction for all DEX types");
 
-    let executor_program_id = MEV_BOT_ONCHAIN_PROGRAM_ID.to_pubkey();
+    let executor_program_id = SMB_ONCHAIN_PROGRAM_ID.to_pubkey();
 
     let fee_collector = if use_flashloan {
-        MevBotFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
+        SmbFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
     } else {
         let fee_accounts = [
-            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
-            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
-            MevBotFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
         ];
         *random_select(&fee_accounts).expect("fee_accounts should not be empty")
     };
@@ -258,7 +258,7 @@ fn create_swap_instruction(
             false,
         ));
         let token_pda = derive_vault_token_account(
-            &MEV_BOT_ONCHAIN_PROGRAM_ID.to_pubkey(),
+            &SMB_ONCHAIN_PROGRAM_ID.to_pubkey(),
             &flashloan_base_mint,
         );
         accounts.push(AccountMeta::new(token_pda.0, false));

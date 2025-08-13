@@ -40,6 +40,7 @@ rand = "0.8"
 bs58 = "0.4"
 borsh = "0.10.3"
 bytemuck = { version = "1.16.1", features = ["derive"] }
+lazy_static = "1.4"
 
 # Command line argument parsing
 clap = "3.2"
