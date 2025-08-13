@@ -7,7 +7,7 @@ use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
 use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
 use crate::dex::pool_fetch::fetch_pool;
 use crate::dex::raydium::{
-    get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
+    _get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
     RaydiumClmmPoolInfo, RaydiumAmmInfo, RaydiumCpAmmInfo,
 };
 use crate::dex::solfi::constants::solfi_program_id;
@@ -31,7 +31,7 @@ pub async fn initialize_pool_data(
     pump_pools_config: Option<&Vec<String>>,
     dlmm_pools: Option<&Vec<String>>,
     whirlpool_pools: Option<&Vec<String>>,
-    raydium_clmm_pools: Option<&Vec<String>>,
+    raydium_clmm_pools_config: Option<&Vec<String>>,
     meteora_damm_pools: Option<&Vec<String>>,
     solfi_pools: Option<&Vec<String>>,
     meteora_damm_v2_pools: Option<&Vec<String>>,
@@ -85,11 +85,15 @@ pub async fn initialize_pool_data(
             Err(e) => error!("Failed to fetch raydium pool: {}", e),
         });
 
-    raydium_clmm_pools
-        .map(|pools| {
-            initialize_raydium_clmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
-        })
-        .transpose()?;
+    raydium_clmm_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.raydium_clmm_pools.push(pool),
+            Err(e) => error!("Failed to fetch raydium clmm pool: {}", e),
+        });
+
 
     dlmm_pools
         .map(|pools| {
@@ -351,123 +355,6 @@ fn initialize_whirlpool_pools(
     Ok(())
 }
 
-fn initialize_raydium_clmm_pools(
-    pools: &Vec<String>,
-    mint_pubkey: &Pubkey,
-    pool_data: &mut MintPoolData,
-    rpc_client: &RpcClient,
-) -> anyhow::Result<()> {
-    let raydium_clmm_program_id = raydium_clmm_program_id();
-
-    for pool_address in pools {
-        match rpc_client.get_account(&pool_address.to_pubkey()) {
-            Ok(account) => {
-                if account.owner != raydium_clmm_program_id {
-                    error!(
-                        "Raydium CLMM pool {} is not owned by the Raydium CLMM program, skipping",
-                        pool_address
-                    );
-                    continue;
-                }
-
-                match RaydiumClmmPoolInfo::load_checked(&account.data) {
-                    Ok(raydium_clmm) => {
-                        if raydium_clmm.token_mint_0 != pool_data.mint
-                            && raydium_clmm.token_mint_1 != pool_data.mint
-                        {
-                            error!(
-                                "Mint {} is not present in Raydium CLMM pool {}, skipping",
-                                pool_data.mint, pool_address
-                            );
-                            continue;
-                        }
-
-                        let sol_mint = TokenMint::SOL.to_pubkey();
-                        let (token_vault, sol_vault) = if sol_mint == raydium_clmm.token_mint_0 {
-                            (raydium_clmm.token_vault_1, raydium_clmm.token_vault_0)
-                        } else if sol_mint == raydium_clmm.token_mint_1 {
-                            (raydium_clmm.token_vault_0, raydium_clmm.token_vault_1)
-                        } else {
-                            error!("SOL is not present in Raydium CLMM pool {}", pool_address);
-                            continue;
-                        };
-
-                        let tick_array_pubkeys = get_tick_array_pubkeys(
-                            &pool_address.to_pubkey(),
-                            raydium_clmm.tick_current,
-                            raydium_clmm.tick_spacing,
-                            &[-1, 0, 1],
-                            &raydium_clmm_program_id,
-                        )?;
-
-                        let tick_array_strings: Vec<String> = tick_array_pubkeys
-                            .iter()
-                            .map(|pubkey| pubkey.to_string())
-                            .collect();
-
-                        let tick_array_str_refs: Vec<&str> =
-                            tick_array_strings.iter().map(|s| s.as_str()).collect();
-
-                        let (token_mint, base_mint) = if mint_pubkey == &raydium_clmm.token_mint_0 {
-                            (raydium_clmm.token_mint_0, raydium_clmm.token_mint_1)
-                        } else {
-                            (raydium_clmm.token_mint_1, raydium_clmm.token_mint_0)
-                        };
-
-                        pool_data.add_raydium_clmm_pool(
-                            pool_address,
-                            &raydium_clmm.amm_config.to_string(),
-                            &raydium_clmm.observation_key.to_string(),
-                            &token_vault.to_string(),
-                            &sol_vault.to_string(),
-                            tick_array_str_refs,
-                            None,
-                            &token_mint.to_string(),
-                            &base_mint.to_string(),
-                        )?;
-
-                        info!("Raydium CLMM pool added: {}", pool_address);
-                        info!(
-                            "    Token mint 0: {}",
-                            raydium_clmm.token_mint_0.to_string()
-                        );
-                        info!(
-                            "    Token mint 1: {}",
-                            raydium_clmm.token_mint_1.to_string()
-                        );
-                        info!("    Token vault: {}", token_vault.to_string());
-                        info!("    Sol vault: {}", sol_vault.to_string());
-                        info!("    AMM config: {}", raydium_clmm.amm_config.to_string());
-                        info!(
-                            "    Observation key: {}",
-                            raydium_clmm.observation_key.to_string()
-                        );
-
-                        for (i, array) in tick_array_strings.iter().enumerate() {
-                            info!("    Tick Array {}: {}", i, array);
-                        }
-                        info!("");
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error parsing Raydium CLMM data from pool {}: {:?}",
-                            pool_address, e
-                        );
-                        continue;
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Error fetching Raydium CLMM pool account {}: {:?}",
-                    pool_address, e
-                );
-                continue;
-            }
-        }
-    }
-    Ok(())
-}
 
 fn initialize_meteora_damm_pools(
     pools: &Vec<String>,

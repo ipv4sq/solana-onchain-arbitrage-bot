@@ -1,5 +1,9 @@
+use crate::constants::helpers::ToPubkey;
+use crate::dex::pool_checker::PoolChecker;
+use crate::dex::raydium::{raydium_clmm_program_id, RAYDIUM_CLMM_PROGRAM_ID};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
+use solana_sdk::pubkey;
 
 pub const TICK_ARRAY_SEED: &str = "tick_array";
 pub const TICK_ARRAY_SIZE: i32 = 60;
@@ -101,6 +105,24 @@ pub struct RaydiumClmmPoolInfo {
     pub padding2: [u64; 32],
 }
 
+impl PoolChecker for RaydiumClmmPoolInfo {
+    fn get_base_mint(&self) -> Pubkey {
+        self.token_mint_0
+    }
+
+    fn get_token_mint(&self) -> Pubkey {
+        self.token_mint_1
+    }
+
+    fn get_base_vault(&self) -> Pubkey {
+        self.token_vault_0
+    }
+
+    fn get_token_vault(&self) -> Pubkey {
+        self.token_vault_1
+    }
+}
+
 impl RaydiumClmmPoolInfo {
     pub fn load_checked(data: &[u8]) -> Result<Self> {
         if data.len() < 8 + 32 + 32 + 32 + 32 + 32 + 32 + 4 + 2 {
@@ -175,6 +197,26 @@ impl RaydiumClmmPoolInfo {
             ..Default::default()
         })
     }
+
+    pub fn get_tick_arrays(
+        &self,
+        pool: &Pubkey,
+    ) -> Result<Vec<Pubkey>> {
+        _get_tick_array_pubkeys(
+            pool,
+            self.tick_current,
+            self.tick_spacing,
+            &[-1, 0, 1],
+            &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey(),
+        )
+    }
+
+    pub fn get_bitmap_extensions(&self, pool: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(), pool.as_ref()],
+            &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey(),
+        ).0
+    }
 }
 
 pub fn compute_tick_array_start_index(tick: i32, tick_spacing: u16) -> i32 {
@@ -186,7 +228,7 @@ pub fn compute_tick_array_start_index(tick: i32, tick_spacing: u16) -> i32 {
     start * ticks_in_array
 }
 
-pub fn get_tick_array_pubkeys(
+pub fn _get_tick_array_pubkeys(
     pool_pubkey: &Pubkey,
     tick_current: i32,
     tick_spacing: u16,

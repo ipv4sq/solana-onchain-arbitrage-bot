@@ -129,52 +129,6 @@ impl MintPoolData {
         Ok(())
     }
 
-    pub fn add_raydium_clmm_pool(
-        &mut self,
-        pool: &str,
-        amm_config: &str,
-        observation_state: &str,
-        x_vault: &str,
-        y_vault: &str,
-        tick_arrays: Vec<&str>,
-        memo_program: Option<&str>,
-        token_mint: &str,
-        base_mint: &str,
-    ) -> anyhow::Result<()> {
-        let pool_pubkey = Pubkey::from_str(pool)?;
-        let bitmap_extension = Pubkey::find_program_address(
-            &[
-                POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(),
-                &pool_pubkey.as_ref(),
-            ],
-            &raydium_clmm_program_id(),
-        )
-        .0;
-        let tick_array_pubkeys = tick_arrays
-            .iter()
-            .map(|&s| Pubkey::from_str(s))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let memo_program_pubkey = if let Some(memo) = memo_program {
-            Some(Pubkey::from_str(memo)?)
-        } else {
-            None
-        };
-
-        self.raydium_clmm_pools.push(RaydiumClmmPool {
-            pool: pool_pubkey,
-            amm_config: Pubkey::from_str(amm_config)?,
-            observation_state: Pubkey::from_str(observation_state)?,
-            x_vault: Pubkey::from_str(x_vault)?,
-            y_vault: Pubkey::from_str(y_vault)?,
-            bitmap_extension,
-            tick_arrays: tick_array_pubkeys,
-            memo_program: memo_program_pubkey,
-            token_mint: Pubkey::from_str(token_mint)?,
-            base_mint: Pubkey::from_str(base_mint)?,
-        });
-        Ok(())
-    }
 
     pub fn add_meteora_damm_pool(
         &mut self,
