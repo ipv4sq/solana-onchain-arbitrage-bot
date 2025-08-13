@@ -98,30 +98,6 @@ impl MintPoolData {
         Ok(())
     }
 
-    pub fn add_pump_pool(
-        &mut self,
-        pool: &str,
-        token_vault: &str,
-        sol_vault: &str,
-        fee_token_wallet: &str,
-        coin_creator_vault_ata: &str,
-        coin_creator_authority: &str,
-        token_mint: &str,
-        base_mint: &str,
-    ) -> anyhow::Result<()> {
-        self.pump_pools.push(PumpPool {
-            pool: Pubkey::from_str(pool)?,
-            token_vault: Pubkey::from_str(token_vault)?,
-            sol_vault: Pubkey::from_str(sol_vault)?,
-            fee_token_wallet: Pubkey::from_str(fee_token_wallet)?,
-            coin_creator_vault_ata: Pubkey::from_str(coin_creator_vault_ata)?,
-            coin_creator_vault_authority: Pubkey::from_str(coin_creator_authority)?,
-            token_mint: Pubkey::from_str(token_mint)?,
-            base_mint: Pubkey::from_str(base_mint)?,
-        });
-        Ok(())
-    }
-
     pub fn add_dlmm_pool(
         &mut self,
         pair: &str,
