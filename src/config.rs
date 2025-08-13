@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer};
 use std::{env, fs::File, io::Read};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct Config {
     pub bot: BotConfig,
     pub routing: RoutingConfig,
@@ -11,17 +11,17 @@ pub struct Config {
     pub flashloan: Option<FlashloanConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct BotConfig {
     pub compute_unit_limit: u32,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct RoutingConfig {
     pub mint_config_list: Vec<MintConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct MintConfig {
     pub mint: String,
 
@@ -45,13 +45,13 @@ pub struct MintConfig {
     pub process_delay: u64,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct RpcConfig {
     #[serde(deserialize_with = "serde_string_or_env")]
     pub url: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct SpamConfig {
     pub enabled: bool,
     pub sending_rpc_urls: Vec<String>,
@@ -59,13 +59,13 @@ pub struct SpamConfig {
     pub max_retries: Option<u64>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct WalletConfig {
     #[serde(deserialize_with = "serde_string_or_env")]
     pub private_key: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
 pub struct FlashloanConfig {
     pub enabled: bool,
 }
