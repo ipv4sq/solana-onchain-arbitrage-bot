@@ -5,6 +5,7 @@ use crate::constants::{
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
 use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
+use crate::dex::pool_fetch::fetch_pool;
 use crate::dex::raydium::{
     get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
     PoolState, RaydiumAmmInfo, RaydiumCpAmmInfo,
@@ -16,6 +17,7 @@ use crate::dex::whirlpool::{
     constants::whirlpool_program_id, pool_clmm::Whirlpool, update_tick_array_accounts_for_onchain,
 };
 use crate::pools::*;
+use futures::StreamExt;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
@@ -24,8 +26,8 @@ use tracing::{error, info};
 pub async fn initialize_pool_data(
     mint: &str,
     wallet_account: &str,
-    raydium_pools: Option<&Vec<String>>,
-    raydium_cp_pools: Option<&Vec<String>>,
+    raydium_pools_config: Option<&Vec<String>>,
+    raydium_cp_pools_config: Option<&Vec<String>>,
     pump_pools_config: Option<&Vec<String>>,
     dlmm_pools: Option<&Vec<String>>,
     whirlpool_pools: Option<&Vec<String>>,
@@ -56,24 +58,36 @@ pub async fn initialize_pool_data(
     let mut global_pool_config = MintPoolData::new(mint, wallet_account, token_program)?;
     info!("Pool data initialized for mint: {}", mint);
 
-    // pump_pools_config
-    //     .into_iter()
-    //     .flatten()
-    //     .map(|it| fetch_pump_pool(it, &mint_pubkey, &rpc_client))
-    //     .for_each(|r| match r {
-    //         Ok(pool) => global_pool_config.pump_pools.push(pool),
-    //         Err(e) => error!("Failed to fetch pump pool: {}", e),
-    //     });
+    pump_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.pump_pools.push(pool),
+            Err(e) => error!("Failed to fetch pump pool: {}", e),
+        });
 
-    raydium_pools
-        .map(|pools| {
-            initialize_raydium_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
-        })
-        .transpose()?;
+    raydium_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.raydium_pools.push(pool),
+            Err(e) => error!("Failed to fetch raydium pool: {}", e),
+        });
 
-    raydium_cp_pools
+    raydium_cp_pools_config
+        .into_iter()
+        .flatten()
+        .map(|it| fetch_pool(&it.to_pubkey(), &mint_pubkey, &rpc_client))
+        .for_each(|r| match r {
+            Ok(pool) => global_pool_config.raydium_cp_pools.push(pool),
+            Err(e) => error!("Failed to fetch raydium pool: {}", e),
+        });
+
+    raydium_clmm_pools
         .map(|pools| {
-            initialize_raydium_cp_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+            initialize_raydium_clmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
         })
         .transpose()?;
 
@@ -86,12 +100,6 @@ pub async fn initialize_pool_data(
     whirlpool_pools
         .map(|pools| {
             initialize_whirlpool_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
-        })
-        .transpose()?;
-
-    raydium_clmm_pools
-        .map(|pools| {
-            initialize_raydium_clmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
         })
         .transpose()?;
 
@@ -125,197 +133,6 @@ pub async fn initialize_pool_data(
         .transpose()?;
 
     Ok(global_pool_config)
-}
-
-fn initialize_raydium_pools(
-    pools: &Vec<String>,
-    mint_pubkey: &Pubkey,
-    pool_data: &mut MintPoolData,
-    rpc_client: &RpcClient,
-) -> anyhow::Result<()> {
-    for pool_address in pools {
-        let raydium_pool_pubkey = pool_address.to_pubkey();
-
-        match rpc_client.get_account(&raydium_pool_pubkey) {
-            Ok(account) => {
-                if account.owner != raydium_program_id() {
-                    error!(
-                        "Error: Raydium pool account is not owned by the Raydium program. Expected: {}, Actual: {}",
-                        raydium_program_id(), account.owner
-                    );
-                    return Err(anyhow::anyhow!(
-                        "Raydium pool account is not owned by the Raydium program"
-                    ));
-                }
-
-                match RaydiumAmmInfo::load_checked(&account.data) {
-                    Ok(amm_info) => {
-                        if amm_info.coin_mint != pool_data.mint
-                            && amm_info.pc_mint != pool_data.mint
-                        {
-                            error!(
-                                "Mint {} is not present in Raydium pool {}, skipping",
-                                pool_data.mint, raydium_pool_pubkey
-                            );
-                            return Err(anyhow::anyhow!(
-                                "Invalid Raydium pool: {}",
-                                raydium_pool_pubkey
-                            ));
-                        }
-
-                        if amm_info.coin_mint != TokenMint::SOL.to_pubkey()
-                            && amm_info.pc_mint != TokenMint::SOL.to_pubkey()
-                        {
-                            error!("SOL is not present in Raydium pool {}", raydium_pool_pubkey);
-                            return Err(anyhow::anyhow!(
-                                "SOL is not present in Raydium pool: {}",
-                                raydium_pool_pubkey
-                            ));
-                        }
-
-                        let (sol_vault, token_vault) =
-                            if TokenMint::SOL.to_pubkey() == amm_info.coin_mint {
-                                (amm_info.coin_vault, amm_info.pc_vault)
-                            } else {
-                                (amm_info.pc_vault, amm_info.coin_vault)
-                            };
-
-                        let (token_mint, base_mint) = if mint_pubkey == &amm_info.coin_mint {
-                            (amm_info.coin_mint, amm_info.pc_mint)
-                        } else {
-                            (amm_info.pc_mint, amm_info.coin_mint)
-                        };
-
-                        pool_data.add_raydium_pool(
-                            pool_address,
-                            &token_vault.to_string(),
-                            &sol_vault.to_string(),
-                            &token_mint.to_string(),
-                            &base_mint.to_string(),
-                        )?;
-                        info!("Raydium pool added: {}", pool_address);
-                        info!("    Coin mint: {}", amm_info.coin_mint.to_string());
-                        info!("    PC mint: {}", amm_info.pc_mint.to_string());
-                        info!("    Token vault: {}", token_vault.to_string());
-                        info!("    Sol vault: {}", sol_vault.to_string());
-                        info!("    Initialized Raydium pool: {}\n", raydium_pool_pubkey);
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error parsing AmmInfo from Raydium pool {}: {:?}",
-                            raydium_pool_pubkey, e
-                        );
-                        return Err(e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Error fetching Raydium pool account {}: {:?}",
-                    raydium_pool_pubkey, e
-                );
-                return Err(anyhow::anyhow!("Error fetching Raydium pool account"));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn initialize_raydium_cp_pools(
-    pools: &Vec<String>,
-    mint_pubkey: &Pubkey,
-    pool_data: &mut MintPoolData,
-    rpc_client: &RpcClient,
-) -> anyhow::Result<()> {
-    for pool_address in pools {
-        let raydium_cp_pool_pubkey = pool_address.to_pubkey();
-
-        match rpc_client.get_account(&raydium_cp_pool_pubkey) {
-            Ok(account) => {
-                if account.owner != raydium_cp_program_id() {
-                    error!(
-                        "Error: Raydium CP pool account is not owned by the Raydium CP program. Expected: {}, Actual: {}",
-                        raydium_cp_program_id(), account.owner
-                    );
-                    return Err(anyhow::anyhow!(
-                        "Raydium CP pool account is not owned by the Raydium CP program"
-                    ));
-                }
-
-                match RaydiumCpAmmInfo::load_checked(&account.data) {
-                    Ok(amm_info) => {
-                        if amm_info.token_0_mint != pool_data.mint
-                            && amm_info.token_1_mint != pool_data.mint
-                        {
-                            error!(
-                                "Mint {} is not present in Raydium CP pool {}, skipping",
-                                pool_data.mint, raydium_cp_pool_pubkey
-                            );
-                            return Err(anyhow::anyhow!(
-                                "Invalid Raydium CP pool: {}",
-                                raydium_cp_pool_pubkey
-                            ));
-                        }
-
-                        let (sol_vault, token_vault) =
-                            if TokenMint::SOL.to_pubkey() == amm_info.token_0_mint {
-                                (amm_info.token_0_vault, amm_info.token_1_vault)
-                            } else if TokenMint::SOL.to_pubkey() == amm_info.token_1_mint {
-                                (amm_info.token_1_vault, amm_info.token_0_vault)
-                            } else {
-                                error!(
-                                    "SOL is not present in Raydium CP pool {}",
-                                    raydium_cp_pool_pubkey
-                                );
-                                return Err(anyhow::anyhow!(
-                                    "SOL is not present in Raydium CP pool: {}",
-                                    raydium_cp_pool_pubkey
-                                ));
-                            };
-
-                        let (token_mint, base_mint) = if mint_pubkey == &amm_info.token_0_mint {
-                            (amm_info.token_0_mint, amm_info.token_1_mint)
-                        } else {
-                            (amm_info.token_1_mint, amm_info.token_0_mint)
-                        };
-
-                        pool_data.add_raydium_cp_pool(
-                            pool_address,
-                            &token_vault.to_string(),
-                            &sol_vault.to_string(),
-                            &amm_info.amm_config.to_string(),
-                            &amm_info.observation_key.to_string(),
-                            &token_mint.to_string(),
-                            &base_mint.to_string(),
-                        )?;
-                        info!("Raydium CP pool added: {}", pool_address);
-                        info!("    Token vault: {}", token_vault.to_string());
-                        info!("    Sol vault: {}", sol_vault.to_string());
-                        info!("    AMM Config: {}", amm_info.amm_config.to_string());
-                        info!(
-                            "    Observation Key: {}\n",
-                            amm_info.observation_key.to_string()
-                        );
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error parsing AmmInfo from Raydium CP pool {}: {:?}",
-                            raydium_cp_pool_pubkey, e
-                        );
-                        return Err(e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Error fetching Raydium CP pool account {}: {:?}",
-                    raydium_cp_pool_pubkey, e
-                );
-                return Err(anyhow::anyhow!("Error fetching Raydium CP pool account"));
-            }
-        }
-    }
-    Ok(())
 }
 
 fn initialize_dlmm_pools(

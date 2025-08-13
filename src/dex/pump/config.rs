@@ -90,13 +90,14 @@ mod tests {
         let rpc_client = get_test_rpc_client();
 
         // 这个是池子的地址
-        let pool_address = pool_addresses::PUMP_TEST_POOL;
+        let pool_address = pool_addresses::PUMP_TEST_POOL.to_pubkey();
         // 这个是土狗币的地址
         let mint_pubkey = pool_addresses::PUMP_TEST_TOKEN_MINT.to_pubkey();
 
         // Now you can test the fetch_pump_pool function directly
-        let result = PumpPool::fetch_from_str(pool_address, &mint_pubkey, &rpc_client).unwrap();
-        assert_eq!(result.pool.to_string(), pool_address);
+
+        let result = PumpPool::fetch(&pool_address, &mint_pubkey, &rpc_client).unwrap();
+        assert_eq!(result.pool.to_string(), pool_address.to_string());
         assert_eq!(result.base_mint, TokenMint::SOL.to_pubkey());
     }
 }

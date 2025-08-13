@@ -58,45 +58,6 @@ impl MintPoolData {
         })
     }
 
-    pub fn add_raydium_pool(
-        &mut self,
-        pool: &str,
-        token_vault: &str,
-        sol_vault: &str,
-        token_mint: &str,
-        base_mint: &str,
-    ) -> anyhow::Result<()> {
-        self.raydium_pools.push(RaydiumPool {
-            pool: Pubkey::from_str(pool)?,
-            token_vault: Pubkey::from_str(token_vault)?,
-            sol_vault: Pubkey::from_str(sol_vault)?,
-            token_mint: Pubkey::from_str(token_mint)?,
-            base_mint: Pubkey::from_str(base_mint)?,
-        });
-        Ok(())
-    }
-
-    pub fn add_raydium_cp_pool(
-        &mut self,
-        pool: &str,
-        token_vault: &str,
-        sol_vault: &str,
-        amm_config: &str,
-        observation: &str,
-        token_mint: &str,
-        base_mint: &str,
-    ) -> anyhow::Result<()> {
-        self.raydium_cp_pools.push(RaydiumCpPool {
-            pool: Pubkey::from_str(pool)?,
-            token_vault: Pubkey::from_str(token_vault)?,
-            sol_vault: Pubkey::from_str(sol_vault)?,
-            amm_config: Pubkey::from_str(amm_config)?,
-            observation: Pubkey::from_str(observation)?,
-            token_mint: Pubkey::from_str(token_mint)?,
-            base_mint: Pubkey::from_str(base_mint)?,
-        });
-        Ok(())
-    }
 
     pub fn add_dlmm_pool(
         &mut self,

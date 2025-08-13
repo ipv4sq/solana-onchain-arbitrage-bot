@@ -1,3 +1,12 @@
+use crate::constants::addresses::TokenMint;
+use crate::constants::helpers::ToPubkey;
+use crate::constants::utils::expect_owner;
+use crate::dex::pool_fetch::PoolFetch;
+use crate::dex::raydium::{
+    RaydiumAmmInfo, RaydiumCpAmmInfo, RAYDIUM_CP_PROGRAM_ID, RAYDIUM_PROGRAM_ID,
+};
+use crate::not_in;
+use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 
 // 老式 AMM（恒定乘积公式，池简单，单 vault 对单 mint）
@@ -10,6 +19,54 @@ pub struct RaydiumPool {
     pub base_mint: Pubkey,
 }
 
+impl PoolFetch for RaydiumPool {
+    fn fetch(pool: &Pubkey, mint: &Pubkey, rpc_client: &RpcClient) -> anyhow::Result<Self> {
+        let account = rpc_client
+            .get_account(pool)
+            .map_err(|e| anyhow::anyhow!("Error fetching RaydiumPool account {pool}: {e:?}"))?;
+
+        expect_owner(pool, &account, &RAYDIUM_PROGRAM_ID.to_pubkey())?;
+
+        let amm_info = RaydiumAmmInfo::load_checked(&account.data)?;
+
+        if not_in!(*mint, amm_info.coin_mint, amm_info.pc_mint) {
+            return Err(anyhow::anyhow!(
+                "Invalid Raydium pool: {} because the pair doesn't contain the mint {}",
+                pool,
+                mint
+            ));
+        }
+
+        let sol = TokenMint::SOL.to_pubkey();
+
+        if not_in!(sol, amm_info.coin_mint, amm_info.pc_mint) {
+            return Err(anyhow::anyhow!(
+                "SOL is not present in Raydium pool: {}",
+                pool
+            ));
+        }
+
+        let (sol_vault, token_vault) = if sol == amm_info.coin_mint {
+            (amm_info.coin_vault, amm_info.pc_vault)
+        } else {
+            (amm_info.pc_vault, amm_info.coin_vault)
+        };
+
+        let (token_mint, base_mint) = if mint == &amm_info.coin_mint {
+            (amm_info.coin_mint, amm_info.pc_mint)
+        } else {
+            (amm_info.pc_mint, amm_info.coin_mint)
+        };
+        Ok(RaydiumPool {
+            pool: *pool,
+            token_vault,
+            sol_vault,
+            base_mint,
+            token_mint,
+        })
+    }
+}
+
 // 集中流动性池（有 tick、position NFT 等复杂结构）
 #[derive(Debug, Clone)]
 pub struct RaydiumCpPool {
@@ -20,6 +77,54 @@ pub struct RaydiumCpPool {
     pub observation: Pubkey,
     pub token_mint: Pubkey,
     pub base_mint: Pubkey,
+}
+
+impl PoolFetch for RaydiumCpPool {
+    fn fetch(pool: &Pubkey, mint: &Pubkey, rpc_client: &RpcClient) -> anyhow::Result<Self> {
+        let account = rpc_client.get_account(pool)?;
+
+        expect_owner(pool, &account, &RAYDIUM_CP_PROGRAM_ID.to_pubkey())?;
+
+        let info = RaydiumCpAmmInfo::load_checked(&account.data)?;
+
+        if not_in!(*mint, info.token_0_mint, info.token_1_mint) {
+            return Err(anyhow::anyhow!(
+                "Invalid Raydium CP pool: {} missing mint {}",
+                pool,
+                mint
+            ));
+        }
+
+        let sol = TokenMint::SOL.to_pubkey();
+        if not_in!(sol, info.token_0_mint, info.token_1_mint) {
+            return Err(anyhow::anyhow!(
+                "SOL is not present in Raydium CP pool: {}",
+                pool
+            ));
+        }
+
+        let (sol_vault, token_vault) = if sol == info.token_0_mint {
+            (info.token_0_vault, info.token_1_mint)
+        } else {
+            (info.token_1_mint, info.token_0_vault)
+        };
+
+        let (token_mint, base_mint) = if mint == &info.token_0_mint {
+            (info.token_0_mint, info.token_1_mint)
+        } else {
+            (info.token_1_mint, info.token_0_mint)
+        };
+
+        Ok(RaydiumCpPool {
+            pool: *pool,
+            token_vault,
+            sol_vault,
+            amm_config: info.amm_config,
+            observation: info.observation_key,
+            token_mint,
+            base_mint,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
