@@ -4,7 +4,7 @@ use crate::constants::{
 };
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
-use crate::dex::meteora::{constants::dlmm_program_id, dlmm_info::DlmmInfo};
+use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
 use crate::dex::pump::initialize_pump_pools;
 use crate::dex::raydium::{
     get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
