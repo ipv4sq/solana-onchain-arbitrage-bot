@@ -5,7 +5,6 @@ use crate::constants::{
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
 use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
-use crate::dex::pump::{fetch_pump_pool, initialize_pump_pools};
 use crate::dex::raydium::{
     get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
     PoolState, RaydiumAmmInfo, RaydiumCpAmmInfo,
@@ -57,14 +56,14 @@ pub async fn initialize_pool_data(
     let mut global_pool_config = MintPoolData::new(mint, wallet_account, token_program)?;
     info!("Pool data initialized for mint: {}", mint);
 
-    pump_pools_config
-        .into_iter()
-        .flatten()
-        .map(|it| fetch_pump_pool(it, &mint_pubkey, &rpc_client))
-        .for_each(|r| match r {
-            Ok(pool) => global_pool_config.pump_pools.push(pool),
-            Err(e) => error!("Failed to fetch pump pool: {}", e),
-        });
+    // pump_pools_config
+    //     .into_iter()
+    //     .flatten()
+    //     .map(|it| fetch_pump_pool(it, &mint_pubkey, &rpc_client))
+    //     .for_each(|r| match r {
+    //         Ok(pool) => global_pool_config.pump_pools.push(pool),
+    //         Err(e) => error!("Failed to fetch pump pool: {}", e),
+    //     });
 
     raydium_pools
         .map(|pools| {

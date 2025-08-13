@@ -109,3 +109,4 @@ The `config.toml` must include:
 - Every swap transaction must include the coin creator's vault authority account
 - This is derived using PDA: `["creator_vault", coin_creator_pubkey]`
 - Part of the trading fees automatically flow to the token creator's vault
+- DO NOT USE /// for comments, it looks annoying, normal // will be good

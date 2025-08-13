@@ -4,3 +4,4 @@ pub mod raydium;
 pub mod solfi;
 pub mod vertigo;
 pub mod whirlpool;
+pub mod pool_fetch;
