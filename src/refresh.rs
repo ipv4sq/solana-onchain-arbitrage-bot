@@ -27,7 +27,7 @@ pub async fn initialize_pool_data(
     wallet_account: &str,
     raydium_pools: Option<&Vec<String>>,
     raydium_cp_pools: Option<&Vec<String>>,
-    pump_pools: Option<&Vec<String>>,
+    pump_pools_config: Option<&Vec<String>>,
     dlmm_pools: Option<&Vec<String>>,
     whirlpool_pools: Option<&Vec<String>>,
     raydium_clmm_pools: Option<&Vec<String>>,
@@ -54,58 +54,74 @@ pub async fn initialize_pool_data(
     };
 
     info!("Detected token program: {}", token_program);
-    let mut pool_data = MintPoolData::new(mint, wallet_account, token_program)?;
+    let mut global_pool_config = MintPoolData::new(mint, wallet_account, token_program)?;
     info!("Pool data initialized for mint: {}", mint);
 
-    pump_pools
-        .map(|pools| initialize_pump_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+    pump_pools_config
+        .map(|it| initialize_pump_pools(it, &mint_pubkey, &mut global_pool_config, &rpc_client))
         .transpose()?;
-
+    
     raydium_pools
-        .map(|pools| initialize_raydium_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_raydium_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
     raydium_cp_pools
-        .map(|pools| initialize_raydium_cp_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_raydium_cp_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
     dlmm_pools
-        .map(|pools| initialize_dlmm_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_dlmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
     whirlpool_pools
-        .map(|pools| initialize_whirlpool_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_whirlpool_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
     raydium_clmm_pools
         .map(|pools| {
-            initialize_raydium_clmm_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client)
+            initialize_raydium_clmm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
         })
         .transpose()?;
 
     meteora_damm_pools
         .map(|pools| {
-            initialize_meteora_damm_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client)
+            initialize_meteora_damm_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
         })
         .transpose()?;
 
     meteora_damm_v2_pools
         .map(|pools| {
-            initialize_meteora_damm_v2_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client)
+            initialize_meteora_damm_v2_pools(
+                pools,
+                &mint_pubkey,
+                &mut global_pool_config,
+                &rpc_client,
+            )
         })
         .transpose()?;
 
     solfi_pools
-        .map(|pools| initialize_solfi_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_solfi_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
     vertigo_pools
-        .map(|pools| initialize_vertigo_pools(pools, &mint_pubkey, &mut pool_data, &rpc_client))
+        .map(|pools| {
+            initialize_vertigo_pools(pools, &mint_pubkey, &mut global_pool_config, &rpc_client)
+        })
         .transpose()?;
 
-    Ok(pool_data)
+    Ok(global_pool_config)
 }
-
 
 fn initialize_raydium_pools(
     pools: &Vec<String>,
