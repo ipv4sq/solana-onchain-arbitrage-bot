@@ -1,6 +1,6 @@
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey, utils::expect_owner};
-use crate::dex::pump::{PumpAmmInfo, PUMP_FEE_WALLET, PUMP_PROGRAM_ID};
-use crate::pools::{MintPoolData, PumpPool};
+use crate::dex::pump::{PumpAmmInfo, PumpPool, PUMP_FEE_WALLET, PUMP_PROGRAM_ID};
+use crate::pools::MintPoolData;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account;
@@ -30,16 +30,14 @@ pub fn fetch_pump_pool(
     })?;
 
     let sol_mint = TokenMint::SOL.to_pubkey();
-    let (sol_vault, token_vault) = amm_info
-        .get_vaults_for_sol(&sol_mint)
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "Pump pool {} does not contain SOL. Base: {}, Quote: {}",
-                pump_pool,
-                amm_info.base_mint,
-                amm_info.quote_mint
-            )
-        })?;
+    let (sol_vault, token_vault) = amm_info.get_vaults_for_sol(&sol_mint).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Pump pool {} does not contain SOL. Base: {}, Quote: {}",
+            pump_pool,
+            amm_info.base_mint,
+            amm_info.quote_mint
+        )
+    })?;
 
     let pump_fee_wallet = PUMP_FEE_WALLET.to_pubkey();
     let fee_token_wallet = spl_associated_token_account::get_associated_token_address(
