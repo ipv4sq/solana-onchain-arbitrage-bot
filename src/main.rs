@@ -10,6 +10,7 @@ mod transaction;
 #[cfg(test)]
 pub mod test;
 pub mod util;
+pub mod arb;
 
 use clap::{App, Arg};
 use tracing::{info, Level};
