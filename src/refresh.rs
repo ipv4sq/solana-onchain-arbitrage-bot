@@ -8,7 +8,7 @@ use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::DlmmInfo};
 use crate::dex::pool_fetch::fetch_pool;
 use crate::dex::raydium::{
     get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
-    PoolState, RaydiumAmmInfo, RaydiumCpAmmInfo,
+    RaydiumClmmPoolInfo, RaydiumAmmInfo, RaydiumCpAmmInfo,
 };
 use crate::dex::solfi::constants::solfi_program_id;
 use crate::dex::solfi::pool_info::SolfiInfo;
@@ -370,7 +370,7 @@ fn initialize_raydium_clmm_pools(
                     continue;
                 }
 
-                match PoolState::load_checked(&account.data) {
+                match RaydiumClmmPoolInfo::load_checked(&account.data) {
                     Ok(raydium_clmm) => {
                         if raydium_clmm.token_mint_0 != pool_data.mint
                             && raydium_clmm.token_mint_1 != pool_data.mint

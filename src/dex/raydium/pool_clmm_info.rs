@@ -44,7 +44,7 @@ impl RewardInfo {
 }
 
 #[derive(Default, Debug)]
-pub struct PoolState {
+pub struct RaydiumClmmPoolInfo {
     pub bump: [u8; 1],
     pub amm_config: Pubkey,
     pub owner: Pubkey,
@@ -101,7 +101,7 @@ pub struct PoolState {
     pub padding2: [u64; 32],
 }
 
-impl PoolState {
+impl RaydiumClmmPoolInfo {
     pub fn load_checked(data: &[u8]) -> Result<Self> {
         if data.len() < 8 + 32 + 32 + 32 + 32 + 32 + 32 + 4 + 2 {
             return Err(anyhow::anyhow!(

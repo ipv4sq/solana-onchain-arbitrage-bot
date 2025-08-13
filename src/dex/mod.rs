@@ -5,3 +5,4 @@ pub mod solfi;
 pub mod vertigo;
 pub mod whirlpool;
 pub mod pool_fetch;
+pub mod pool_checker;

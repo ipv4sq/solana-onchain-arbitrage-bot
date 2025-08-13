@@ -2,9 +2,7 @@ use crate::constants::addresses::TokenMint;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::utils::expect_owner;
 use crate::dex::pool_fetch::PoolFetch;
-use crate::dex::raydium::{
-    RaydiumAmmInfo, RaydiumCpAmmInfo, RAYDIUM_CP_PROGRAM_ID, RAYDIUM_PROGRAM_ID,
-};
+use crate::dex::raydium::{RaydiumClmmPoolInfo, RaydiumAmmInfo, RaydiumCpAmmInfo, RAYDIUM_CLMM_PROGRAM_ID, RAYDIUM_CP_PROGRAM_ID, RAYDIUM_PROGRAM_ID};
 use crate::not_in;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
@@ -139,4 +137,16 @@ pub struct RaydiumClmmPool {
     pub memo_program: Option<Pubkey>, // For Token 2022 support
     pub token_mint: Pubkey,
     pub base_mint: Pubkey,
+}
+
+impl PoolFetch for RaydiumClmmPool {
+    fn fetch(pool: &Pubkey, mint: &Pubkey, rpc_client: &RpcClient) -> anyhow::Result<Self> {
+        let account = rpc_client.get_account(pool)?;
+        expect_owner(pool, &account, &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey())?;
+        
+        let info = RaydiumClmmPoolInfo::load_checked(&account.data)?;
+        
+        
+        todo!()
+    }
 }
