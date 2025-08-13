@@ -1,116 +1,15 @@
+use crate::dex::meteora::config::{MeteoraDAmmPool, MeteoraDAmmV2Pool, MeteoraDlmmPool};
+use crate::dex::pump::PumpPool;
+use crate::dex::raydium::config::{RaydiumClmmPool, RaydiumCpPool, RaydiumPool};
+use crate::dex::solfi::config::SolfiPool;
+use crate::dex::vertigo::config::VertigoPool;
+use crate::dex::whirlpool::config::WhirlpoolPool;
 use crate::{
     constants::addresses::TokenMint,
     dex::raydium::{pool_clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
 };
-use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
-use crate::dex::pump::PumpPool;
-
-#[derive(Debug, Clone)]
-pub struct RaydiumPool {
-    pub pool: Pubkey,
-    pub token_vault: Pubkey,
-    pub sol_vault: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct RaydiumCpPool {
-    pub pool: Pubkey,
-    pub token_vault: Pubkey,
-    pub sol_vault: Pubkey,
-    pub amm_config: Pubkey,
-    pub observation: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-
-
-#[derive(Debug, Clone)]
-pub struct DlmmPool {
-    pub pair: Pubkey,
-    pub token_vault: Pubkey,
-    pub sol_vault: Pubkey,
-    pub oracle: Pubkey,
-    pub bin_arrays: Vec<Pubkey>,
-    pub memo_program: Option<Pubkey>, // For Token 2022 support
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct WhirlpoolPool {
-    pub pool: Pubkey,
-    pub oracle: Pubkey,
-    pub x_vault: Pubkey,
-    pub y_vault: Pubkey,
-    pub tick_arrays: Vec<Pubkey>,
-    pub memo_program: Option<Pubkey>, // For Token 2022 support
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct RaydiumClmmPool {
-    pub pool: Pubkey,
-    pub amm_config: Pubkey,
-    pub observation_state: Pubkey,
-    pub bitmap_extension: Pubkey,
-    pub x_vault: Pubkey,
-    pub y_vault: Pubkey,
-    pub tick_arrays: Vec<Pubkey>,
-    pub memo_program: Option<Pubkey>, // For Token 2022 support
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct MeteoraDAmmPool {
-    pub pool: Pubkey,
-    pub token_x_vault: Pubkey,
-    pub token_sol_vault: Pubkey,
-    pub token_x_token_vault: Pubkey,
-    pub token_sol_token_vault: Pubkey,
-    pub token_x_lp_mint: Pubkey,
-    pub token_sol_lp_mint: Pubkey,
-    pub token_x_pool_lp: Pubkey,
-    pub token_sol_pool_lp: Pubkey,
-    pub admin_token_fee_x: Pubkey,
-    pub admin_token_fee_sol: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct SolfiPool {
-    pub pool: Pubkey,
-    pub token_x_vault: Pubkey,
-    pub token_sol_vault: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct MeteoraDAmmV2Pool {
-    pub pool: Pubkey,
-    pub token_x_vault: Pubkey,
-    pub token_sol_vault: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
-
-#[derive(Debug, Clone)]
-pub struct VertigoPool {
-    pub pool: Pubkey,
-    pub pool_owner: Pubkey,
-    pub token_x_vault: Pubkey,
-    pub token_sol_vault: Pubkey,
-    pub token_mint: Pubkey,
-    pub base_mint: Pubkey,
-}
 
 #[derive(Debug, Clone)]
 pub struct MintPoolData {
@@ -118,15 +17,20 @@ pub struct MintPoolData {
     pub token_program: Pubkey, // Support for both Token and Token 2022
     // pub wallet_account: Pubkey,
     pub wallet_wsol_account: Pubkey,
+
+    // below are thr pools
     pub raydium_pools: Vec<RaydiumPool>,
     pub raydium_cp_pools: Vec<RaydiumCpPool>,
-    pub pump_pools: Vec<PumpPool>,
-    pub dlmm_pairs: Vec<DlmmPool>,
-    pub whirlpool_pools: Vec<WhirlpoolPool>,
     pub raydium_clmm_pools: Vec<RaydiumClmmPool>,
+    //
+    pub pump_pools: Vec<PumpPool>,
+    //
+    pub meteora_dlmm_pools: Vec<MeteoraDlmmPool>,
     pub meteora_damm_pools: Vec<MeteoraDAmmPool>,
-    pub solfi_pools: Vec<SolfiPool>,
     pub meteora_damm_v2_pools: Vec<MeteoraDAmmV2Pool>,
+    //
+    pub whirlpool_pools: Vec<WhirlpoolPool>,
+    pub solfi_pools: Vec<SolfiPool>,
     pub vertigo_pools: Vec<VertigoPool>,
 }
 
@@ -144,7 +48,7 @@ impl MintPoolData {
             raydium_pools: Vec::new(),
             raydium_cp_pools: Vec::new(),
             pump_pools: Vec::new(),
-            dlmm_pairs: Vec::new(),
+            meteora_dlmm_pools: Vec::new(),
             whirlpool_pools: Vec::new(),
             raydium_clmm_pools: Vec::new(),
             meteora_damm_pools: Vec::new(),
@@ -240,7 +144,7 @@ impl MintPoolData {
             None
         };
 
-        self.dlmm_pairs.push(DlmmPool {
+        self.meteora_dlmm_pools.push(MeteoraDlmmPool {
             pair: Pubkey::from_str(pair)?,
             token_vault: Pubkey::from_str(token_vault)?,
             sol_vault: Pubkey::from_str(sol_vault)?,

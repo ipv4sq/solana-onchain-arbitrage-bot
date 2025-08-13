@@ -68,7 +68,6 @@ pub fn fetch_pump_pool(
     })
 }
 
-/// Initializes multiple Pump pools and adds them to pool_data
 pub fn initialize_pump_pools(
     pools: &Vec<String>,
     mint_pubkey: &Pubkey,
@@ -88,6 +87,8 @@ pub fn initialize_pump_pools(
             pump_pool.token_mint,
             pump_pool.base_mint
         );
+
+
 
         pool_data.add_pump_pool(
             pool_address,

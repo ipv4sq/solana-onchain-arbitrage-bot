@@ -372,7 +372,7 @@ fn create_swap_instruction(
     }
 
     // Add DLMM pairs
-    for pair in &mint_pool_data.dlmm_pairs {
+    for pair in &mint_pool_data.meteora_dlmm_pools {
         accounts.push(AccountMeta::new_readonly(dlmm_program_id(), false));
         accounts.push(AccountMeta::new_readonly(pair.base_mint, false)); // V9: Add base mint
         accounts.push(AccountMeta::new_readonly(dlmm_event_authority(), false));
