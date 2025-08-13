@@ -127,7 +127,7 @@ pub struct VertigoPool {
 pub struct MintPoolData {
     pub mint: Pubkey,
     pub token_program: Pubkey, // Support for both Token and Token 2022
-    pub wallet_account: Pubkey,
+    // pub wallet_account: Pubkey,
     pub wallet_wsol_account: Pubkey,
     pub raydium_pools: Vec<RaydiumPool>,
     pub raydium_cp_pools: Vec<RaydiumCpPool>,
@@ -150,7 +150,7 @@ impl MintPoolData {
         Ok(Self {
             mint: Pubkey::from_str(mint)?,
             token_program,
-            wallet_account: wallet_pk,
+            // wallet_account: wallet_pk,
             wallet_wsol_account: wallet_wsol_pk,
             raydium_pools: Vec::new(),
             raydium_cp_pools: Vec::new(),

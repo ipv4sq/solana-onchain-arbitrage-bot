@@ -1,7 +1,7 @@
 pub mod constants;
-pub mod state;
+pub mod pool_clmm;
 
-use crate::dex::whirlpool::state::{Whirlpool, TICK_ARRAY_SIZE};
+use crate::dex::whirlpool::pool_clmm::{Whirlpool, TICK_ARRAY_SIZE};
 use crate::dex::whirlpool::constants::{MAX_TICK_INDEX, MIN_TICK_INDEX};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;

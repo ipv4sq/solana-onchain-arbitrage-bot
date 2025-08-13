@@ -1,2 +1,2 @@
 pub mod constants;
-pub mod info;
+pub mod pool_info;

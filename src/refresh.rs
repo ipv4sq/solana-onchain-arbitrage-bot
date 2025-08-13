@@ -3,7 +3,7 @@ use crate::constants::{
     helpers::ToPubkey,
 };
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
-use crate::dex::meteora::dammv2_info::MeteoraDAmmV2Info;
+use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
 use crate::dex::meteora::{constants::dlmm_program_id, dlmm_info::DlmmInfo};
 use crate::dex::pump::initialize_pump_pools;
 use crate::dex::raydium::{
@@ -11,10 +11,10 @@ use crate::dex::raydium::{
     PoolState, RaydiumAmmInfo, RaydiumCpAmmInfo,
 };
 use crate::dex::solfi::constants::solfi_program_id;
-use crate::dex::solfi::info::SolfiInfo;
+use crate::dex::solfi::pool_info::SolfiInfo;
 use crate::dex::vertigo::{derive_vault_address, vertigo_program_id, VertigoInfo};
 use crate::dex::whirlpool::{
-    constants::whirlpool_program_id, state::Whirlpool, update_tick_array_accounts_for_onchain,
+    constants::whirlpool_program_id, pool_clmm::Whirlpool, update_tick_array_accounts_for_onchain,
 };
 use crate::pools::*;
 use solana_client::rpc_client::RpcClient;

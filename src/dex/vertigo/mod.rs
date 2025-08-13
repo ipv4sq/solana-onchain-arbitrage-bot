@@ -1,5 +1,5 @@
 pub mod constants;
-pub mod info;
+pub mod pool_clmm;
 
 pub use constants::*;
-pub use info::*;
+pub use pool_clmm::*;
