@@ -7,16 +7,6 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
-pub struct WhirlpoolRewardInfo {
-    pub mint: Pubkey,
-    pub vault: Pubkey,
-    pub authority: Pubkey,
-    pub emissions_per_second_x64: u128,
-    pub growth_global_x64: u128,
-}
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
 pub struct WhirlpoolAccountData {
     pub whirlpools_config: Pubkey,
     pub whirlpool_bump: [u8; 1],
@@ -142,7 +132,15 @@ impl WhirlpoolAccountData {
         .0
     }
 }
-
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct WhirlpoolRewardInfo {
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub authority: Pubkey,
+    pub emissions_per_second_x64: u128,
+    pub growth_global_x64: u128,
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,11 +157,11 @@ mod tests {
         ];
 
         // Use the actual test pool from the JSON data
-        let pool_pubkey = pool_address.to_pubkey();
+        let pool_pubkey = POOL_ADDRESS.to_pubkey();
 
         // Parse the actual account data from base64
         let data = general_purpose::STANDARD
-            .decode(account_data_base64)
+            .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
         let account_data =
             WhirlpoolAccountData::load_data(&data).expect("Failed to parse account data");
@@ -184,7 +182,7 @@ mod tests {
     fn test_get_oracle() {
         let expected = "6uSvnzqPXLW986gQhVkY2u4xWjx8CEA2B8PAvq4A5N4w";
         assert_eq!(
-            WhirlpoolAccountData::get_oracle(&pool_address.to_pubkey()),
+            WhirlpoolAccountData::get_oracle(&POOL_ADDRESS.to_pubkey()),
             expected.to_pubkey()
         )
     }
@@ -195,12 +193,12 @@ mod tests {
         use serde_json::Value;
 
         let data = general_purpose::STANDARD
-            .decode(account_data_base64)
+            .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
         let account = WhirlpoolAccountData::load_data(&data).expect("Failed to parse account data");
 
         // Parse the JSON to validate
-        let json: Value = serde_json::from_str(account_data_json).expect("Failed to parse JSON");
+        let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
 
         // Verify numeric fields
         assert_eq!(
@@ -265,9 +263,9 @@ mod tests {
             reward_infos[0]["vault"].as_str().unwrap()
         );
     }
-    static pool_address: &str = "HsQGWEh3ib6w59rBh5n1jXmi8VXFBqKEjxozL6PGfcgb";
-    static account_data_base64: &str = "P5XRDOGAYwkT5EH4ORPKaLBjT7Al/eqohzfoQRDRJV41ezN33e4czf9gAGAAZBkUBT+JBnSLEgAAAAAAAAAAAABahPv2uI2R2wAAAAAAAAAAAfT//2RyBgAAAAAAAAAAAAAAAAAGm4hX/quBhPtof2NGGMA12sQ53BrrO1WYoPAAAAAAAVefegaXBwZMxqwalusK9L5+17+jVTju2F30gp2IvXMaO953eRHm1mgAAAAAAAAAAMDwQqqsn4I3RswQ4QTTY1WRzy16NHGubwcnwI/bJ02F2zeUqN1nAxXz4s+kyh7WkgN8R2G4u2rmyBHN2n+YatstnJixVyHqnQEAAAAAAAAARm6daAAAAADA8EKqrJ+CN0bMEOEE02NVkc8tejRxrm8HJ8CP2ydNhbmMneuU3O/D1Y36i7YiayN1+Q5zoVMSUb5fcGpxrIKNvR0xrxfe/zwmhIFgCsr+SxQJjA/hQbf0oc34STRkRAMAAAAAAAAAAAAAAAAAAAAAi32hSmVI5C4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC9HTGvF97/PCaEgWAKyv5LFAmMD+FBt/ShzfhJNGREAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL0dMa8X3v88JoSBYArK/ksUCYwP4UG39KHN+Ek0ZEQDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    static account_data_json: &str = r#"{
+    static POOL_ADDRESS: &str = "HsQGWEh3ib6w59rBh5n1jXmi8VXFBqKEjxozL6PGfcgb";
+    static ACCOUNT_DATA_BASE64: &str = "P5XRDOGAYwkT5EH4ORPKaLBjT7Al/eqohzfoQRDRJV41ezN33e4czf9gAGAAZBkUBT+JBnSLEgAAAAAAAAAAAABahPv2uI2R2wAAAAAAAAAAAfT//2RyBgAAAAAAAAAAAAAAAAAGm4hX/quBhPtof2NGGMA12sQ53BrrO1WYoPAAAAAAAVefegaXBwZMxqwalusK9L5+17+jVTju2F30gp2IvXMaO953eRHm1mgAAAAAAAAAAMDwQqqsn4I3RswQ4QTTY1WRzy16NHGubwcnwI/bJ02F2zeUqN1nAxXz4s+kyh7WkgN8R2G4u2rmyBHN2n+YatstnJixVyHqnQEAAAAAAAAARm6daAAAAADA8EKqrJ+CN0bMEOEE02NVkc8tejRxrm8HJ8CP2ydNhbmMneuU3O/D1Y36i7YiayN1+Q5zoVMSUb5fcGpxrIKNvR0xrxfe/zwmhIFgCsr+SxQJjA/hQbf0oc34STRkRAMAAAAAAAAAAAAAAAAAAAAAi32hSmVI5C4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC9HTGvF97/PCaEgWAKyv5LFAmMD+FBt/ShzfhJNGREAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL0dMa8X3v88JoSBYArK/ksUCYwP4UG39KHN+Ek0ZEQDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    static ACCOUNT_DATA_JSON: &str = r#"{
   "whirlpoolsConfig": {
     "type": "publicKey",
     "data": "2LecshUwdy9xi7meFgHtFJQNSKk4KdTrcpvaB56dP2NQ"
