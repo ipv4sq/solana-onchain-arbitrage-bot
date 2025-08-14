@@ -1,9 +1,17 @@
-use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::constant::known_pool_program::{KnownPoolPrograms, METEORA_DLMM_PROGRAM};
+use crate::arb::pool::interface::{
+    PoolAccountDataLoader, PoolConfig, PoolConfigInit, SwapAccountsToList,
+};
+use crate::constants::addresses::{TokenProgram, SPL_TOKEN_KEY};
+use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+use crate::dex::meteora::constants::METEORA_DLMM_PROGRAM_ID;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use itertools::concat;
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+
+const DLMM_EVENT_AUTHORITY: &str = "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6";
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -73,7 +81,52 @@ impl PoolAccountDataLoader for MeteoraDlmmAccountData {
 }
 
 type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmAccountData>;
-pub struct MeteoraDlmmSwapAccounts;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MeteoraDlmmSwapAccounts {
+    lb_pair: AccountMeta,
+    bin_array_bitmap_extension: AccountMeta,
+    reverse_x: AccountMeta,
+    reverse_y: AccountMeta,
+    user_token_in: AccountMeta,
+    user_token_out: AccountMeta,
+    token_x_mint: AccountMeta,
+    token_y_mint: AccountMeta,
+    oracle: AccountMeta,
+    host_fee_in: AccountMeta,
+    user: AccountMeta,
+    token_x_program: AccountMeta,
+    token_y_program: AccountMeta,
+    event_authority: AccountMeta,
+    program: AccountMeta,
+    bin_arrays: Vec<AccountMeta>,
+}
+
+impl SwapAccountsToList for MeteoraDlmmSwapAccounts {
+    fn to_list(&self) -> Vec<&AccountMeta> {
+        concat(vec![
+            vec![
+                &self.lb_pair,
+                &self.bin_array_bitmap_extension,
+                &self.reverse_x,
+                &self.reverse_y,
+                &self.user_token_in,
+                &self.user_token_out,
+                &self.token_x_mint,
+                &self.token_y_mint,
+                &self.oracle,
+                &self.host_fee_in,
+                &self.user,
+                &self.token_x_program,
+                &self.token_y_program,
+                &self.event_authority,
+                &self.program,
+            ],
+            self.bin_arrays.iter().collect(),
+        ])
+    }
+}
+
 impl PoolConfigInit<MeteoraDlmmAccountData, MeteoraDlmmSwapAccounts> for MeteoraDlmmPoolConfig {
     fn init(
         pool: &Pubkey,
@@ -103,8 +156,35 @@ impl PoolConfigInit<MeteoraDlmmAccountData, MeteoraDlmmSwapAccounts> for Meteora
         })
     }
 
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<MeteoraDlmmSwapAccounts> {
-        todo!()
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+    ) -> Result<MeteoraDlmmSwapAccounts> {
+        Ok(MeteoraDlmmSwapAccounts {
+            lb_pair: self.pool.to_writable(),
+            bin_array_bitmap_extension: METEORA_DLMM_PROGRAM.to_program(),
+            reverse_x: self.data.reserve_x.to_writable(),
+            reverse_y: self.data.reserve_y.to_writable(),
+            user_token_in: Self::ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
+            user_token_out: Self::ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
+            token_x_mint: input_mint.to_readonly(),
+            token_y_mint: output_mint.to_readonly(),
+            oracle: self.data.oracle.to_writable(),
+            host_fee_in: METEORA_DLMM_PROGRAM.to_program(),
+            user: payer.to_signer(),
+            token_x_program: SPL_TOKEN_KEY.to_program(),
+            token_y_program: SPL_TOKEN_KEY.to_program(),
+            event_authority: DLMM_EVENT_AUTHORITY.to_readonly(),
+            program: METEORA_DLMM_PROGRAM.to_program(),
+            bin_arrays: self
+                .data
+                .get_bin_arrays(&self.pool)
+                .iter()
+                .map(|a| a.to_writable())
+                .collect(),
+        })
     }
 }
 
@@ -192,7 +272,56 @@ pub struct RewardInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arb::constant::mint::WSOL_KEY;
     use crate::constants::helpers::ToPubkey;
+    use base64::engine::general_purpose;
+    use base64::Engine;
+    // tx: https://solscan.io/tx/2qVruJuf1dUTnUfG3ePnp4cRSg4WGK3P1AVUaB7MQdEJ7UMnzVdWL2677BNuPJJmowmvmfirEC9XvQ4uPZpcaTxw
+
+    fn load_data() -> Result<MeteoraDlmmAccountData> {
+        let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
+        let account =
+            MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+        return Ok(account);
+    }
+    #[test]
+    fn test_swap_accounts() {
+        let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
+        let expected = MeteoraDlmmSwapAccounts {
+            lb_pair: "8ztFxjFPfVUtEf4SLSapcFj8GW2dxyUA9no2bLPq7H7V".to_writable(),
+            bin_array_bitmap_extension: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
+            reverse_x: "64GTWbkiCgZt62EMccjFHRoT1MQAQviDioa63NCj37w8".to_writable(),
+            reverse_y: "HJfR4mh9Yctrrh8pQQsrGsNdqV7KfpaaXGSdxGTwoeBK".to_writable(),
+            user_token_in: "4m7mnuw9HhbQzK87HNA2NvkinG84M75YZEjbMW8UFaMs".to_writable(),
+            user_token_out: "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_writable(),
+            token_x_mint: "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_readonly(),
+            token_y_mint: "So11111111111111111111111111111111111111112".to_readonly(),
+            oracle: "Fo3m9HQx8Rv4EMzmKWxe5yjCZMNcB5W5sKNv4pDzRFqe".to_writable(),
+            host_fee_in: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
+            user: "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_signer(),
+            token_x_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
+            token_y_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
+            event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
+            program: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
+            bin_arrays: vec![
+                "9caL9WS3Y1RZ7L3wwXp4qa8hapTicbDY5GJJ3pteP7oX".to_writable(),
+                "MrNAjbZvwT2awQDobynRrmkJStE5ejprQ7QmFXLvycq".to_writable(),
+                "5Dj2QB9BtRtWV6skbCy6eadj23h6o46CVHpLbjsCJCEB".to_writable(),
+                "69EaDEqwjBKKRFKrtRxb7okPDu5EP5nFhbuqrBtekwDg".to_writable(),
+                "433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU".to_writable(),
+            ],
+        };
+        let config =
+            MeteoraDlmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
+                .unwrap();
+
+        let result = config.build_accounts(
+            &payer,
+            &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
+            &*WSOL_KEY,
+        ).unwrap();
+        assert_eq!(result, expected)
+    }
 
     #[test]
     fn test_parse_meteora_dlmm_account_data() {
