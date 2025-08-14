@@ -52,6 +52,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 meteora-damm-cpi = { path = "lib/meteora-damm", features = ["no-entrypoint"] }
 meteora-vault-cpi = { path = "lib/meteora-vault", features = ["no-entrypoint"] }
+itertools = "0.10.5"
 
 [dev-dependencies]
 tempfile = "3.8"

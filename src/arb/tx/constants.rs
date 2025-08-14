@@ -1,6 +1,7 @@
+use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
+use crate::constants::helpers::ToPubkey;
 
-// Known DEX program IDs
 pub struct KnownPoolPrograms;
 
 impl KnownPoolPrograms {
@@ -14,6 +15,19 @@ impl KnownPoolPrograms {
     pub const WHIRLPOOL: &'static str = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
     pub const SOLFI: &'static str = "SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe";
     pub const VERTIGO: &'static str = "vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ";
+}
+
+lazy_static! {
+    pub static ref RAYDIUM_V4_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_V4.to_pubkey();
+    pub static ref RAYDIUM_CP_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_CP.to_pubkey();
+    pub static ref RAYDIUM_CLMM_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_CLMM.to_pubkey();
+    pub static ref PUMP_PROGRAM: Pubkey = KnownPoolPrograms::PUMP.to_pubkey();
+    pub static ref METEORA_DLMM_PROGRAM: Pubkey = KnownPoolPrograms::METEORA_DLMM.to_pubkey();
+    pub static ref METEORA_DAMM_PROGRAM: Pubkey = KnownPoolPrograms::METEORA_DAMM.to_pubkey();
+    pub static ref METEORA_DAMM_V2_PROGRAM: Pubkey = KnownPoolPrograms::METEORA_DAMM_V2.to_pubkey();
+    pub static ref WHIRLPOOL_PROGRAM: Pubkey = KnownPoolPrograms::WHIRLPOOL.to_pubkey();
+    pub static ref SOLFI_PROGRAM: Pubkey = KnownPoolPrograms::SOLFI.to_pubkey();
+    pub static ref VERTIGO_PROGRAM: Pubkey = KnownPoolPrograms::VERTIGO.to_pubkey();
 }
 
 // DEX types that can be identified in the transaction
