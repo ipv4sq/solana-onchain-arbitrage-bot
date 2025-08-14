@@ -38,6 +38,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 rand = "0.8"
 bs58 = "0.4"
+base64 = "0.21"
 borsh = "0.10.3"
 bytemuck = { version = "1.16.1", features = ["derive"] }
 lazy_static = "1.4"
