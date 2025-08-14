@@ -6,7 +6,7 @@ pub struct KnownPoolPrograms;
 
 impl KnownPoolPrograms {
     pub const RAYDIUM_V4: &'static str = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
-    pub const RAYDIUM_CP: &'static str = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+    pub const RAYDIUM_CPMM: &'static str = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
     pub const RAYDIUM_CLMM: &'static str = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK";
     pub const PUMP: &'static str = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
     pub const METEORA_DLMM: &'static str = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo";
@@ -19,7 +19,7 @@ impl KnownPoolPrograms {
 
 lazy_static! {
     pub static ref RAYDIUM_V4_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_V4.to_pubkey();
-    pub static ref RAYDIUM_CP_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_CP.to_pubkey();
+    pub static ref RAYDIUM_CPMM_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_CPMM.to_pubkey();
     pub static ref RAYDIUM_CLMM_PROGRAM: Pubkey = KnownPoolPrograms::RAYDIUM_CLMM.to_pubkey();
     pub static ref PUMP_PROGRAM: Pubkey = KnownPoolPrograms::PUMP.to_pubkey();
     pub static ref METEORA_DLMM_PROGRAM: Pubkey = KnownPoolPrograms::METEORA_DLMM.to_pubkey();
@@ -53,7 +53,7 @@ impl DexType {
 
         match program_str.as_str() {
             KnownPoolPrograms::RAYDIUM_V4 => DexType::RaydiumV4,
-            KnownPoolPrograms::RAYDIUM_CP => DexType::RaydiumCp,
+            KnownPoolPrograms::RAYDIUM_CPMM => DexType::RaydiumCp,
             KnownPoolPrograms::RAYDIUM_CLMM => DexType::RaydiumClmm,
             KnownPoolPrograms::PUMP => DexType::Pump,
             KnownPoolPrograms::METEORA_DLMM => DexType::MeteoraDlmm,

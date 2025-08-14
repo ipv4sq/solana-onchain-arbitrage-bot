@@ -7,53 +7,6 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
-pub struct StaticParameters {
-    pub base_factor: u16,
-    pub filter_period: u16,
-    pub decay_period: u16,
-    pub reduction_factor: u16,
-    pub variable_fee_control: u32,
-    pub max_volatility_accumulator: u32,
-    pub min_bin_id: i32,
-    pub max_bin_id: i32,
-    pub protocol_share: u16,
-    pub base_fee_power_factor: u8,
-    pub _padding: [u8; 5],
-}
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct VariableParameters {
-    pub volatility_accumulator: u32,
-    pub volatility_reference: u32,
-    pub index_reference: i32,
-    pub _padding: [u8; 4],
-    pub last_update_timestamp: i64,
-    pub _padding_1: [u8; 8],
-}
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct ProtocolFee {
-    pub amount_x: u64,
-    pub amount_y: u64,
-}
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct RewardInfo {
-    pub mint: Pubkey,
-    pub vault: Pubkey,
-    pub funder: Pubkey,
-    pub reward_duration: u64,
-    pub reward_duration_end: u64,
-    pub reward_rate: u128,
-    pub last_update_time: u64,
-    pub cumulative_seconds_with_empty_liquidity_reward: u64,
-}
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
 pub struct MeteoraDlmmAccountData {
     pub parameters: StaticParameters,
     pub v_parameters: VariableParameters,
@@ -134,17 +87,9 @@ impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
             pool_data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![
-                desired_mint,
-                *METEORA_DLMM_PROGRAM,
-                account_data.oracle,
-            ],
+            readonly_accounts: vec![desired_mint, *METEORA_DLMM_PROGRAM, account_data.oracle],
             writeable_accounts: concat(vec![
-                vec![
-                    *pool,
-                    account_data.reserve_x,
-                    account_data.reserve_y,
-                ],
+                vec![*pool, account_data.reserve_x, account_data.reserve_y],
                 account_data.get_bin_arrays(pool),
             ]),
         })
@@ -154,27 +99,27 @@ impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
 impl MeteoraDlmmAccountData {
     fn get_bin_arrays(&self, pool: &Pubkey) -> Vec<Pubkey> {
         let mut bin_arrays = Vec::new();
-        
+
         // Get bin arrays around the active bin
         // Meteora DLMM typically needs 3 bin arrays: previous, current, next
         let active_bin = self.active_id;
         let bin_step = self.bin_step as i32;
-        
+
         // Bin array indices are calculated based on the active bin ID
         // Each bin array covers a range of bins
         const BINS_PER_ARRAY: i32 = 70; // Standard for Meteora DLMM
-        
+
         let current_array_index = active_bin / BINS_PER_ARRAY;
-        
+
         // Add previous, current, and next bin arrays
         for offset in -1..=1 {
             let array_index = current_array_index + offset;
             bin_arrays.push(Self::get_bin_array_pda(pool, array_index));
         }
-        
+
         bin_arrays
     }
-    
+
     fn get_bin_array_pda(pool: &Pubkey, bin_array_index: i32) -> Pubkey {
         let index_bytes = bin_array_index.to_le_bytes();
         Pubkey::find_program_address(
@@ -183,6 +128,53 @@ impl MeteoraDlmmAccountData {
         )
         .0
     }
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct StaticParameters {
+    pub base_factor: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub variable_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+    pub min_bin_id: i32,
+    pub max_bin_id: i32,
+    pub protocol_share: u16,
+    pub base_fee_power_factor: u8,
+    pub _padding: [u8; 5],
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct VariableParameters {
+    pub volatility_accumulator: u32,
+    pub volatility_reference: u32,
+    pub index_reference: i32,
+    pub _padding: [u8; 4],
+    pub last_update_timestamp: i64,
+    pub _padding_1: [u8; 8],
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct ProtocolFee {
+    pub amount_x: u64,
+    pub amount_y: u64,
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct RewardInfo {
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub funder: Pubkey,
+    pub reward_duration: u64,
+    pub reward_duration_end: u64,
+    pub reward_rate: u128,
+    pub last_update_time: u64,
+    pub cumulative_seconds_with_empty_liquidity_reward: u64,
 }
 
 #[cfg(test)]
@@ -198,7 +190,8 @@ mod tests {
         let data = general_purpose::STANDARD
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
-        let account = MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+        let account =
+            MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
 
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
 
@@ -299,7 +292,8 @@ mod tests {
         // So we should get arrays for indices 1, 2, 3
         let expected_indices = vec![1, 2, 3];
         for (i, expected_index) in expected_indices.iter().enumerate() {
-            let expected_pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool_pubkey, *expected_index);
+            let expected_pda =
+                MeteoraDlmmAccountData::get_bin_array_pda(&pool_pubkey, *expected_index);
             assert_eq!(bin_arrays[i], expected_pda);
         }
     }
@@ -308,16 +302,16 @@ mod tests {
     fn test_get_bin_array_pda() {
         let pool = POOL_ADDRESS.to_pubkey();
         let bin_array_index = 2;
-        
+
         let pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool, bin_array_index);
-        
+
         // Verify it's a valid PDA
         let index_bytes = bin_array_index.to_le_bytes();
         let (expected_pda, _bump) = Pubkey::find_program_address(
             &[b"bin_array", pool.as_ref(), &index_bytes],
             &*METEORA_DLMM_PROGRAM,
         );
-        
+
         assert_eq!(pda, expected_pda);
     }
 
