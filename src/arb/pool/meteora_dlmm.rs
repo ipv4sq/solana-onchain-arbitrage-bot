@@ -1,48 +1,325 @@
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::tx::constants::METEORA_DLMM_PROGRAM;
+use anyhow::Result;
+use borsh::{BorshDeserialize, BorshSerialize};
+use itertools::concat;
 use solana_program::pubkey::Pubkey;
 
-pub struct MeteoraDlmmAccountData {}
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct StaticParameters {
+    pub base_factor: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub variable_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+    pub min_bin_id: i32,
+    pub max_bin_id: i32,
+    pub protocol_share: u16,
+    pub base_fee_power_factor: u8,
+    pub _padding: [u8; 5],
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct VariableParameters {
+    pub volatility_accumulator: u32,
+    pub volatility_reference: u32,
+    pub index_reference: i32,
+    pub _padding: [u8; 4],
+    pub last_update_timestamp: i64,
+    pub _padding_1: [u8; 8],
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct ProtocolFee {
+    pub amount_x: u64,
+    pub amount_y: u64,
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct RewardInfo {
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub funder: Pubkey,
+    pub reward_duration: u64,
+    pub reward_duration_end: u64,
+    pub reward_rate: u128,
+    pub last_update_time: u64,
+    pub cumulative_seconds_with_empty_liquidity_reward: u64,
+}
+
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[repr(C)]
+pub struct MeteoraDlmmAccountData {
+    pub parameters: StaticParameters,
+    pub v_parameters: VariableParameters,
+    pub bump_seed: [u8; 1],
+    pub bin_step_seed: [u8; 2],
+    pub pair_type: u8,
+    pub active_id: i32,
+    pub bin_step: u16,
+    pub status: u8,
+    pub require_base_factor_seed: u8,
+    pub base_factor_seed: [u8; 2],
+    pub activation_type: u8,
+    pub creator_pool_on_off_control: u8,
+    pub token_x_mint: Pubkey,
+    pub token_y_mint: Pubkey,
+    pub reserve_x: Pubkey,
+    pub reserve_y: Pubkey,
+    pub protocol_fee: ProtocolFee,
+    pub _padding_1: [u8; 32],
+    pub reward_infos: [RewardInfo; 2],
+    pub oracle: Pubkey,
+    pub bin_array_bitmap: [u64; 16],
+    pub last_updated_at: i64,
+    pub _padding_2: [u8; 32],
+    pub pre_activation_swap_address: Pubkey,
+    pub base_key: Pubkey,
+    pub activation_point: u64,
+    pub pre_activation_duration: u64,
+    pub _padding_3: [u8; 8],
+    pub _padding_4: u64,
+    pub creator: Pubkey,
+    pub token_mint_x_program_flag: u8,
+    pub token_mint_y_program_flag: u8,
+    pub _reserved: [u8; 22],
+}
 
 impl PoolAccountDataLoader for MeteoraDlmmAccountData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
-        todo!()
+        if data.len() < 8 {
+            return Err(anyhow::anyhow!(
+                "Account data too short, expected at least 8 bytes"
+            ));
+        }
+
+        MeteoraDlmmAccountData::try_from_slice(&data[8..])
+            .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
     fn get_base_mint(&self) -> Pubkey {
-        todo!()
+        self.token_x_mint
     }
 
     fn get_quote_mint(&self) -> Pubkey {
-        todo!()
+        self.token_y_mint
     }
 
     fn get_base_vault(&self) -> Pubkey {
-        todo!()
+        self.reserve_x
     }
 
     fn get_quote_vault(&self) -> Pubkey {
-        todo!()
+        self.reserve_y
     }
 }
 
 type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmAccountData>;
+
 impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: MeteoraDlmmAccountData,
         desired_mint: Pubkey,
-    ) -> anyhow::Result<Self> {
-        todo!()
+    ) -> Result<Self> {
+        account_data.shall_contain(&desired_mint)?;
+
+        Ok(MeteoraDlmmPoolConfig {
+            pool: *pool,
+            pool_data: account_data,
+            desired_mint,
+            minor_mint: account_data.the_other_mint(&desired_mint)?,
+            readonly_accounts: vec![
+                desired_mint,
+                *METEORA_DLMM_PROGRAM,
+                account_data.oracle,
+            ],
+            writeable_accounts: concat(vec![
+                vec![
+                    *pool,
+                    account_data.reserve_x,
+                    account_data.reserve_y,
+                ],
+                account_data.get_bin_arrays(pool),
+            ]),
+        })
+    }
+}
+
+impl MeteoraDlmmAccountData {
+    fn get_bin_arrays(&self, pool: &Pubkey) -> Vec<Pubkey> {
+        let mut bin_arrays = Vec::new();
+        
+        // Get bin arrays around the active bin
+        // Meteora DLMM typically needs 3 bin arrays: previous, current, next
+        let active_bin = self.active_id;
+        let bin_step = self.bin_step as i32;
+        
+        // Bin array indices are calculated based on the active bin ID
+        // Each bin array covers a range of bins
+        const BINS_PER_ARRAY: i32 = 70; // Standard for Meteora DLMM
+        
+        let current_array_index = active_bin / BINS_PER_ARRAY;
+        
+        // Add previous, current, and next bin arrays
+        for offset in -1..=1 {
+            let array_index = current_array_index + offset;
+            bin_arrays.push(Self::get_bin_array_pda(pool, array_index));
+        }
+        
+        bin_arrays
+    }
+    
+    fn get_bin_array_pda(pool: &Pubkey, bin_array_index: i32) -> Pubkey {
+        let index_bytes = bin_array_index.to_le_bytes();
+        Pubkey::find_program_address(
+            &[b"bin_array", pool.as_ref(), &index_bytes],
+            &*METEORA_DLMM_PROGRAM,
+        )
+        .0
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::constants::helpers::ToPubkey;
+
     #[test]
-    fn test_load_data() {
-        todo!()
+    fn test_parse_meteora_dlmm_account_data() {
+        use base64::{engine::general_purpose, Engine as _};
+        use serde_json::Value;
+
+        let data = general_purpose::STANDARD
+            .decode(ACCOUNT_DATA_BASE64)
+            .unwrap();
+        let account = MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+
+        let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
+
+        // Verify parameters
+        assert_eq!(
+            account.parameters.base_factor,
+            json["parameters"]["data"]["base_factor"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap()
+        );
+        assert_eq!(
+            account.parameters.filter_period,
+            json["parameters"]["data"]["filter_period"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap()
+        );
+        assert_eq!(
+            account.parameters.protocol_share,
+            json["parameters"]["data"]["protocol_share"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap()
+        );
+
+        // Verify active bin and bin step
+        assert_eq!(
+            account.active_id,
+            json["active_id"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<i32>()
+                .unwrap()
+        );
+        assert_eq!(
+            account.bin_step,
+            json["bin_step"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap()
+        );
+
+        // Verify token mints
+        assert_eq!(
+            account.token_x_mint.to_string(),
+            json["token_x_mint"]["data"].as_str().unwrap()
+        );
+        assert_eq!(
+            account.token_y_mint.to_string(),
+            json["token_y_mint"]["data"].as_str().unwrap()
+        );
+
+        // Verify reserves
+        assert_eq!(
+            account.reserve_x.to_string(),
+            json["reserve_x"]["data"].as_str().unwrap()
+        );
+        assert_eq!(
+            account.reserve_y.to_string(),
+            json["reserve_y"]["data"].as_str().unwrap()
+        );
+
+        // Verify oracle
+        assert_eq!(
+            account.oracle.to_string(),
+            json["oracle"]["data"].as_str().unwrap()
+        );
     }
 
+    #[test]
+    fn test_bin_arrays() {
+        use base64::{engine::general_purpose, Engine as _};
+
+        let pool_pubkey = POOL_ADDRESS.to_pubkey();
+
+        let data = general_purpose::STANDARD
+            .decode(ACCOUNT_DATA_BASE64)
+            .unwrap();
+        let account_data =
+            MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+
+        // Verify values from JSON
+        assert_eq!(account_data.bin_step, 20);
+        assert_eq!(account_data.active_id, 200);
+
+        let bin_arrays = account_data.get_bin_arrays(&pool_pubkey);
+
+        // Should have 3 bin arrays (previous, current, next)
+        assert_eq!(bin_arrays.len(), 3);
+
+        // Verify the bin array PDAs are being generated
+        // Active bin 200 / 70 bins per array = array index 2
+        // So we should get arrays for indices 1, 2, 3
+        let expected_indices = vec![1, 2, 3];
+        for (i, expected_index) in expected_indices.iter().enumerate() {
+            let expected_pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool_pubkey, *expected_index);
+            assert_eq!(bin_arrays[i], expected_pda);
+        }
+    }
+
+    #[test]
+    fn test_get_bin_array_pda() {
+        let pool = POOL_ADDRESS.to_pubkey();
+        let bin_array_index = 2;
+        
+        let pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool, bin_array_index);
+        
+        // Verify it's a valid PDA
+        let index_bytes = bin_array_index.to_le_bytes();
+        let (expected_pda, _bump) = Pubkey::find_program_address(
+            &[b"bin_array", pool.as_ref(), &index_bytes],
+            &*METEORA_DLMM_PROGRAM,
+        );
+        
+        assert_eq!(pda, expected_pda);
+    }
 
     const POOL_ADDRESS: &str = "8ztFxjFPfVUtEf4SLSapcFj8GW2dxyUA9no2bLPq7H7V";
     const ACCOUNT_DATA_BASE64: &str = "IQsxYrVlsQ0QJx4AWAKIEyBOAAAwVwUAtar//0tVAAD0AQAAAAAAAKlQAACJAgAAxgAAAAAAAACthZ1oAAAAAAAAAAAAAAAA/RQAA8gAAAAUAAAAECcAAMDwQqqsn4I3RswQ4QTTY1WRzy16NHGubwcnwI/bJ02FBpuIV/6rgYT7aH9jRhjANdrEOdwa6ztVmKDwAAAAAAFLIKeIqVbCJLfRzAXj0i57dYiuNT0BDGidCwPV101ZK/JBTOrKFnQ0+pYZB/CAnCaFTYy4e2m7WYU+0HudVPia3HxfclcAAADNXYQ0OAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2890xm4z7dNMN2joFKm10GFDBVccWYrFno7Rmd3nVw0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2O7//wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABULzqvBPVQwYswClugFtsyU938tEfqaHFwk5hbiY2f6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACZ6kZcnXYJnUKGAndLzPGvshsD4aJ6oRLteCWio9S9RQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
