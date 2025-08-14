@@ -1,9 +1,9 @@
+use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
 use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
-use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -79,13 +79,10 @@ impl PoolConfigInit<RaydiumCpmmAccountData> for RaydiumCpmmPoolConfig {
             pool_data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![
-                desired_mint,
-                *RAYDIUM_CPMM_PROGRAM,
-                RAYDIUM_CP_AUTHORITY.to_pubkey(),
-            ],
-            writeable_accounts: vec![
+            readonly_accounts: vec![],
+            partial_writeable_accounts: vec![
                 *pool,
+                RAYDIUM_CPMM_AUTHORITY.to_pubkey(),
                 account_data.amm_config,
                 account_data.token_0_vault,
                 account_data.token_1_vault,
@@ -95,11 +92,12 @@ impl PoolConfigInit<RaydiumCpmmAccountData> for RaydiumCpmmPoolConfig {
     }
 }
 
-const RAYDIUM_CP_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
+const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arb::constant::mint::WSOL_KEY;
     use crate::constants::addresses::TokenMint;
     use base64::engine::general_purpose;
     use base64::Engine;
@@ -114,19 +112,28 @@ mod tests {
 
     #[test]
     fn test_computed_accounts() {
-        let readonly = vec![""];
-        let writeable = vec![""];
         let account = load_data().unwrap();
-        let config = RaydiumCpmmPoolConfig::init(
-            &POOL_ADDRESS.to_pubkey(),
-            account,
-            TokenMint::SOL.to_pubkey(),
-        )
-        .unwrap();
-        
-        
-        
-        todo!()
+        let expected_writeable = vec![
+            // Authority
+            RAYDIUM_CPMM_AUTHORITY.to_pubkey(),
+            // Amm Config
+            "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2".to_pubkey(),
+            // Pool itself
+            POOL_ADDRESS.to_pubkey(),
+            // Input/Output Vault
+            "HgNPDD8bpbSrGyHegiCT5xrYxHTfwLfZydwGkjNCJRKA".to_pubkey(),
+            "9xsCiNwYQXM3ZeHFSVj9JQdP1vREJREpN23f6wvxA1ty".to_pubkey(),
+            // Observation State
+            "4UdSz2kMddtX4woMmdgkWg75fdBP8FgYwqfkh4ri7mnD".to_pubkey(),
+        ];
+
+        let config =
+            RaydiumCpmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), account, *WSOL_KEY).unwrap();
+
+        crate::test::test_utils::assert_vec_eq_unordered(
+            config.partial_writeable_accounts,
+            expected_writeable,
+        );
     }
 
     #[test]

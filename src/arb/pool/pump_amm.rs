@@ -68,7 +68,7 @@ impl PoolConfigInit<PumpAmmAccountData> for PumpAmmPoolConfig {
                 desired_mint,
                 *PUMP_PROGRAM,
             ],
-            writeable_accounts: vec![
+            partial_writeable_accounts: vec![
                 *pool,
                 account_data.pool_base_token_account,
                 account_data.pool_quote_token_account,

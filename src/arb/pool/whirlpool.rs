@@ -80,7 +80,7 @@ impl PoolConfigInit<WhirlpoolAccountData> for WhirlpoolPoolConfig {
                 desired_mint,
                 *WHIRLPOOL_PROGRAM,
             ],
-            writeable_accounts: concat(vec![
+            partial_writeable_accounts: concat(vec![
                 vec![
                     *pool,
                     WhirlpoolAccountData::get_oracle(pool),

@@ -60,8 +60,18 @@ pub struct PoolConfig<T> {
     pub pool_data: T,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
+    /*
+    This is the partial readonly accounts, DOES NOT include
+    1. Input/Output Token Program
+     */
     pub readonly_accounts: Vec<Pubkey>,
-    pub writeable_accounts: Vec<Pubkey>,
+    /*
+    This is the partial writable accounts, DOES NOT include
+    1. The Payer
+    2. The Input/Output Token Account
+    3. The Input/Output Token Mint
+     */
+    pub partial_writeable_accounts: Vec<Pubkey>,
 }
 
 pub trait PoolConfigInit<T>: Sized {

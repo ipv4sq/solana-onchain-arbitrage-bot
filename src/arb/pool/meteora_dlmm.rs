@@ -88,7 +88,7 @@ impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
             readonly_accounts: vec![desired_mint, *METEORA_DLMM_PROGRAM, account_data.oracle],
-            writeable_accounts: concat(vec![
+            partial_writeable_accounts: concat(vec![
                 vec![*pool, account_data.reserve_x, account_data.reserve_y],
                 account_data.get_bin_arrays(pool),
             ]),
