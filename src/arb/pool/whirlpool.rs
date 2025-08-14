@@ -61,8 +61,8 @@ impl PoolAccountDataLoader for WhirlpoolAccountData {
 }
 
 type WhirlpoolPoolConfig = PoolConfig<WhirlpoolAccountData>;
-
-impl PoolConfigInit<WhirlpoolAccountData> for WhirlpoolPoolConfig {
+pub struct WhirlpoolSwapAccounts {}
+impl PoolConfigInit<WhirlpoolAccountData, WhirlpoolSwapAccounts> for WhirlpoolPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: WhirlpoolAccountData,
@@ -72,24 +72,28 @@ impl PoolConfigInit<WhirlpoolAccountData> for WhirlpoolPoolConfig {
 
         Ok(WhirlpoolPoolConfig {
             pool: *pool,
-            pool_data: account_data,
+            data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![
-                // TODO memo program
-                desired_mint,
-                *WHIRLPOOL_PROGRAM,
-            ],
-            partial_writeable_accounts: concat(vec![
-                vec![
-                    *pool,
-                    WhirlpoolAccountData::get_oracle(pool),
-                    account_data.token_vault_a,
-                    account_data.token_vault_b,
-                ],
-                account_data.get_tick_arrays(pool),
-            ]),
+            // readonly_accounts: vec![
+            //     // TODO memo program
+            //     desired_mint,
+            //     *WHIRLPOOL_PROGRAM,
+            // ],
+            // partial_writeable_accounts: concat(vec![
+            //     vec![
+            //         *pool,
+            //         WhirlpoolAccountData::get_oracle(pool),
+            //         account_data.token_vault_a,
+            //         account_data.token_vault_b,
+            //     ],
+            //     account_data.get_tick_arrays(pool),
+            // ]),
         })
+    }
+
+    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<WhirlpoolSwapAccounts> {
+        todo!()
     }
 }
 

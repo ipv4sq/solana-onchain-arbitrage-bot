@@ -39,13 +39,17 @@ impl PoolAccountDataLoader for MeteoraDammV2AccountData {
 }
 
 type MeteoraPoolConfig = PoolConfig<MeteoraDammV2AccountData>;
-
-impl PoolConfigInit<MeteoraDammV2AccountData> for MeteoraPoolConfig {
+pub struct MeteoraDammV2SwapAccounts;
+impl PoolConfigInit<MeteoraDammV2AccountData, MeteoraDammV2SwapAccounts> for MeteoraPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: MeteoraDammV2AccountData,
         desired_mint: Pubkey,
     ) -> Result<Self> {
+        todo!()
+    }
+
+    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<MeteoraDammV2SwapAccounts> {
         todo!()
     }
 }

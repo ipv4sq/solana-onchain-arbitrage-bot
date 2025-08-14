@@ -40,9 +40,13 @@ impl PoolAccountDataLoader for ExampleAccountData {
 }
 
 type ExamplePoolConfig = PoolConfig<ExampleAccountData>;
-
-impl PoolConfigInit<ExampleAccountData> for ExamplePoolConfig {
+pub struct ExamplePoolSwapAccounts;
+impl PoolConfigInit<ExampleAccountData, ExamplePoolSwapAccounts> for ExamplePoolConfig {
     fn init(pool: &Pubkey, account_data: ExampleAccountData, desired_mint: Pubkey) -> Result<Self> {
+        todo!()
+    }
+
+    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<ExamplePoolSwapAccounts> {
         todo!()
     }
 }

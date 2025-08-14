@@ -1,5 +1,25 @@
+use crate::constants::addresses::TokenProgram;
 use anyhow::Result;
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use spl_associated_token_account::get_associated_token_address_with_program_id;
+
+#[macro_export]
+macro_rules! impl_swap_accounts_to_list {
+    ($struct_name:ident { $($field:ident),+ $(,)? }) => {
+        impl $crate::arb::pool::interface::SwapAccountsToList for $struct_name {
+            fn to_list(&self) -> Vec<&AccountMeta> {
+                vec![
+                    $(&self.$field),+
+                ]
+            }
+        }
+    };
+    // Alternate syntax without braces for backwards compatibility
+    ($struct_name:ident, $($field:ident),+ $(,)?) => {
+        impl_swap_accounts_to_list!($struct_name { $($field),+ });
+    };
+}
 
 pub trait PoolAccountDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
@@ -57,23 +77,25 @@ pub trait PoolAccountDataLoader: Sized {
 #[derive(Debug, Clone)]
 pub struct PoolConfig<T> {
     pub pool: Pubkey,
-    pub pool_data: T,
+    pub data: T,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
-    /*
-    This is the partial readonly accounts, DOES NOT include
-    1. Input/Output Token Program
-     */
-    pub readonly_accounts: Vec<Pubkey>,
-    /*
-    This is the partial writable accounts, DOES NOT include
-    1. The Payer
-    2. The Input/Output Token Account
-    3. The Input/Output Token Mint
-     */
-    pub partial_writeable_accounts: Vec<Pubkey>,
 }
 
-pub trait PoolConfigInit<T>: Sized {
+pub trait PoolConfigInit<T, P>: Sized {
     fn init(pool: &Pubkey, account_data: T, desired_mint: Pubkey) -> Result<Self>;
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+    ) -> Result<P>;
+
+    fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
+        get_associated_token_address_with_program_id(owner, mint, token_program)
+    }
+}
+
+pub trait SwapAccountsToList: Sized {
+    fn to_list(&self) -> Vec<&AccountMeta>;
 }

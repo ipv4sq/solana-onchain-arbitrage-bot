@@ -1,3 +1,5 @@
+use crate::constants::helpers::ToPubkey;
+use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
 
 // Token mint addresses
@@ -5,7 +7,7 @@ pub struct TokenMint;
 impl TokenMint {
     // Native SOL mint address
     pub const SOL: &'static str = "So11111111111111111111111111111111111111112";
-    
+
     pub const USDC: &'static str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 }
 
@@ -17,6 +19,11 @@ impl TokenProgram {
 
     // Token 2022 program
     pub const TOKEN_2022: &'static str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+}
+
+lazy_static! {
+    pub static ref SPL_TOKEN_KEY: Pubkey = TokenProgram::SPL_TOKEN.to_pubkey();
+    pub static ref TOKEN_2022_KEY: Pubkey = TokenProgram::TOKEN_2022.to_pubkey();
 }
 
 // Address lookup table addresses

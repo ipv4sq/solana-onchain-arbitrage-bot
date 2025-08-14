@@ -1,9 +1,13 @@
-use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::constants::helpers::ToPubkey;
+use crate::constants::addresses::{TokenProgram, SPL_TOKEN_KEY};
+use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+use crate::impl_swap_accounts_to_list;
 use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+
+const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -64,9 +68,43 @@ impl PoolAccountDataLoader for RaydiumCpmmAccountData {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct RaydiumCpmmSwapAccounts {
+    payer: AccountMeta,
+    authority: AccountMeta,
+    amm_config: AccountMeta,
+    pool_state: AccountMeta,
+    input_token_account: AccountMeta,
+    output_token_account: AccountMeta,
+    input_vault: AccountMeta,
+    output_vault: AccountMeta,
+    input_token_program: AccountMeta,
+    output_token_program: AccountMeta,
+    input_token_mint: AccountMeta,
+    output_token_mint: AccountMeta,
+    observation_state: AccountMeta,
+}
+
+impl_swap_accounts_to_list!(
+    RaydiumCpmmSwapAccounts,
+    payer,
+    authority,
+    amm_config,
+    pool_state,
+    input_token_account,
+    output_token_account,
+    input_vault,
+    output_vault,
+    input_token_program,
+    output_token_program,
+    input_token_mint,
+    output_token_mint,
+    observation_state
+);
+
 type RaydiumCpmmPoolConfig = PoolConfig<RaydiumCpmmAccountData>;
 
-impl PoolConfigInit<RaydiumCpmmAccountData> for RaydiumCpmmPoolConfig {
+impl PoolConfigInit<RaydiumCpmmAccountData, RaydiumCpmmSwapAccounts> for RaydiumCpmmPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: RaydiumCpmmAccountData,
@@ -76,29 +114,40 @@ impl PoolConfigInit<RaydiumCpmmAccountData> for RaydiumCpmmPoolConfig {
 
         Ok(RaydiumCpmmPoolConfig {
             pool: *pool,
-            pool_data: account_data,
+            data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![],
-            partial_writeable_accounts: vec![
-                *pool,
-                RAYDIUM_CPMM_AUTHORITY.to_pubkey(),
-                account_data.amm_config,
-                account_data.token_0_vault,
-                account_data.token_1_vault,
-                account_data.observation_key,
-            ],
+        })
+    }
+
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+    ) -> Result<RaydiumCpmmSwapAccounts> {
+        Ok(RaydiumCpmmSwapAccounts {
+            payer: payer.to_signer(),
+            authority: RAYDIUM_CPMM_AUTHORITY.to_pubkey().to_writable(),
+            amm_config: self.data.amm_config.to_writable(),
+            pool_state: self.pool.to_writable(),
+            input_token_account: Self::ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
+            output_token_account: Self::ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
+            input_vault: self.data.token_0_vault.to_writable(),
+            output_vault: self.data.token_1_vault.to_writable(),
+            input_token_program: SPL_TOKEN_KEY.to_readonly(),
+            output_token_program: SPL_TOKEN_KEY.to_readonly(),
+            input_token_mint: input_mint.to_writable(),
+            output_token_mint: output_mint.to_writable(),
+            observation_state: self.data.observation_key.to_writable(),
         })
     }
 }
 
-const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arb::constant::mint::WSOL_KEY;
-    use crate::constants::addresses::TokenMint;
+    use crate::arb::constant::mint::{Mints, WSOL_KEY};
     use base64::engine::general_purpose;
     use base64::Engine;
     // tx: https://solscan.io/tx/4mUwr6wFSxmmaThPELhF5WZECS9GLm6DQqBu3fUKQNaMQ8MXUvaykKnmJGfK8MCHMk3xVSTbrMVBnzKrKE3MnRXS
@@ -113,32 +162,61 @@ mod tests {
     #[test]
     fn test_computed_accounts() {
         let account = load_data().unwrap();
-        let expected_writeable = vec![
-            // Authority
-            RAYDIUM_CPMM_AUTHORITY.to_pubkey(),
-            // Amm Config
-            "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2".to_pubkey(),
-            // Pool itself
-            POOL_ADDRESS.to_pubkey(),
-            // Input/Output Vault
-            "HgNPDD8bpbSrGyHegiCT5xrYxHTfwLfZydwGkjNCJRKA".to_pubkey(),
-            "9xsCiNwYQXM3ZeHFSVj9JQdP1vREJREpN23f6wvxA1ty".to_pubkey(),
-            // Observation State
-            "4UdSz2kMddtX4woMmdgkWg75fdBP8FgYwqfkh4ri7mnD".to_pubkey(),
-        ];
-
+        let payer = "JDDadtcuCMTNy4Y8CDQ5VmL33yqbWRPPmapJdF7sxCvF".to_pubkey();
         let config =
             RaydiumCpmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), account, *WSOL_KEY).unwrap();
 
-        crate::test::test_utils::assert_vec_eq_unordered(
-            config.partial_writeable_accounts,
-            expected_writeable,
-        );
+        let expected = RaydiumCpmmSwapAccounts {
+            payer: payer.to_signer(),
+            authority: "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+                .to_pubkey()
+                .to_writable(),
+            amm_config: "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2"
+                .to_pubkey()
+                .to_writable(),
+            pool_state: POOL_ADDRESS.to_pubkey().to_writable(),
+            input_token_account: "4gDjRYMJ7ha8vonY7L8RiqRYiQfcn4riNsHUAR5XAjNg"
+                .to_pubkey()
+                .to_writable(),
+            output_token_account: "2Mpreh9Z6z6WQEzKauZVzyKdVyx5DYVZZ6aPwdtJVcXK"
+                .to_pubkey()
+                .to_writable(),
+            input_vault: "HgNPDD8bpbSrGyHegiCT5xrYxHTfwLfZydwGkjNCJRKA"
+                .to_pubkey()
+                .to_writable(),
+            output_vault: "9xsCiNwYQXM3ZeHFSVj9JQdP1vREJREpN23f6wvxA1ty"
+                .to_pubkey()
+                .to_writable(),
+            input_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                .to_pubkey()
+                .to_readonly(),
+            output_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                .to_pubkey()
+                .to_readonly(),
+            input_token_mint: "So11111111111111111111111111111111111111112"
+                .to_pubkey()
+                .to_writable(),
+            output_token_mint: "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk"
+                .to_pubkey()
+                .to_writable(),
+            observation_state: "4UdSz2kMddtX4woMmdgkWg75fdBP8FgYwqfkh4ri7mnD"
+                .to_pubkey()
+                .to_writable(),
+        };
+
+        let result = config
+            .build_accounts(
+                &payer,
+                &*WSOL_KEY,
+                &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
+            )
+            .unwrap();
+
+        assert_eq!(expected, result);
     }
 
     #[test]
     fn test_parse_raydium_cpmm_account_data() {
-        use base64::{engine::general_purpose, Engine as _};
         use serde_json::Value;
 
         let account = load_data().unwrap();

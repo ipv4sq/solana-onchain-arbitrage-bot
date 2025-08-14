@@ -11,3 +11,4 @@ impl Mints {
 lazy_static! {
     pub static ref WSOL_KEY: Pubkey = Mints::WSOL.to_pubkey();
 }
+

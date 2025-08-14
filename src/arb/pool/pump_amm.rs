@@ -51,7 +51,9 @@ impl PoolAccountDataLoader for PumpAmmAccountData {
 
 type PumpAmmPoolConfig = PoolConfig<PumpAmmAccountData>;
 
-impl PoolConfigInit<PumpAmmAccountData> for PumpAmmPoolConfig {
+pub struct PumpAmmAccountSwapAccounts {}
+
+impl PoolConfigInit<PumpAmmAccountData, PumpAmmAccountSwapAccounts> for PumpAmmPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: PumpAmmAccountData,
@@ -61,23 +63,27 @@ impl PoolConfigInit<PumpAmmAccountData> for PumpAmmPoolConfig {
 
         Ok(PumpAmmPoolConfig {
             pool: *pool,
-            pool_data: account_data,
+            data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![
-                desired_mint,
-                *PUMP_PROGRAM,
-            ],
-            partial_writeable_accounts: vec![
-                *pool,
-                account_data.pool_base_token_account,
-                account_data.pool_quote_token_account,
-                PumpAmmAccountData::get_creator_vault_ata(
-                    &PumpAmmAccountData::get_creator_vault_authority(&account_data.coin_creator),
-                    &account_data.base_mint,
-                ),
-            ],
+            // readonly_accounts: vec![
+            //     desired_mint,
+            //     *PUMP_PROGRAM,
+            // ],
+            // partial_writeable_accounts: vec![
+            //     *pool,
+            //     account_data.pool_base_token_account,
+            //     account_data.pool_quote_token_account,
+            //     PumpAmmAccountData::get_creator_vault_ata(
+            //         &PumpAmmAccountData::get_creator_vault_authority(&account_data.coin_creator),
+            //         &account_data.base_mint,
+            //     ),
+            // ],
         })
+    }
+
+    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<PumpAmmAccountSwapAccounts> {
+        todo!()
     }
 }
 

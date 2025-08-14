@@ -1,5 +1,5 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
+use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use itertools::concat;
@@ -73,8 +73,8 @@ impl PoolAccountDataLoader for MeteoraDlmmAccountData {
 }
 
 type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmAccountData>;
-
-impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
+pub struct MeteoraDlmmSwapAccounts;
+impl PoolConfigInit<MeteoraDlmmAccountData, MeteoraDlmmSwapAccounts> for MeteoraDlmmPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: MeteoraDlmmAccountData,
@@ -84,15 +84,27 @@ impl PoolConfigInit<MeteoraDlmmAccountData> for MeteoraDlmmPoolConfig {
 
         Ok(MeteoraDlmmPoolConfig {
             pool: *pool,
-            pool_data: account_data,
+            data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
-            readonly_accounts: vec![desired_mint, *METEORA_DLMM_PROGRAM, account_data.oracle],
-            partial_writeable_accounts: concat(vec![
-                vec![*pool, account_data.reserve_x, account_data.reserve_y],
-                account_data.get_bin_arrays(pool),
-            ]),
+            // readonly_accounts: vec![
+            //     //
+            //     *METEORA_DLMM_PROGRAM,
+            // ],
+            // partial_writeable_accounts: concat(vec![
+            //     vec![
+            //         //
+            //         *pool,
+            //         account_data.reserve_x,
+            //         account_data.reserve_y,
+            //     ],
+            //     account_data.get_bin_arrays(pool),
+            // ]),
         })
+    }
+
+    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<MeteoraDlmmSwapAccounts> {
+        todo!()
     }
 }
 

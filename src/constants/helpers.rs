@@ -1,3 +1,4 @@
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 use std::str::FromStr;
@@ -33,5 +34,26 @@ impl ToSignature for &str {
 impl ToSignature for String {
     fn to_sig(&self) -> Signature {
         Signature::from_str(self).unwrap()
+    }
+}
+
+/// Extension trait for Pubkey to easily create AccountMeta
+pub trait ToAccountMeta {
+    fn to_signer(&self) -> AccountMeta;
+    fn to_readonly(&self) -> AccountMeta;
+    fn to_writable(&self) -> AccountMeta;
+}
+
+impl ToAccountMeta for Pubkey {
+    fn to_signer(&self) -> AccountMeta {
+        AccountMeta::new(*self, true)
+    }
+    
+    fn to_readonly(&self) -> AccountMeta {
+        AccountMeta::new_readonly(*self, false)
+    }
+    
+    fn to_writable(&self) -> AccountMeta {
+        AccountMeta::new(*self, false)
     }
 }
