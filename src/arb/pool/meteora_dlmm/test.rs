@@ -2,13 +2,14 @@
 mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
     use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
+    use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
+    use crate::arb::pool::meteora_dlmm::data::MeteoraDlmmAccountData;
     use crate::arb::pool::meteora_dlmm::pool_config::*;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
-    use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
-    use crate::arb::pool::meteora_dlmm::data::MeteoraDlmmAccountData;
+
     // tx: https://solscan.io/tx/2qVruJuf1dUTnUfG3ePnp4cRSg4WGK3P1AVUaB7MQdEJ7UMnzVdWL2677BNuPJJmowmvmfirEC9XvQ4uPZpcaTxw
 
     fn load_data() -> Result<MeteoraDlmmAccountData> {
@@ -17,6 +18,7 @@ mod tests {
             MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
         Ok(account)
     }
+
     #[test]
     fn test_swap_accounts_with_amount() {
         // Test with the actual transaction amount: 1.485 SOL
@@ -37,28 +39,7 @@ mod tests {
             )
             .unwrap();
 
-        println!("\n=== BIN ARRAY CALCULATION TEST ===");
-        println!(
-            "Amount In: {} ({} SOL)",
-            amount_in,
-            amount_in as f64 / 1_000_000_000.0
-        );
-        println!("Active Bin ID: {}", load_data().unwrap().active_id);
-        println!(
-            "Active Bin Array Index: {}",
-            load_data().unwrap().active_id / 70
-        );
 
-        println!(
-            "\nGenerated {} bin arrays for {} SOL swap:",
-            result.bin_arrays.len(),
-            amount_in as f64 / 1_000_000_000.0
-        );
-
-        for (i, ba) in result.bin_arrays.iter().enumerate() {
-            let index = (load_data().unwrap().active_id / 70) + (i as i32 - 2);
-            println!("  [{}] Index {}: {}", i, index, ba.pubkey);
-        }
 
         // Compare with expected from transaction
         let expected_arrays = vec![
@@ -69,12 +50,6 @@ mod tests {
             "433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU",
         ];
 
-        println!("\nExpected bin arrays from actual transaction:");
-        for (i, ba) in expected_arrays.iter().enumerate() {
-            println!("  [{}]: {}", i, ba);
-        }
-
-        // For large swaps (>= 1 SOL), we should generate 5 bin arrays
         assert_eq!(
             result.bin_arrays.len(),
             5,
@@ -138,151 +113,7 @@ mod tests {
             )
             .unwrap();
 
-        // Print account details for debugging
-        println!("\n=== METEORA DLMM SWAP ACCOUNTS VALIDATION ===");
-        println!("Pool: {}", POOL_ADDRESS);
-        println!("Active Bin ID: {}", load_data().unwrap().active_id);
-        println!(
-            "Active Bin Array Index: {}",
-            load_data().unwrap().active_id / 70
-        );
-
-        // Print generated bin arrays
-        println!("\nGenerated Bin Arrays ({}): ", result.bin_arrays.len());
-        for (i, ba) in result.bin_arrays.iter().enumerate() {
-            let index = (load_data().unwrap().active_id / 70) + (i as i32 - 1);
-            println!("  [{}] Index {}: {}", i, index, ba.pubkey);
-        }
-
-        // Print expected bin arrays from transaction
-        println!(
-            "\nExpected Bin Arrays from Transaction ({}):",
-            expected.bin_arrays.len()
-        );
-        for (i, ba) in expected.bin_arrays.iter().enumerate() {
-            println!("  [{}]: {}", i, ba.pubkey);
-        }
-
-        // Compare other fields
-        let mut has_diff = false;
-        if result != expected {
-            println!("\n=== DIFFERENCES ===\n");
-
-            // Compare each field
-            if result.lb_pair != expected.lb_pair {
-                println!("lb_pair:");
-                println!("  Expected: {:?}", expected.lb_pair);
-                println!("  Got:      {:?}", result.lb_pair);
-            }
-
-            if result.bin_array_bitmap_extension != expected.bin_array_bitmap_extension {
-                println!("bin_array_bitmap_extension:");
-                println!("  Expected: {:?}", expected.bin_array_bitmap_extension);
-                println!("  Got:      {:?}", result.bin_array_bitmap_extension);
-            }
-
-            if result.reverse_x != expected.reverse_x {
-                println!("reverse_x:");
-                println!("  Expected: {:?}", expected.reverse_x);
-                println!("  Got:      {:?}", result.reverse_x);
-            }
-
-            if result.reverse_y != expected.reverse_y {
-                println!("reverse_y:");
-                println!("  Expected: {:?}", expected.reverse_y);
-                println!("  Got:      {:?}", result.reverse_y);
-            }
-
-            if result.user_token_in != expected.user_token_in {
-                println!("user_token_in:");
-                println!("  Expected: {:?}", expected.user_token_in);
-                println!("  Got:      {:?}", result.user_token_in);
-            }
-
-            if result.user_token_out != expected.user_token_out {
-                println!("user_token_out:");
-                println!("  Expected: {:?}", expected.user_token_out);
-                println!("  Got:      {:?}", result.user_token_out);
-            }
-
-            if result.token_x_mint != expected.token_x_mint {
-                println!("token_x_mint:");
-                println!("  Expected: {:?}", expected.token_x_mint);
-                println!("  Got:      {:?}", result.token_x_mint);
-            }
-
-            if result.token_y_mint != expected.token_y_mint {
-                println!("token_y_mint:");
-                println!("  Expected: {:?}", expected.token_y_mint);
-                println!("  Got:      {:?}", result.token_y_mint);
-            }
-
-            if result.oracle != expected.oracle {
-                println!("oracle:");
-                println!("  Expected: {:?}", expected.oracle);
-                println!("  Got:      {:?}", result.oracle);
-            }
-
-            if result.host_fee_in != expected.host_fee_in {
-                println!("host_fee_in:");
-                println!("  Expected: {:?}", expected.host_fee_in);
-                println!("  Got:      {:?}", result.host_fee_in);
-            }
-
-            if result.user != expected.user {
-                println!("user:");
-                println!("  Expected: {:?}", expected.user);
-                println!("  Got:      {:?}", result.user);
-            }
-
-            if result.token_x_program != expected.token_x_program {
-                println!("token_x_program:");
-                println!("  Expected: {:?}", expected.token_x_program);
-                println!("  Got:      {:?}", result.token_x_program);
-            }
-
-            if result.token_y_program != expected.token_y_program {
-                println!("token_y_program:");
-                println!("  Expected: {:?}", expected.token_y_program);
-                println!("  Got:      {:?}", result.token_y_program);
-            }
-
-            if result.event_authority != expected.event_authority {
-                println!("event_authority:");
-                println!("  Expected: {:?}", expected.event_authority);
-                println!("  Got:      {:?}", result.event_authority);
-            }
-
-            if result.program != expected.program {
-                println!("program:");
-                println!("  Expected: {:?}", expected.program);
-                println!("  Got:      {:?}", result.program);
-            }
-
-            if result.bin_arrays != expected.bin_arrays {
-                has_diff = true;
-                println!("bin_arrays: DIFFERENT");
-                println!("  Note: Bin arrays are dynamically calculated based on liquidity needs");
-                println!("  The expected values are from a specific historical transaction");
-            }
-
-            if has_diff {
-                println!("\n=== END DIFFERENCES ===\n");
-            }
-        }
-
-        // For now, we'll skip the bin arrays comparison since they're dynamic
-        // and depend on the specific swap size and liquidity distribution
-        assert_eq!(result.lb_pair, expected.lb_pair);
-        assert_eq!(result.reverse_x, expected.reverse_x);
-        assert_eq!(result.reverse_y, expected.reverse_y);
-        assert_eq!(result.oracle, expected.oracle);
-        // Validate that we generate the correct number of bin arrays (3 for standard swaps)
-        assert_eq!(
-            result.bin_arrays.len(),
-            3,
-            "Should generate 3 bin arrays (previous, current, next)"
-        );
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -368,7 +199,6 @@ mod tests {
             json["oracle"]["data"].as_str().unwrap()
         );
     }
-
 
     #[test]
     fn test_get_bin_array_pda() {
