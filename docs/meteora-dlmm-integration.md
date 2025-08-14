@@ -22,16 +22,28 @@ Meteora DLMM uses a bin-based system where liquidity is distributed across discr
 - Swaps may cross multiple bins depending on liquidity and size
 
 #### Bin Array Calculation
+
+The implementation provides dynamic bin array calculation based on swap size:
+
 ```rust
-// Each bin array contains 70 bins
-const BINS_PER_ARRAY: i32 = 70;
+// Calculate required bin arrays for a swap
+let bin_arrays = calculate_bin_arrays_for_swap(
+    &pool,
+    active_bin_id,
+    amount_in,
+    is_a_to_b,
+);
+```
 
-// Calculate bin array index from bin ID
-let bin_array_index = bin_id / BINS_PER_ARRAY;
+**Size-based logic:**
+- Small swaps (< 0.1 SOL): 3 bin arrays (indices -1, 0, 1)
+- Medium swaps (0.1-1 SOL): 4 bin arrays (indices -1, 0, 1, 2)
+- Large swaps (≥ 1 SOL): 5 bin arrays (indices -2, -1, 0, 1, 2)
 
-// Derive bin array PDA
+#### Bin Array PDA Derivation
+```rust
 let (bin_array_pda, _) = Pubkey::find_program_address(
-    &[b"bin_array", pool.as_ref(), &bin_array_index.to_le_bytes()],
+    &[b"bin_array", pool.as_ref(), &index.to_le_bytes()],
     &METEORA_DLMM_PROGRAM_ID,
 );
 ```
@@ -40,15 +52,20 @@ let (bin_array_pda, _) = Pubkey::find_program_address(
 
 When executing a swap:
 1. Determine the active bin array based on `active_id`
-2. Include adjacent bin arrays for larger swaps that may cross bins
-3. Pass bin arrays as remaining accounts to the swap instruction
+2. Calculate required bin arrays based on swap amount
+3. Include bin arrays as remaining accounts in the swap instruction
 
-The implementation currently includes:
-- Previous bin array (index - 1)
-- Current bin array (index)
-- Next bin array (index + 1)
+### Usage
 
-This ensures sufficient liquidity coverage for most swaps.
+```rust
+// Build swap accounts with specific amount
+let accounts = config.build_accounts_with_amount(
+    &payer,
+    &input_mint,
+    &output_mint,
+    amount_in, // e.g., 1_485_000_000 for 1.485 SOL
+)?;
+```
 
 ## Reference Implementation
 
@@ -67,7 +84,22 @@ The `meteora-cpi-examples` submodule contains Meteora's official CPI examples:
 The implementation includes tests that verify:
 - Correct bin array PDA derivation
 - Proper account structure for swap instructions
-- Bin array selection based on active bin ID
+- Dynamic bin array selection based on swap amount
+
+### Example Test Output
+```
+=== BIN ARRAY CALCULATION TEST ===
+Amount In: 1485000000 (1.485 SOL)
+Active Bin ID: 200
+Active Bin Array Index: 2
+
+Generated 5 bin arrays for 1.485 SOL swap:
+  [0] Index -2: 433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU
+  [1] Index -1: 69EaDEqwjBKKRFKrtRxb7okPDu5EP5nFhbuqrBtekwDg
+  [2] Index 0: 5Dj2QB9BtRtWV6skbCy6eadj23h6o46CVHpLbjsCJCEB
+  [3] Index 1: MrNAjbZvwT2awQDobynRrmkJStE5ejprQ7QmFXLvycq
+  [4] Index 2: 9caL9WS3Y1RZ7L3wwXp4qa8hapTicbDY5GJJ3pteP7oX
+```
 
 ## Constants
 
@@ -81,3 +113,4 @@ The implementation includes tests that verify:
 - The swap amount calculation is currently simplified and doesn't implement full DLMM math
 - Real implementation would need to fetch bin liquidity data and calculate exact outputs
 - Fee calculation should consider both base fees and variable fees based on volatility
+- Bin arrays are ordered by index, with the active bin array typically in the middle
