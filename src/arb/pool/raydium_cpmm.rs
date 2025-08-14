@@ -1,8 +1,9 @@
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::tx::constants::RAYDIUM_CPMM_PROGRAM;
+use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
+use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -81,35 +82,59 @@ impl PoolConfigInit<RaydiumCpmmAccountData> for RaydiumCpmmPoolConfig {
             readonly_accounts: vec![
                 desired_mint,
                 *RAYDIUM_CPMM_PROGRAM,
-                account_data.amm_config,
-                account_data.observation_key,
+                RAYDIUM_CP_AUTHORITY.to_pubkey(),
             ],
             writeable_accounts: vec![
                 *pool,
+                account_data.amm_config,
                 account_data.token_0_vault,
                 account_data.token_1_vault,
+                account_data.observation_key,
             ],
         })
     }
 }
 
-impl RaydiumCpmmAccountData {}
+const RAYDIUM_CP_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::helpers::ToPubkey;
+    use crate::constants::addresses::TokenMint;
+    use base64::engine::general_purpose;
+    use base64::Engine;
+    // tx: https://solscan.io/tx/4mUwr6wFSxmmaThPELhF5WZECS9GLm6DQqBu3fUKQNaMQ8MXUvaykKnmJGfK8MCHMk3xVSTbrMVBnzKrKE3MnRXS
+
+    fn load_data() -> Result<RaydiumCpmmAccountData> {
+        let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
+        let account =
+            RaydiumCpmmAccountData::load_data(&data).expect("Failed to parse account data");
+        return Ok(account);
+    }
+
+    #[test]
+    fn test_computed_accounts() {
+        let readonly = vec![""];
+        let writeable = vec![""];
+        let account = load_data().unwrap();
+        let config = RaydiumCpmmPoolConfig::init(
+            &POOL_ADDRESS.to_pubkey(),
+            account,
+            TokenMint::SOL.to_pubkey(),
+        )
+        .unwrap();
+        
+        
+        
+        todo!()
+    }
 
     #[test]
     fn test_parse_raydium_cpmm_account_data() {
         use base64::{engine::general_purpose, Engine as _};
         use serde_json::Value;
 
-        let data = general_purpose::STANDARD
-            .decode(ACCOUNT_DATA_BASE64)
-            .unwrap();
-        let account =
-            RaydiumCpmmAccountData::load_data(&data).expect("Failed to parse account data");
+        let account = load_data().unwrap();
 
         // Parse the JSON to validate
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");

@@ -1,5 +1,5 @@
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::tx::constants::METEORA_DLMM_PROGRAM;
+use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use itertools::concat;
