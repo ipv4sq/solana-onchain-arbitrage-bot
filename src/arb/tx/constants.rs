@@ -36,7 +36,7 @@ impl DexType {
     // Determine DEX type from a program ID
     pub fn determine_from(program_id: &Pubkey) -> Self {
         let program_str = program_id.to_string();
-        
+
         match program_str.as_str() {
             KnownPoolPrograms::RAYDIUM_V4 => DexType::RaydiumV4,
             KnownPoolPrograms::RAYDIUM_CP => DexType::RaydiumCp,

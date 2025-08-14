@@ -52,46 +52,25 @@ impl SmbIxParameter {
         }
     }
 
-    // Create default parameters with the given raw data
-    pub fn default_with_data(data: &[u8]) -> Self {
-        Self {
-            instruction_discriminator: if data.len() > 0 { data[0] } else { 0 },
-            minimum_profit: 0,
-            compute_unit_limit: 0,
-            no_failure_mode: false,
-            reserved: 0,
-            use_flashloan: false,
-            raw_data: data.to_vec(),
-        }
-    }
-
-    /// Convert to hex string representation
     pub fn to_hex(&self) -> String {
         self.raw_data.iter().map(|b| format!("{:02x}", b)).collect()
     }
 
-    /// Convert to base58 string representation
     pub fn to_base58(&self) -> String {
         bs58::encode(&self.raw_data).into_string()
     }
 
-    /// Check if this is a valid arbitrage instruction (discriminator = 28)
     pub fn is_arbitrage_instruction(&self) -> bool {
         self.instruction_discriminator == 28
     }
 }
 
-/// Represents a parsed swap instruction within the MEV transaction
 #[derive(Debug, Clone)]
 pub struct SwapInstruction {
     pub dex_type: DexType,
     pub pool_address: Pubkey,
-    pub from_mint: Pubkey,
-    pub to_mint: Pubkey,
-    pub from_vault: Pubkey,
-    pub to_vault: Pubkey,
-    pub from_amount: Option<u64>, // Input amount (if available)
-    pub to_amount: Option<u64>,   // Output amount (if available)
+    pub accounts: Vec<String>,
+    pub data: Vec<u8>,
 }
 
 #[cfg(test)]
