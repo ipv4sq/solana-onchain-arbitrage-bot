@@ -73,7 +73,8 @@ impl PoolAccountDataLoader for MeteoraDlmmAccountData {
 }
 
 impl MeteoraDlmmAccountData {
-    pub fn calculate_bin_arrays_for_swap(
+    // Estimation version - uses heuristics based on amount size
+    pub fn estimate_bin_arrays_for_swap(
         &self,
         pool: &Pubkey,
         active_bin_id: i32,
@@ -129,6 +130,116 @@ impl MeteoraDlmmAccountData {
         }
 
         bin_arrays
+    }
+
+    // Accurate version - fetches onchain bin arrays with liquidity
+    pub async fn calculate_bin_arrays_for_swap(
+        &self,
+        rpc: &solana_client::rpc_client::RpcClient,
+        pool: &Pubkey,
+        swap_for_y: bool,
+        num_arrays: usize,
+    ) -> anyhow::Result<Vec<Pubkey>> {
+        // Get bitmap extension if exists
+        let (bitmap_extension_key, _bump) = Pubkey::find_program_address(
+            &[b"bitmap_extension", pool.as_ref()],
+            &*METEORA_DLMM_PROGRAM,
+        );
+        
+        let bitmap_extension = rpc.get_account_data(&bitmap_extension_key).ok();
+
+        // Use the SDK's logic to find bin arrays with liquidity
+        let bin_array_pubkeys = self.get_bin_array_pubkeys_for_swap(
+            pool,
+            bitmap_extension.as_deref(),
+            swap_for_y,
+            num_arrays,
+        )?;
+
+        Ok(bin_array_pubkeys)
+    }
+
+    // Helper method matching SDK's get_bin_array_pubkeys_for_swap
+    fn get_bin_array_pubkeys_for_swap(
+        &self,
+        lb_pair_pubkey: &Pubkey,
+        bitmap_extension: Option<&[u8]>,
+        swap_for_y: bool,
+        num_bin_arrays: usize,
+    ) -> anyhow::Result<Vec<Pubkey>> {
+        let mut start_bin_array_idx = Self::bin_id_to_bin_array_index(self.active_id);
+        let mut bin_array_pubkeys = Vec::with_capacity(num_bin_arrays);
+
+        for _ in 0..num_bin_arrays {
+            let (next_idx, is_overflow) = self.next_bin_array_index_with_liquidity(
+                swap_for_y,
+                start_bin_array_idx,
+                bitmap_extension,
+            )?;
+            
+            if is_overflow {
+                break;
+            }
+
+            bin_array_pubkeys.push(Self::get_bin_array_pda(lb_pair_pubkey, next_idx));
+            start_bin_array_idx = if swap_for_y {
+                next_idx - 1
+            } else {
+                next_idx + 1
+            };
+        }
+
+        Ok(bin_array_pubkeys)
+    }
+
+    // Find next bin array with liquidity
+    fn next_bin_array_index_with_liquidity(
+        &self,
+        swap_for_y: bool,
+        start_array_index: i32,
+        bitmap_extension: Option<&[u8]>,
+    ) -> anyhow::Result<(i32, bool)> {
+        let (min_bin_array_idx, max_bin_array_idx) = (-17, 17); // Default range
+        
+        if swap_for_y {
+            // Search downward
+            for idx in (min_bin_array_idx..=start_array_index).rev() {
+                if self.is_bin_array_has_liquidity(idx, bitmap_extension) {
+                    return Ok((idx, false));
+                }
+            }
+        } else {
+            // Search upward
+            for idx in start_array_index..=max_bin_array_idx {
+                if self.is_bin_array_has_liquidity(idx, bitmap_extension) {
+                    return Ok((idx, false));
+                }
+            }
+        }
+        
+        Ok((0, true)) // Overflow
+    }
+
+    // Check if bin array has liquidity using bitmap
+    fn is_bin_array_has_liquidity(&self, bin_array_index: i32, bitmap_extension: Option<&[u8]>) -> bool {
+        // Check if index is in default bitmap range
+        if bin_array_index >= -64 && bin_array_index <= 63 {
+            let offset = Self::get_bin_array_offset(bin_array_index);
+            let bitmap_chunk = offset / 64;
+            let bit_position = offset % 64;
+            
+            if bitmap_chunk < 16 {
+                return (self.bin_array_bitmap[bitmap_chunk] & (1u64 << bit_position)) != 0;
+            }
+        }
+        
+        // Would need to check bitmap extension for out-of-range indices
+        // For now, assume no liquidity if not in default range
+        false
+    }
+
+    fn get_bin_array_offset(bin_array_index: i32) -> usize {
+        (bin_array_index + 512) as usize
     }
 
     pub fn bin_id_to_bin_array_index(bin_id: i32) -> i32 {

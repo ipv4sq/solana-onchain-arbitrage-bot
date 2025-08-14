@@ -25,8 +25,8 @@ impl MeteoraDlmmPoolConfig {
         // Determine swap direction
         let is_a_to_b = input_mint == &self.data.token_x_mint;
 
-        // Calculate required bin arrays based on amount
-        let bin_arrays = self.data.calculate_bin_arrays_for_swap(
+        // Calculate required bin arrays based on amount (using estimation)
+        let bin_arrays = self.data.estimate_bin_arrays_for_swap(
             &self.pool,
             self.data.active_id,
             amount_in,
