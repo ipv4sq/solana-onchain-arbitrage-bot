@@ -21,8 +21,8 @@ mod tests {
 
     #[test]
     fn test_swap_accounts_with_amount() {
-        // Test with the actual transaction amount: 1.485 SOL
-        let amount_in = 1_485_000_000u64;
+        // Test with the actual transaction amount from the swap instruction
+        let amount_in = 449_360_555u64;
         let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
 
         let config =
@@ -56,9 +56,8 @@ mod tests {
             "Large swap should generate 5 bin arrays"
         );
 
-        // Verify the pattern: indices -2, -1, 0, 1, 2 from active bin array
-        let active_array_index = 2; // bin 200 / 70 = 2
-        let expected_indices = vec![0, 1, 2, 3, 4]; // -2 to +2 from active
+        // Verify the pattern matches the actual transaction order: 2, 1, 0, -1, -2
+        let expected_indices = vec![2, 1, 0, -1, -2];
 
         for (i, expected_idx) in expected_indices.iter().enumerate() {
             let expected_pda =
@@ -106,10 +105,11 @@ mod tests {
                 .unwrap();
 
         let result = config
-            .build_accounts(
+            .build_accounts_with_amount(
                 &payer,
                 &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
                 &*WSOL_KEY,
+                449_360_555u64,
             )
             .unwrap();
 
