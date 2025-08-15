@@ -43,7 +43,6 @@ impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDl
 }
 
 impl MeteoraDlmmPoolConfig {
-    /// Build swap accounts with specific amount for accurate bin array calculation
     pub fn build_accounts_with_amount(
         &self,
         payer: &Pubkey,
@@ -51,40 +50,6 @@ impl MeteoraDlmmPoolConfig {
         output_mint: &Pubkey,
         amount_in: u64,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        // Determine swap direction
-        let is_a_to_b = input_mint == &self.data.token_x_mint;
-
-        // Calculate required bin arrays based on amount (using estimation)
-        let bin_arrays = bin_array::estimate_bin_arrays_for_swap(
-            &self.data,
-            &self.pool,
-            self.data.active_id,
-            amount_in,
-            is_a_to_b,
-        );
-
-        Ok(MeteoraDlmmInputAccounts {
-            lb_pair: self.pool.to_writable(),
-            bin_array_bitmap_extension: METEORA_DLMM_PROGRAM.to_program(),
-            reverse_x: self.data.reserve_x.to_writable(),
-            reverse_y: self.data.reserve_y.to_writable(),
-            user_token_in: Self::ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
-            user_token_out: Self::ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
-            token_x_mint: self.data.token_x_mint.to_readonly(),
-            token_y_mint: self.data.token_y_mint.to_readonly(),
-            oracle: self.data.oracle.to_writable(),
-            host_fee_in: METEORA_DLMM_PROGRAM.to_program(),
-            user: payer.to_signer(),
-            token_x_program: SPL_TOKEN_KEY.to_program(),
-            token_y_program: SPL_TOKEN_KEY.to_program(),
-            event_authority: Pubkey::find_program_address(
-                &[b"__event_authority"],
-                &*METEORA_DLMM_PROGRAM,
-            )
-            .0
-            .to_readonly(),
-            program: METEORA_DLMM_PROGRAM.to_program(),
-            bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
-        })
+        todo!()
     }
 }
