@@ -268,24 +268,7 @@ mod tests {
         )
         .unwrap();
 
-        // Build expected with same logic as build_accounts
-        let payer = Pubkey::default();
-        let input_token_account = get_associated_token_address_with_program_id(
-            &payer,
-            &input_mint,
-            &TokenProgram::SPL_TOKEN.to_pubkey(),
-        );
-        let output_token_account = get_associated_token_address_with_program_id(
-            &payer,
-            &output_mint,
-            &TokenProgram::SPL_TOKEN.to_pubkey(),
-        );
-
-        let mut expected = expected_account();
-        expected.payer = payer.to_signer();
-        expected.input_token_account = input_token_account.to_writable();
-        expected.output_token_account = output_token_account.to_writable();
-
+        let expected = expected_account();
         assert_eq!(expected, result);
     }
 
