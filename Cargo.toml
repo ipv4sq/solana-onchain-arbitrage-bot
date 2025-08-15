@@ -55,6 +55,11 @@ meteora-damm-cpi = { path = "lib/meteora-damm", features = ["no-entrypoint"] }
 meteora-vault-cpi = { path = "lib/meteora-vault", features = ["no-entrypoint"] }
 itertools = "0.10.5"
 
+# Database
+sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "chrono"] }
+dotenv = "0.15"
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 tempfile = "3.8"
 serde_json = "1.0"
