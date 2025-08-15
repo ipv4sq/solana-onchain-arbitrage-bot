@@ -1,153 +1,7 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::constant::known_pool_program::WHIRLPOOL_PROGRAM;
-use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
-use itertools::concat;
-use solana_program::pubkey::Pubkey;
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct WhirlpoolAccountData {
-    pub whirlpools_config: Pubkey,
-    pub whirlpool_bump: [u8; 1],
-    pub tick_spacing: u16,
-    pub fee_tier_index_seed: [u8; 2],
-    pub fee_rate: u16,
-    pub protocol_fee_rate: u16,
-    pub liquidity: u128,
-    pub sqrt_price: u128,
-    pub tick_current_index: i32,
-    pub protocol_fee_owed_a: u64,
-    pub protocol_fee_owed_b: u64,
-    pub token_mint_a: Pubkey,
-    pub token_vault_a: Pubkey,
-    pub fee_growth_global_a: u128,
-    pub token_mint_b: Pubkey,
-    pub token_vault_b: Pubkey,
-    pub fee_growth_global_b: u128,
-    pub reward_last_updated_timestamp: u64,
-    pub reward_infos: [WhirlpoolRewardInfo; 3],
-}
-
-impl PoolAccountDataLoader for WhirlpoolAccountData {
-    fn load_data(data: &[u8]) -> anyhow::Result<Self> {
-        // Whirlpool accounts always have an 8-byte discriminator at the beginning
-        if data.len() < 8 {
-            return Err(anyhow::anyhow!(
-                "Account data too short, expected at least 8 bytes"
-            ));
-        }
-
-        // Skip the 8-byte discriminator
-        WhirlpoolAccountData::try_from_slice(&data[8..])
-            .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
-    }
-
-    fn get_base_mint(&self) -> Pubkey {
-        self.token_mint_a
-    }
-
-    fn get_quote_mint(&self) -> Pubkey {
-        self.token_mint_b
-    }
-
-    fn get_base_vault(&self) -> Pubkey {
-        self.token_vault_a
-    }
-
-    fn get_quote_vault(&self) -> Pubkey {
-        self.token_vault_b
-    }
-}
-
-type WhirlpoolPoolConfig = PoolConfig<WhirlpoolAccountData>;
-pub struct WhirlpoolSwapAccounts {}
-impl PoolConfigInit<WhirlpoolAccountData, WhirlpoolSwapAccounts> for WhirlpoolPoolConfig {
-    fn init(
-        pool: &Pubkey,
-        account_data: WhirlpoolAccountData,
-        desired_mint: Pubkey,
-    ) -> Result<Self> {
-        account_data.shall_contain(&desired_mint)?;
-
-        Ok(WhirlpoolPoolConfig {
-            pool: *pool,
-            data: account_data,
-            desired_mint,
-            minor_mint: account_data.the_other_mint(&desired_mint)?,
-            // readonly_accounts: vec![
-            //     // TODO memo program
-            //     desired_mint,
-            //     *WHIRLPOOL_PROGRAM,
-            // ],
-            // partial_writeable_accounts: concat(vec![
-            //     vec![
-            //         *pool,
-            //         WhirlpoolAccountData::get_oracle(pool),
-            //         account_data.token_vault_a,
-            //         account_data.token_vault_b,
-            //     ],
-            //     account_data.get_tick_arrays(pool),
-            // ]),
-        })
-    }
-
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<WhirlpoolSwapAccounts> {
-        todo!()
-    }
-}
-
-impl WhirlpoolAccountData {
-    fn get_oracle(pool: &Pubkey) -> Pubkey {
-        Pubkey::find_program_address(&[b"oracle", pool.as_ref()], &*WHIRLPOOL_PROGRAM).0
-    }
-
-    fn get_tick_arrays(&self, pool: &Pubkey) -> Vec<Pubkey> {
-        const TICK_ARRAY_SIZE: i32 = 88;
-
-        let tick_spacing = self.tick_spacing as i32;
-        let current_tick = self.tick_current_index;
-        let num_ticks_in_array = TICK_ARRAY_SIZE * tick_spacing;
-
-        // Calculate start index for current tick array
-        let current_start = if current_tick < 0 && current_tick % num_ticks_in_array != 0 {
-            current_tick - (current_tick % num_ticks_in_array) - num_ticks_in_array
-        } else {
-            current_tick - (current_tick % num_ticks_in_array)
-        };
-
-        // Get tick arrays for both directions (previous, current, next)
-        let prev_start = current_start - num_ticks_in_array;
-        let next_start = current_start + num_ticks_in_array;
-
-        vec![
-            Self::get_tick_array_pda(pool, prev_start),
-            Self::get_tick_array_pda(pool, current_start),
-            Self::get_tick_array_pda(pool, next_start),
-        ]
-    }
-
-    fn get_tick_array_pda(pool: &Pubkey, start_tick_index: i32) -> Pubkey {
-        let start_tick_str = start_tick_index.to_string();
-        Pubkey::find_program_address(
-            &[b"tick_array", pool.as_ref(), start_tick_str.as_bytes()],
-            &*WHIRLPOOL_PROGRAM,
-        )
-        .0
-    }
-}
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct WhirlpoolRewardInfo {
-    pub mint: Pubkey,
-    pub vault: Pubkey,
-    pub authority: Pubkey,
-    pub emissions_per_second_x64: u128,
-    pub growth_global_x64: u128,
-}
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::arb::pool::example::whirlpool::data::WhirlpoolPoolData;
+    use crate::arb::pool::interface::PoolAccountDataLoader;
     use crate::constants::helpers::ToPubkey;
 
     #[test]
@@ -168,7 +22,7 @@ mod tests {
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
         let account_data =
-            WhirlpoolAccountData::load_data(&data).expect("Failed to parse account data");
+            WhirlpoolPoolData::load_data(&data).expect("Failed to parse account data");
 
         // Verify tick values from JSON
         assert_eq!(account_data.tick_spacing, 96);
@@ -186,7 +40,7 @@ mod tests {
     fn test_get_oracle() {
         let expected = "6uSvnzqPXLW986gQhVkY2u4xWjx8CEA2B8PAvq4A5N4w";
         assert_eq!(
-            WhirlpoolAccountData::get_oracle(&POOL_ADDRESS.to_pubkey()),
+            WhirlpoolPoolData::get_oracle(&POOL_ADDRESS.to_pubkey()),
             expected.to_pubkey()
         )
     }
@@ -199,7 +53,7 @@ mod tests {
         let data = general_purpose::STANDARD
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
-        let account = WhirlpoolAccountData::load_data(&data).expect("Failed to parse account data");
+        let account = WhirlpoolPoolData::load_data(&data).expect("Failed to parse account data");
 
         // Parse the JSON to validate
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");

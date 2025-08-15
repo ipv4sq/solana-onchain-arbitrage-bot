@@ -1,109 +1,7 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::constant::known_pool_program::PUMP_PROGRAM;
-use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::pubkey::Pubkey;
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
-#[repr(C)]
-pub struct PumpAmmAccountData {
-    pub pool_bump: u8,
-    pub index: u16,
-    pub creator: Pubkey,
-    pub base_mint: Pubkey,
-    pub quote_mint: Pubkey,
-    pub lp_mint: Pubkey,
-    pub pool_base_token_account: Pubkey,
-    pub pool_quote_token_account: Pubkey,
-    pub lp_supply: u64,
-    pub coin_creator: Pubkey,
-    pub _padding: [u8; 57],
-}
-
-impl PoolAccountDataLoader for PumpAmmAccountData {
-    fn load_data(data: &[u8]) -> anyhow::Result<Self> {
-        if data.len() < 8 {
-            return Err(anyhow::anyhow!(
-                "Account data too short, expected at least 8 bytes"
-            ));
-        }
-
-        PumpAmmAccountData::try_from_slice(&data[8..])
-            .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
-    }
-
-    fn get_base_mint(&self) -> Pubkey {
-        self.base_mint
-    }
-
-    fn get_quote_mint(&self) -> Pubkey {
-        self.quote_mint
-    }
-
-    fn get_base_vault(&self) -> Pubkey {
-        self.pool_base_token_account
-    }
-
-    fn get_quote_vault(&self) -> Pubkey {
-        self.pool_quote_token_account
-    }
-}
-
-type PumpAmmPoolConfig = PoolConfig<PumpAmmAccountData>;
-
-pub struct PumpAmmAccountSwapAccounts {}
-
-impl PoolConfigInit<PumpAmmAccountData, PumpAmmAccountSwapAccounts> for PumpAmmPoolConfig {
-    fn init(
-        pool: &Pubkey,
-        account_data: PumpAmmAccountData,
-        desired_mint: Pubkey,
-    ) -> Result<Self> {
-        account_data.shall_contain(&desired_mint)?;
-
-        Ok(PumpAmmPoolConfig {
-            pool: *pool,
-            data: account_data,
-            desired_mint,
-            minor_mint: account_data.the_other_mint(&desired_mint)?,
-            // readonly_accounts: vec![
-            //     desired_mint,
-            //     *PUMP_PROGRAM,
-            // ],
-            // partial_writeable_accounts: vec![
-            //     *pool,
-            //     account_data.pool_base_token_account,
-            //     account_data.pool_quote_token_account,
-            //     PumpAmmAccountData::get_creator_vault_ata(
-            //         &PumpAmmAccountData::get_creator_vault_authority(&account_data.coin_creator),
-            //         &account_data.base_mint,
-            //     ),
-            // ],
-        })
-    }
-
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<PumpAmmAccountSwapAccounts> {
-        todo!()
-    }
-}
-
-impl PumpAmmAccountData {
-    fn get_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
-        Pubkey::find_program_address(
-            &[b"creator_vault", coin_creator.as_ref()],
-            &*PUMP_PROGRAM,
-        )
-        .0
-    }
-
-    fn get_creator_vault_ata(vault_authority: &Pubkey, token_mint: &Pubkey) -> Pubkey {
-        spl_associated_token_account::get_associated_token_address(vault_authority, token_mint)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::arb::pool::interface::PoolAccountDataLoader;
+    use crate::arb::pool::pump_amm::data::PumpAmmPoolData;
     use crate::constants::helpers::ToPubkey;
 
     #[test]
@@ -111,7 +9,7 @@ mod tests {
         let expected = "wYGQPcWwnpSV1eqLQwatefR9ihwUtWoybNZcg8uvQWU";
         let coin_creator = "GeUnv1jmtviRbR7Gu1JnXSGkUMUgFVBHuEVQVpTaUX1W".to_pubkey();
         assert_eq!(
-            PumpAmmAccountData::get_creator_vault_authority(&coin_creator),
+            PumpAmmPoolData::get_creator_vault_authority(&coin_creator),
             expected.to_pubkey()
         )
     }
@@ -124,7 +22,7 @@ mod tests {
         let data = general_purpose::STANDARD
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
-        let account = PumpAmmAccountData::load_data(&data).expect("Failed to parse account data");
+        let account = PumpAmmPoolData::load_data(&data).expect("Failed to parse account data");
 
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
 
