@@ -105,28 +105,33 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
-        _rpc: &RpcClient,
+        rpc: &RpcClient,
     ) -> Result<MeteoraDlmmInputAccounts> {
         use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
         use crate::arb::pool::meteora_dlmm::bin_array;
         use crate::constants::addresses::TokenProgram;
-        use crate::constants::helpers::ToAccountMeta;
+        use crate::constants::helpers::{ToAccountMeta, ToPubkey};
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
-        // Determine swap direction
-        let is_a_to_b = input_mint == &pool_data.token_x_mint;
+        // Determine swap direction (swap_for_y means swapping X for Y)
+        let swap_for_y = input_mint == &pool_data.token_x_mint;
 
-        // Calculate input amount for bin array estimation
-        let amount_in = input_amount.unwrap_or(0);
-
-        // Calculate required bin arrays based on amount
-        let bin_arrays = bin_array::estimate_bin_arrays_for_swap(
-            &pool_data,
-            pool,
-            pool_data.active_id,
-            amount_in,
-            is_a_to_b,
-        );
+        // Use tokio's block_on to call the async function from sync context
+        // In production, consider making build_accounts async
+        let runtime = tokio::runtime::Runtime::new()?;
+        let bin_arrays = runtime.block_on(async {
+            // Estimate number of bin arrays based on swap amount
+            // It's safer to include more arrays - unused ones are ignored
+            let num_arrays = bin_array::estimate_num_bin_arrays(input_amount.unwrap_or(0));
+            
+            bin_array::calculate_bin_arrays_for_swap(
+                &pool_data,
+                rpc,
+                pool,
+                swap_for_y,
+                num_arrays,
+            ).await
+        })?;
 
         // Determine token programs (assuming SPL token for now)
         let token_x_program = TokenProgram::SPL_TOKEN.to_program();
