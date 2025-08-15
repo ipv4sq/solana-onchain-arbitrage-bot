@@ -1,7 +1,11 @@
 use crate::constants::addresses::TokenProgram;
 use anyhow::Result;
+use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use solana_transaction_status::{
+    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
+};
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 
 #[macro_export]
@@ -99,5 +103,24 @@ pub trait PoolConfigInit<T, P>: Sized {
 }
 
 pub trait SwapAccountsToList: Sized {
+    fn to_list(&self) -> Vec<&AccountMeta>;
+}
+
+pub trait SwapInputAccountUtil<A, PD>: Sized {
+    fn retore_from(
+        ix: &UiPartiallyDecodedInstruction,
+        tx: &EncodedConfirmedTransactionWithStatusMeta,
+    ) -> Result<A>;
+
+    fn build_accounts(
+        pool: &Pubkey,
+        pool_data: PD,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+        input_amount: Option<u64>,
+        output_amount: Option<u64>,
+        rpc: &RpcClient,
+    ) -> Result<A>;
+
     fn to_list(&self) -> Vec<&AccountMeta>;
 }
