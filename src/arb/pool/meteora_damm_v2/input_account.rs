@@ -1,13 +1,13 @@
 use crate::arb::pool::interface::SwapInputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
+use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiMessage,
-    UiPartiallyDecodedInstruction,
+    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
 };
 #[derive(Debug, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
@@ -22,19 +22,13 @@ pub struct MeteoraDammV2InputAccount {
     pub payer: AccountMeta,
     pub token_a_program: AccountMeta,
     pub token_b_program: AccountMeta,
-    // solscan 上显示的是account, 但是实际上的地址是一个program
+    // Solscan shows this as account, but the actual address is a program
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     pub referral_token_program: AccountMeta,
     pub event_authority: AccountMeta,
     pub meteora_program: AccountMeta,
 }
 
-/*
-那么对于这个account, 我们需要实现哪些函数呢?
-1. 对于一个已经存在的IX, 我们需要能从一堆accounts中, 按照顺序restore出这个数据结构, 当然, 权限信息需要从tx中拿到.
-2. 对于一个我们想发起的交易, 我们要能够从pool_data, 交易对, 交易方向, 交易数量, 以及池子本身的地址中推导出需要的accounts. 有些时候甚至需要RPC.
-3. 实现一个to_list方法,把结果推成一个list
- */
 impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     for MeteoraDammV2InputAccount
 {
@@ -49,51 +43,23 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             ));
         }
 
-        let parsed_accounts = match &tx.transaction.transaction {
-            EncodedTransaction::Json(t) => match &t.message {
-                UiMessage::Parsed(msg) => &msg.account_keys,
-                _ => return Err(anyhow::anyhow!("Transaction message is not parsed format")),
-            },
-            _ => return Err(anyhow::anyhow!("Transaction is not in JSON format")),
-        };
-
-        let create_account_meta = |index: usize| -> Result<AccountMeta> {
-            let account_key = ix
-                .accounts
-                .get(index)
-                .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
-
-            let parsed_acc = parsed_accounts
-                .iter()
-                .find(|acc| &acc.pubkey == account_key)
-                .ok_or_else(|| {
-                    anyhow::anyhow!("Account {} not found in parsed accounts", account_key)
-                })?;
-
-            Ok(if parsed_acc.signer {
-                account_key.to_signer()
-            } else if parsed_acc.writable {
-                account_key.to_writable()
-            } else {
-                account_key.to_readonly()
-            })
-        };
+        let parsed_accounts = get_parsed_accounts(tx)?;
 
         Ok(MeteoraDammV2InputAccount {
-            pool_authority: create_account_meta(0)?,
-            pool: create_account_meta(1)?,
-            input_token_account: create_account_meta(2)?,
-            output_token_account: create_account_meta(3)?,
-            token_a_vault: create_account_meta(4)?,
-            token_b_vault: create_account_meta(5)?,
-            token_a_mint: create_account_meta(6)?,
-            token_b_mint: create_account_meta(7)?,
-            payer: create_account_meta(8)?,
-            token_a_program: create_account_meta(9)?,
-            token_b_program: create_account_meta(10)?,
-            referral_token_program: create_account_meta(11)?,
-            event_authority: create_account_meta(12)?,
-            meteora_program: create_account_meta(13)?,
+            pool_authority: create_account_meta(parsed_accounts, ix, 0)?,
+            pool: create_account_meta(parsed_accounts, ix, 1)?,
+            input_token_account: create_account_meta(parsed_accounts, ix, 2)?,
+            output_token_account: create_account_meta(parsed_accounts, ix, 3)?,
+            token_a_vault: create_account_meta(parsed_accounts, ix, 4)?,
+            token_b_vault: create_account_meta(parsed_accounts, ix, 5)?,
+            token_a_mint: create_account_meta(parsed_accounts, ix, 6)?,
+            token_b_mint: create_account_meta(parsed_accounts, ix, 7)?,
+            payer: create_account_meta(parsed_accounts, ix, 8)?,
+            token_a_program: create_account_meta(parsed_accounts, ix, 9)?,
+            token_b_program: create_account_meta(parsed_accounts, ix, 10)?,
+            referral_token_program: create_account_meta(parsed_accounts, ix, 11)?,
+            event_authority: create_account_meta(parsed_accounts, ix, 12)?,
+            meteora_program: create_account_meta(parsed_accounts, ix, 13)?,
         })
     }
 
@@ -134,17 +100,14 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         let token_a_program = TokenProgram::SPL_TOKEN.to_program();
         let token_b_program = TokenProgram::SPL_TOKEN.to_program();
 
-        // Assume a default payer (in real implementation, this would come from bot config)
-        let payer = Pubkey::default();
-
         // Get ATAs for input and output
         let input_token_account = get_associated_token_address_with_program_id(
-            &payer,
+            payer,
             input_mint,
             &token_a_program.pubkey,
         );
         let output_token_account = get_associated_token_address_with_program_id(
-            &payer,
+            payer,
             output_mint,
             &token_b_program.pubkey,
         );
@@ -192,7 +155,7 @@ mod tests {
     use crate::arb::constant::known_pool_program::KnownPoolPrograms;
     use crate::arb::pool::interface::SwapInputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-    use crate::arb::pool::meteora_damm_v2::ix::is_meteora_damm_v2_ix;
+    use crate::arb::tx::ix::is_meteora_damm_v2_ix;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::constants::addresses::TokenProgram;
@@ -271,8 +234,5 @@ mod tests {
         let expected = expected_account();
         assert_eq!(expected, result);
     }
-
-    fn test_to_list() {
-        todo!()
-    }
+    
 }

@@ -2,7 +2,8 @@ use crate::arb::constant::known_pool_program::KnownPoolPrograms;
 use crate::arb::pool::interface::SwapAccountsToList;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
-use crate::constants::helpers::{ToAccountMeta, ToPubkey, ToSignature};
+use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
+use crate::constants::helpers::{ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
@@ -153,62 +154,32 @@ pub fn parse_meteora_dlmm(
     ix: &UiPartiallyDecodedInstruction,
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> Result<MeteoraDlmmSwapAccounts> {
-    use solana_program::instruction::AccountMeta;
-
     if ix.accounts.len() < 15 {
         return Err(anyhow::anyhow!(
             "Invalid number of accounts for Meteora DLMM swap"
         ));
     }
 
-    let parsed_accounts = match &tx.transaction.transaction {
-        EncodedTransaction::Json(t) => match &t.message {
-            UiMessage::Parsed(msg) => &msg.account_keys,
-            _ => return Err(anyhow::anyhow!("Transaction message is not parsed format")),
-        },
-        _ => return Err(anyhow::anyhow!("Transaction is not in JSON format")),
-    };
-
-    let create_account_meta = |index: usize| -> Result<AccountMeta> {
-        let account_key = ix
-            .accounts
-            .get(index)
-            .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
-
-        let parsed_acc = parsed_accounts
-            .iter()
-            .find(|acc| &acc.pubkey == account_key)
-            .ok_or_else(|| {
-                anyhow::anyhow!("Account {} not found in parsed accounts", account_key)
-            })?;
-
-        Ok(if parsed_acc.signer {
-            account_key.to_signer()
-        } else if parsed_acc.writable {
-            account_key.to_writable()
-        } else {
-            account_key.to_readonly()
-        })
-    };
+    let parsed_accounts = get_parsed_accounts(tx)?;
 
     Ok(MeteoraDlmmSwapAccounts {
-        lb_pair: create_account_meta(0)?,
-        bin_array_bitmap_extension: create_account_meta(1)?,
-        reverse_x: create_account_meta(2)?,
-        reverse_y: create_account_meta(3)?,
-        user_token_in: create_account_meta(4)?,
-        user_token_out: create_account_meta(5)?,
-        token_x_mint: create_account_meta(6)?,
-        token_y_mint: create_account_meta(7)?,
-        oracle: create_account_meta(8)?,
-        host_fee_in: create_account_meta(9)?,
-        user: create_account_meta(10)?,
-        token_x_program: create_account_meta(11)?,
-        token_y_program: create_account_meta(12)?,
-        event_authority: create_account_meta(13)?,
-        program: create_account_meta(14)?,
+        lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
+        bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
+        reverse_x: create_account_meta(parsed_accounts, ix, 2)?,
+        reverse_y: create_account_meta(parsed_accounts, ix, 3)?,
+        user_token_in: create_account_meta(parsed_accounts, ix, 4)?,
+        user_token_out: create_account_meta(parsed_accounts, ix, 5)?,
+        token_x_mint: create_account_meta(parsed_accounts, ix, 6)?,
+        token_y_mint: create_account_meta(parsed_accounts, ix, 7)?,
+        oracle: create_account_meta(parsed_accounts, ix, 8)?,
+        host_fee_in: create_account_meta(parsed_accounts, ix, 9)?,
+        user: create_account_meta(parsed_accounts, ix, 10)?,
+        token_x_program: create_account_meta(parsed_accounts, ix, 11)?,
+        token_y_program: create_account_meta(parsed_accounts, ix, 12)?,
+        event_authority: create_account_meta(parsed_accounts, ix, 13)?,
+        program: create_account_meta(parsed_accounts, ix, 14)?,
         bin_arrays: (15..ix.accounts.len())
-            .map(create_account_meta)
+            .map(|i| create_account_meta(parsed_accounts, ix, i))
             .collect::<Result<Vec<_>>>()?,
     })
 }
