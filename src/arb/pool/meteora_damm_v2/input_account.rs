@@ -73,7 +73,7 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         output_amount: Option<u64>,
         rpc: &RpcClient,
     ) -> Result<MeteoraDammV2InputAccount> {
-        use crate::arb::constant::known_pool_program::KnownPoolPrograms;
+        use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
         use crate::constants::addresses::TokenProgram;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
@@ -124,9 +124,9 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             payer: payer.to_signer(),
             token_a_program,
             token_b_program,
-            referral_token_program: KnownPoolPrograms::METEORA_DAMM_V2.to_program(),
+            referral_token_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
             event_authority,
-            meteora_program: KnownPoolPrograms::METEORA_DAMM_V2.to_program(),
+            meteora_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
         })
     }
 
@@ -152,7 +152,7 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::constant::known_pool_program::KnownPoolPrograms;
+    use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
     use crate::arb::pool::interface::SwapInputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
     use crate::arb::tx::ix::is_meteora_damm_v2_swap;
@@ -185,9 +185,9 @@ mod tests {
             payer: "4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5".to_signer(),
             token_a_program: TokenProgram::SPL_TOKEN.to_program(),
             token_b_program: TokenProgram::SPL_TOKEN.to_program(),
-            referral_token_program: KnownPoolPrograms::METEORA_DAMM_V2.to_program(),
+            referral_token_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
             event_authority: "3rmHSu74h1ZcmAisVcWerTCiRDQbUrBKmcwptYGjHfet".to_readonly(),
-            meteora_program: KnownPoolPrograms::METEORA_DAMM_V2.to_program(),
+            meteora_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
         }
     }
 

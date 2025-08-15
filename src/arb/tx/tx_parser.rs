@@ -1,4 +1,4 @@
-use crate::arb::constant::known_pool_program::KnownPoolPrograms;
+use crate::arb::constant::known_pool_program::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use crate::arb::pool::interface::SwapAccountsToList;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
@@ -11,9 +11,7 @@ use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
     UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
-use std::collections::{HashMap, HashSet};
-
-
+use std::collections::HashMap;
 
 pub fn get_tx_by_sig(
     client: &RpcClient,
@@ -87,15 +85,6 @@ pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SmbInstru
     })
 }
 
-lazy_static::lazy_static! {
-    static ref RECOGNIZED_POOL_PROGRAMS: HashSet<String> = {
-        let mut set = HashSet::new();
-        set.insert(KnownPoolPrograms::METEORA_DLMM.to_string());
-        set.insert(KnownPoolPrograms::METEORA_DAMM_V2.to_string());
-        set
-    };
-}
-
 pub fn filter_swap_inner_ix(
     inner_instructions: &UiInnerInstructions,
 ) -> HashMap<String, &UiPartiallyDecodedInstruction> {
@@ -109,7 +98,7 @@ pub fn filter_swap_inner_ix(
             },
             UiInstruction::Compiled(_) => None,
         })
-        .filter(|ix| RECOGNIZED_POOL_PROGRAMS.contains(&ix.program_id))
+        .filter(|ix| RECOGNIZED_POOL_OWNER_PROGRAMS.contains(&ix.program_id))
         .map(|ix| (ix.program_id.clone(), ix))
         .collect()
 }
@@ -121,7 +110,7 @@ pub fn parse_swap_inner_ix(
     use crate::arb::tx::constants::DexType;
 
     match ix.program_id.as_str() {
-        KnownPoolPrograms::METEORA_DLMM => {
+        PoolOwnerPrograms::METEORA_DLMM => {
             let accounts = parse_meteora_dlmm(ix, tx)?;
 
             // Parse instruction data (assuming it's base58 encoded)
@@ -213,7 +202,7 @@ mod tests {
             println!("Found swap instruction for program: {}", program_id);
             println!("Instruction has {} accounts", ix.accounts.len());
 
-            if program_id == KnownPoolPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
+            if program_id == PoolOwnerPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
                 let swap_ix =
                     parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
                 assert_eq!(
