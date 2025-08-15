@@ -70,30 +70,151 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         input_amount: Option<u64>,
-        output_amount: Option<u64>,
-        rpc: &RpcClient,
-    ) -> anyhow::Result<MeteoraDlmmInputAccounts> {
-        todo!()
+        _output_amount: Option<u64>,
+        _rpc: &RpcClient,
+    ) -> Result<MeteoraDlmmInputAccounts> {
+        use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
+        use crate::arb::pool::meteora_dlmm::bin_array;
+        use crate::constants::addresses::TokenProgram;
+        use crate::constants::helpers::ToAccountMeta;
+        use spl_associated_token_account::get_associated_token_address_with_program_id;
+
+        // Determine swap direction
+        let is_a_to_b = input_mint == &pool_data.token_x_mint;
+
+        // Calculate input amount for bin array estimation
+        let amount_in = input_amount.unwrap_or(0);
+
+        // Calculate required bin arrays based on amount
+        let bin_arrays = bin_array::estimate_bin_arrays_for_swap(
+            &pool_data,
+            pool,
+            pool_data.active_id,
+            amount_in,
+            is_a_to_b,
+        );
+
+        // Determine token programs (assuming SPL token for now)
+        let token_x_program = TokenProgram::SPL_TOKEN.to_program();
+        let token_y_program = TokenProgram::SPL_TOKEN.to_program();
+
+        // Get ATAs for input and output
+        let user_token_in = get_associated_token_address_with_program_id(
+            payer,
+            input_mint,
+            &token_x_program.pubkey,
+        );
+        let user_token_out = get_associated_token_address_with_program_id(
+            payer,
+            output_mint,
+            &token_y_program.pubkey,
+        );
+
+        // Event authority is a PDA
+        let event_authority =
+            Pubkey::find_program_address(&[b"__event_authority"], &*METEORA_DLMM_PROGRAM).0;
+
+        Ok(MeteoraDlmmInputAccounts {
+            lb_pair: pool.to_writable(),
+            bin_array_bitmap_extension: METEORA_DLMM_PROGRAM.to_program(),
+            reverse_x: pool_data.reserve_x.to_writable(),
+            reverse_y: pool_data.reserve_y.to_writable(),
+            user_token_in: user_token_in.to_writable(),
+            user_token_out: user_token_out.to_writable(),
+            token_x_mint: pool_data.token_x_mint.to_readonly(),
+            token_y_mint: pool_data.token_y_mint.to_readonly(),
+            oracle: pool_data.oracle.to_writable(),
+            host_fee_in: METEORA_DLMM_PROGRAM.to_program(),
+            user: payer.to_writable(),
+            token_x_program,
+            token_y_program,
+            event_authority: event_authority.to_readonly(),
+            program: METEORA_DLMM_PROGRAM.to_program(),
+            bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
+        })
     }
 
     fn to_list(&self) -> Vec<&AccountMeta> {
-        todo!()
+        <Self as SwapAccountsToList>::to_list(self)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
+    use crate::arb::pool::interface::{PoolAccountDataLoader, SwapInputAccountUtil};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+    use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+    use crate::arb::tx::ix::{is_meteora_damm_v2_swap, is_meteora_dlmm_swap};
+    use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
+    use crate::constants::addresses::TokenProgram;
+    use crate::constants::helpers::{ToAccountMeta, ToPubkey, ToSignature};
+    use crate::test::test_utils::get_test_rpc_client;
+    use anyhow::Result;
+    use base64::engine::general_purpose;
+    use base64::Engine;
 
+    static PAYER: &str = "4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5";
     fn expected_result() -> MeteoraDlmmInputAccounts {
-        
+        MeteoraDlmmInputAccounts {
+            lb_pair: "FrQ9w1xEiypynrBt2qWPWLcFQ1Ht1LLfyrcWLKfzcXcs".to_writable(),
+            bin_array_bitmap_extension: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
+            reverse_x: "BkGhDjHS9F6DtZhhhuzBWDjGpRwQUFybj6CXTUt7JR4k".to_writable(),
+            reverse_y: "7ixpeA92jWuwFaPbYPDBFJWRaAtA621QntqZsxmqTaL3".to_writable(),
+            user_token_in: "Aiaz92F1keKEfJkfWjvRrp34D8Wh4dGRbrSDuHzV289s".to_writable(),
+            user_token_out: "AaeZVRToQvmEBuU9EjypuYs3GyVZSZhKpCV2opPa4Biy".to_writable(),
+            token_x_mint: "G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_readonly(),
+            token_y_mint: "So11111111111111111111111111111111111111112".to_readonly(),
+            oracle: "3JZiurfBXWDEbqSA4fJD1FCq3iJyNaxVKJpRi7PkeiM2".to_writable(),
+            host_fee_in: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
+            user: PAYER.to_writable(),
+            token_x_program: TokenProgram::SPL_TOKEN.to_program(),
+            token_y_program: TokenProgram::SPL_TOKEN.to_program(),
+            event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
+            program: METEORA_DLMM_PROGRAM.to_program(),
+            bin_arrays: vec![
+                "99NKxVHj9vRRQQQAYArBiB2L8wxPC9SEqKPdijYA5TXT".to_writable(),
+                "B2a1aWZxBSm1qWwEccceUzrkL76Ab9UYEesgmqdvv449".to_writable(),
+                "5B7g8kDyMMrkZ9M3XViGRa3rBanTNkZrFYzXrvMAe5CU".to_writable(),
+                "J1CV7tayczNeV1vTFeBxwUjFiSoeEsWqcDyNeHenuRwx".to_writable(),
+                "9FEKcgMh9yheepWE9xbosweXud1DNDaH7FiUgn4cwMRM".to_writable(),
+            ],
+        }
+    }
+
+    fn pool_data() -> Result<MeteoraDlmmPoolData> {
+        let onchain_data = "IQsxYrVlsQ0gTiwBsASIE0wdAADwSQIA8e7//w8RAAD0AQAAAAAAAMCbAACQJgAA5vr//wAAAAClDZ9oAAAAAAAAAAAAAAAA/2QAA+P6//9kAAAAIE4AAN7td33Mx98jGjCLKLPX2kDV8j7rMt7KXJNLu8+1PzQDBpuIV/6rgYT7aH9jRhjANdrEOdwa6ztVmKDwAAAAAAGfqpaz2viTuSR0cGGJ6JPCjvoqMsjwVK2+jx2ZT37v4WPmDVuDQWmWg74CrJMkg/t8NH9+nmZ7YYsJqh7B7zFEahonY9KSCgA/bo8XBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIjc/RxuLXAAEl0fOWAcZW485SbwYtahs6aRb/AWoOoUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+AMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHPDNE1wVa0QDjU1aPWTZ0hpdJm2mL/omaPlnDZ70/xBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADVyNG4bWBXDqGWKcspzbTA32Tdih7mqOgVxYAfLC37MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+        let data = general_purpose::STANDARD.decode(onchain_data)?;
+        MeteoraDlmmPoolData::load_data(&data)
     }
     #[test]
     fn test_build_accounts() {
-
+        let result = MeteoraDlmmInputAccounts::build_accounts(
+            &PAYER.to_pubkey(),
+            &"FrQ9w1xEiypynrBt2qWPWLcFQ1Ht1LLfyrcWLKfzcXcs".to_pubkey(),
+            pool_data().unwrap(),
+            &"G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_pubkey(),
+            &"So11111111111111111111111111111111111111112".to_pubkey(),
+            Some(543235989680078),
+            Some(0),
+            &get_test_rpc_client(),
+        )
+        .unwrap();
+        assert_eq!(result, expected_result())
     }
 
     fn test_restore_from() {
+        let tx = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
+        let tx = get_tx_by_sig(&get_test_rpc_client(), tx).unwrap();
+        let (_, inner) = extract_mev_instruction(&tx).unwrap();
+        let dlmm_swap = inner
+            .instructions
+            .iter()
+            .filter_map(is_meteora_dlmm_swap)
+            .next()
+            .unwrap();
 
+        let result = MeteoraDlmmInputAccounts::restore_from(dlmm_swap, &tx).unwrap();
+        assert_eq!(result, expected_result())
     }
 }
