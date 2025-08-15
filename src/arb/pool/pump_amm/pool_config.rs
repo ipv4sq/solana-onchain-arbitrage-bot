@@ -1,15 +1,11 @@
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
+use crate::arb::pool::pump_amm::account::PumpAmmAccountSwapAccounts;
+use crate::arb::pool::pump_amm::data::{PumpAmmPoolConfig, PumpAmmPoolData};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::pump_amm::account::PumpAmmAccountSwapAccounts;
-use crate::arb::pool::pump_amm::data::{PumpAmmPoolData, PumpAmmPoolConfig};
 
 impl PoolConfigInit<PumpAmmPoolData, PumpAmmAccountSwapAccounts> for PumpAmmPoolConfig {
-    fn init(
-        pool: &Pubkey,
-        account_data: PumpAmmPoolData,
-        desired_mint: Pubkey,
-    ) -> Result<Self> {
+    fn init(pool: &Pubkey, account_data: PumpAmmPoolData, desired_mint: Pubkey) -> Result<Self> {
         account_data.shall_contain(&desired_mint)?;
 
         Ok(PumpAmmPoolConfig {
@@ -33,8 +29,14 @@ impl PoolConfigInit<PumpAmmPoolData, PumpAmmAccountSwapAccounts> for PumpAmmPool
         })
     }
 
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<PumpAmmAccountSwapAccounts> {
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+        amount_in: Option<u64>,
+        amount_out: Option<u64>,
+    ) -> Result<PumpAmmAccountSwapAccounts> {
         todo!()
     }
 }
-

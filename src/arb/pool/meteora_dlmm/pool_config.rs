@@ -1,13 +1,11 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-use crate::arb::pool::interface::{
-    PoolAccountDataLoader, PoolConfig, PoolConfigInit,
-};
+use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
+use crate::arb::pool::meteora_dlmm::data::MeteoraDlmmAccountData;
 use crate::constants::addresses::SPL_TOKEN_KEY;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
-use crate::arb::pool::meteora_dlmm::data::MeteoraDlmmAccountData;
 
 const DLMM_EVENT_AUTHORITY: &str = "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6";
 
@@ -47,7 +45,12 @@ impl MeteoraDlmmPoolConfig {
             user: payer.to_signer(),
             token_x_program: SPL_TOKEN_KEY.to_program(),
             token_y_program: SPL_TOKEN_KEY.to_program(),
-            event_authority: Pubkey::find_program_address(&[b"__event_authority"], &*METEORA_DLMM_PROGRAM).0.to_readonly(),
+            event_authority: Pubkey::find_program_address(
+                &[b"__event_authority"],
+                &*METEORA_DLMM_PROGRAM,
+            )
+            .0
+            .to_readonly(),
             program: METEORA_DLMM_PROGRAM.to_program(),
             bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
         })
@@ -75,10 +78,11 @@ impl PoolConfigInit<MeteoraDlmmAccountData, MeteoraDlmmSwapAccounts> for Meteora
         payer: &Pubkey,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
+        amount_in: Option<u64>,
+        amount_out: Option<u64>,
     ) -> Result<MeteoraDlmmSwapAccounts> {
         // Default to small swap bin arrays
         // For actual swaps, should call build_accounts_with_amount
         self.build_accounts_with_amount(payer, input_mint, output_mint, 0)
     }
 }
-

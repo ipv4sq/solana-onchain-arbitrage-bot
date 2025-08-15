@@ -36,6 +36,8 @@ impl PoolConfigInit<WhirlpoolPoolData, WhirlpoolSwapAccounts> for WhirlpoolPoolC
         payer: &Pubkey,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
+        amount_in: Option<u64>,
+        amount_out: Option<u64>,
     ) -> Result<WhirlpoolSwapAccounts> {
         todo!()
     }

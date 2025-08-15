@@ -46,7 +46,14 @@ impl PoolConfigInit<ExampleAccountData, ExamplePoolSwapAccounts> for ExamplePool
         todo!()
     }
 
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<ExamplePoolSwapAccounts> {
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+        amount_in: Option<u64>,
+        amount_out: Option<u64>,
+    ) -> Result<ExamplePoolSwapAccounts> {
         todo!()
     }
 }

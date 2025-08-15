@@ -49,7 +49,14 @@ impl PoolConfigInit<MeteoraDammV2AccountData, MeteoraDammV2SwapAccounts> for Met
         todo!()
     }
 
-    fn build_accounts(&self, payer: &Pubkey, input_mint: &Pubkey, output_mint: &Pubkey) -> Result<MeteoraDammV2SwapAccounts> {
+    fn build_accounts(
+        &self,
+        payer: &Pubkey,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+        amount_in: Option<u64>,
+        amount_out: Option<u64>,
+    ) -> Result<MeteoraDammV2SwapAccounts> {
         todo!()
     }
 }

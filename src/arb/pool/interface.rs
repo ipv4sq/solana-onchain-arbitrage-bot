@@ -89,6 +89,8 @@ pub trait PoolConfigInit<T, P>: Sized {
         payer: &Pubkey,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
+        input_amount: Option<u64>,
+        output_amount: Option<u64>,
     ) -> Result<P>;
 
     fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
