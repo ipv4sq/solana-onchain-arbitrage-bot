@@ -1,7 +1,7 @@
 use crate::arb::pool::interface::PoolAccountDataLoader;
+use crate::arb::pool::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -49,7 +49,7 @@ impl PoolAccountDataLoader for MeteoraDammV2PoolData {
 
         // Skip the 8-byte discriminator
         let mut data_slice = &data[8..];
-        
+
         // Use deserialize which doesn't require all bytes to be consumed
         MeteoraDammV2PoolData::deserialize(&mut data_slice)
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
@@ -73,7 +73,7 @@ impl PoolAccountDataLoader for MeteoraDammV2PoolData {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use super::*;
     use base64::{engine::general_purpose::STANDARD, Engine};
     //pool address: https://solscan.io/account/6CXXieC355gteamwofSzJn8DiyrbKyYyXc3eBKmB81CF#accountData
@@ -84,14 +84,18 @@ mod test {
     {"pool_fees":{"type":{"defined":{"name":"PoolFeesStruct"}},"data":{"base_fee":{"type":{"defined":{"name":"BaseFeeStruct"}},"data":{"cliff_fee_numerator":"20000000","fee_scheduler_mode":0,"padding_0":[0,0,0,0,0],"number_of_period":0,"period_frequency":"0","reduction_factor":"0","padding_1":"0"}},"protocol_fee_percent":{"type":"u8","data":20},"partner_fee_percent":{"type":"u8","data":0},"referral_fee_percent":{"type":"u8","data":20},"padding_0":{"type":{"array":["u8",5]},"data":[0,0,0,0,0]},"dynamic_fee":{"type":{"defined":{"name":"DynamicFeeStruct"}},"data":{"initialized":1,"padding":[0,0,0,0,0,0,0],"max_volatility_accumulator":14460000,"variable_fee_control":1913,"bin_step":1,"filter_period":10,"decay_period":120,"reduction_factor":5000,"last_update_timestamp":"1755235201","bin_step_u128":"1844674407370955","sqrt_price_reference":"25985303462009914","volatility_accumulator":"2053590","volatility_reference":"1013590"}},"padding_1":{"type":{"array":["u64",2]},"data":["0","0"]}}},"token_a_mint":{"type":"pubkey","data":"G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS"},"token_b_mint":{"type":"pubkey","data":"So11111111111111111111111111111111111111112"},"token_a_vault":{"type":"pubkey","data":"9B3KPhHyDhUmNvjY2vk6JYs3vfUgPTzB9u1fWYsfK1s5"},"token_b_vault":{"type":"pubkey","data":"wAx8Her71ffN9hNyh5nj6WR7m56tAGrkajNiEdoGy4G"},"whitelisted_vault":{"type":"pubkey","data":"11111111111111111111111111111111"},"partner":{"type":"pubkey","data":"FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"},"liquidity":{"type":"u128","data":"2461259741443399418112242871877920"},"_padding":{"type":"u128","data":"0"},"protocol_a_fee":{"type":"u64","data":"0"},"protocol_b_fee":{"type":"u64","data":"712006203593"},"partner_a_fee":{"type":"u64","data":"0"},"partner_b_fee":{"type":"u64","data":"0"},"sqrt_min_price":{"type":"u128","data":"4295048016"},"sqrt_max_price":{"type":"u128","data":"79226673521066979257578248091"},"sqrt_price":{"type":"u128","data":"26122654118776782"},"activation_point":{"type":"u64","data":"1755206182"},"activation_type":{"type":"u8","data":1},"pool_status":{"type":"u8","data":0},"token_a_flag":{"type":"u8","data":0},"token_b_flag":{"type":"u8","data":0},"collect_fee_mode":{"type":"u8","data":1},"pool_type":{"type":"u8","data":0},"_padding_0":{"type":{"array":["u8",2]},"data":[0,0]},"fee_a_per_liquidity":{"type":{"array":["u8",32]},"data":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"fee_b_per_liquidity":{"type":{"array":["u8",32]},"data":[76,13,36,239,254,143,93,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"permanent_lock_liquidity":{"type":"u128","data":"2217449760464976157620544597834290"},"metrics":{"type":{"defined":{"name":"PoolMetrics"}},"data":{"total_lp_a_fee":{"type":"u128","data":"0"},"total_lp_b_fee":{"type":"u128","data":"3253177861112"},"total_protocol_a_fee":{"type":"u64","data":"0"},"total_protocol_b_fee":{"type":"u64","data":"712006203593"},"total_partner_a_fee":{"type":"u64","data":"0"},"total_partner_b_fee":{"type":"u64","data":"0"},"total_position":{"type":"u64","data":"32"},"padding":{"type":"u64","data":"0"}}},"creator":{"type":"pubkey","data":"FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"},"_padding_1":{"type":{"array":["u64",6]},"data":["0","0","0","0","0","0"]},"reward_infos":{"type":{"array":[{"defined":{"name":"RewardInfo"}},2]},"data":[{"initialized":0,"reward_token_flag":0,"_padding_0":[0,0,0,0,0,0],"_padding_1":[0,0,0,0,0,0,0,0],"mint":"11111111111111111111111111111111","vault":"11111111111111111111111111111111","funder":"11111111111111111111111111111111","reward_duration":"0","reward_duration_end":"0","reward_rate":"0","reward_per_token_stored":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"last_update_time":"0","cumulative_seconds_with_empty_liquidity_reward":"0"},{"initialized":0,"reward_token_flag":0,"_padding_0":[0,0,0,0,0,0],"_padding_1":[0,0,0,0,0,0,0,0],"mint":"11111111111111111111111111111111","vault":"11111111111111111111111111111111","funder":"11111111111111111111111111111111","reward_duration":"0","reward_duration_end":"0","reward_rate":"0","reward_per_token_stored":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"last_update_time":"0","cumulative_seconds_with_empty_liquidity_reward":"0"}]}}
     "#;
 
+    pub fn load_pool_data() -> MeteoraDammV2PoolData {
+        let pool_data_bytes = STANDARD
+            .decode(POOL_DATA_BASE64)
+            .expect("Failed to decode base64");
+        MeteoraDammV2PoolData::load_data(&pool_data_bytes).expect("Failed to parse pool data")
+    }
+
     #[test]
-    fn test_meteora_damm_v2_pool_data_parsing() {
+    pub fn test_meteora_damm_v2_pool_data_parsing() {
         use serde_json::Value;
-        
-        let pool_data_bytes = STANDARD.decode(POOL_DATA_BASE64).expect("Failed to decode base64");
-        
-        let pool_data = MeteoraDammV2PoolData::load_data(&pool_data_bytes)
-            .expect("Failed to parse pool data");
+
+        let pool_data = load_pool_data();
 
         // Parse the JSON to verify against
         let json: Value = serde_json::from_str(POOL_DATA_JSON).expect("Failed to parse JSON");
@@ -123,7 +127,7 @@ mod test {
         assert_eq!(pool_data.get_quote_mint(), pool_data.token_b_mint);
         assert_eq!(pool_data.get_base_vault(), pool_data.token_a_vault);
         assert_eq!(pool_data.get_quote_vault(), pool_data.token_b_vault);
-        
+
         println!("✓ All critical fields match the JSON data!");
         println!("✓ token_a_mint: {}", pool_data.token_a_mint);
         println!("✓ token_b_mint: {}", pool_data.token_b_mint);
