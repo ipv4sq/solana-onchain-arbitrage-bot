@@ -63,3 +63,4 @@ chrono = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 tempfile = "3.8"
 serde_json = "1.0"
+ctor = "0.2"
