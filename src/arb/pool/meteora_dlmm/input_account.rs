@@ -60,7 +60,41 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         ix: &UiPartiallyDecodedInstruction,
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        todo!()
+        use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
+        
+        if ix.accounts.len() < 15 {
+            return Err(anyhow::anyhow!(
+                "Invalid number of accounts for Meteora DLMM swap: expected at least 15, got {}",
+                ix.accounts.len()
+            ));
+        }
+        
+        let parsed_accounts = get_parsed_accounts(tx)?;
+        
+        // Extract bin arrays (all accounts after index 14)
+        let mut bin_arrays = Vec::new();
+        for i in 15..ix.accounts.len() {
+            bin_arrays.push(create_account_meta(parsed_accounts, ix, i)?);
+        }
+        
+        Ok(MeteoraDlmmInputAccounts {
+            lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
+            bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
+            reverse_x: create_account_meta(parsed_accounts, ix, 2)?,
+            reverse_y: create_account_meta(parsed_accounts, ix, 3)?,
+            user_token_in: create_account_meta(parsed_accounts, ix, 4)?,
+            user_token_out: create_account_meta(parsed_accounts, ix, 5)?,
+            token_x_mint: create_account_meta(parsed_accounts, ix, 6)?,
+            token_y_mint: create_account_meta(parsed_accounts, ix, 7)?,
+            oracle: create_account_meta(parsed_accounts, ix, 8)?,
+            host_fee_in: create_account_meta(parsed_accounts, ix, 9)?,
+            user: create_account_meta(parsed_accounts, ix, 10)?,
+            token_x_program: create_account_meta(parsed_accounts, ix, 11)?,
+            token_y_program: create_account_meta(parsed_accounts, ix, 12)?,
+            event_authority: create_account_meta(parsed_accounts, ix, 13)?,
+            program: create_account_meta(parsed_accounts, ix, 14)?,
+            bin_arrays,
+        })
     }
 
     fn build_accounts(
@@ -125,7 +159,7 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
             token_y_mint: pool_data.token_y_mint.to_readonly(),
             oracle: pool_data.oracle.to_writable(),
             host_fee_in: METEORA_DLMM_PROGRAM.to_program(),
-            user: payer.to_writable(),
+            user: payer.to_signer(),
             token_x_program,
             token_y_program,
             event_authority: event_authority.to_readonly(),
@@ -167,17 +201,15 @@ mod tests {
             token_y_mint: "So11111111111111111111111111111111111111112".to_readonly(),
             oracle: "3JZiurfBXWDEbqSA4fJD1FCq3iJyNaxVKJpRi7PkeiM2".to_writable(),
             host_fee_in: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
-            user: PAYER.to_writable(),
+            user: PAYER.to_signer(),
             token_x_program: TokenProgram::SPL_TOKEN.to_program(),
             token_y_program: TokenProgram::SPL_TOKEN.to_program(),
             event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
             program: METEORA_DLMM_PROGRAM.to_program(),
             bin_arrays: vec![
-                "99NKxVHj9vRRQQQAYArBiB2L8wxPC9SEqKPdijYA5TXT".to_writable(),
                 "B2a1aWZxBSm1qWwEccceUzrkL76Ab9UYEesgmqdvv449".to_writable(),
-                "5B7g8kDyMMrkZ9M3XViGRa3rBanTNkZrFYzXrvMAe5CU".to_writable(),
-                "J1CV7tayczNeV1vTFeBxwUjFiSoeEsWqcDyNeHenuRwx".to_writable(),
-                "9FEKcgMh9yheepWE9xbosweXud1DNDaH7FiUgn4cwMRM".to_writable(),
+                "99NKxVHj9vRRQQQAYArBiB2L8wxPC9SEqKPdijYA5TXT".to_writable(),
+                "CmiWUQbev3JUSDGPvunF3DZDYBTJYAKUdUZpp9WkeJLh".to_writable(),
             ],
         }
     }
@@ -203,6 +235,7 @@ mod tests {
         assert_eq!(result, expected_result())
     }
 
+    #[test]
     fn test_restore_from() {
         let tx = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
         let tx = get_tx_by_sig(&get_test_rpc_client(), tx).unwrap();
