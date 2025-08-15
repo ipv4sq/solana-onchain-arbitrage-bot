@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
-    use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
+    use crate::arb::pool::interface::{PoolDataLoader, PoolConfigInit};
     use crate::arb::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
     use crate::arb::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
     use crate::arb::pool::raydium_cpmm::pool_config::*;

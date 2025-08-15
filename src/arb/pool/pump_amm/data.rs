@@ -1,7 +1,7 @@
 use solana_program::pubkey::Pubkey;
 use borsh::{BorshDeserialize, BorshSerialize};
 use crate::arb::constant::known_pool_program::PUMP_PROGRAM;
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig};
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -19,7 +19,7 @@ pub struct PumpAmmPoolData {
     pub _padding: [u8; 57],
 }
 
-impl PoolAccountDataLoader for PumpAmmPoolData {
+impl PoolDataLoader for PumpAmmPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(

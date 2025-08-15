@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::pool::interface::PoolAccountDataLoader;
+    use crate::arb::pool::interface::PoolDataLoader;
     use crate::arb::pool::pump_amm::data::PumpAmmPoolData;
     use crate::constants::helpers::ToPubkey;
 

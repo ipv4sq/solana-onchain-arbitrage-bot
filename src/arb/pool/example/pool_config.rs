@@ -1,5 +1,5 @@
 use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -8,7 +8,7 @@ use solana_program::pubkey::Pubkey;
 #[repr(C)]
 pub struct ExampleAccountData {}
 
-impl PoolAccountDataLoader for ExampleAccountData {
+impl PoolDataLoader for ExampleAccountData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         // Raydium CPMM accounts have an 8-byte discriminator at the beginning
         if data.len() < 8 {

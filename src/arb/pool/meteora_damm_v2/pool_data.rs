@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::PoolAccountDataLoader;
+use crate::arb::pool::interface::PoolDataLoader;
 use crate::arb::pool::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -39,7 +39,7 @@ pub struct MeteoraDammV2PoolData {
     pub reward_infos: [RewardInfo; 2],
 }
 
-impl PoolAccountDataLoader for MeteoraDammV2PoolData {
+impl PoolDataLoader for MeteoraDammV2PoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(

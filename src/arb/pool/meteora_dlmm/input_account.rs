@@ -28,31 +28,6 @@ pub struct MeteoraDlmmInputAccounts {
     pub bin_arrays: Vec<AccountMeta>,
 }
 
-impl SwapAccountsToList for MeteoraDlmmInputAccounts {
-    fn to_list(&self) -> Vec<&AccountMeta> {
-        concat(vec![
-            vec![
-                &self.lb_pair,
-                &self.bin_array_bitmap_extension,
-                &self.reverse_x,
-                &self.reverse_y,
-                &self.user_token_in,
-                &self.user_token_out,
-                &self.token_x_mint,
-                &self.token_y_mint,
-                &self.oracle,
-                &self.host_fee_in,
-                &self.user,
-                &self.token_x_program,
-                &self.token_y_program,
-                &self.event_authority,
-                &self.program,
-            ],
-            self.bin_arrays.iter().collect(),
-        ])
-    }
-}
-
 impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
     for MeteoraDlmmInputAccounts
 {
@@ -61,22 +36,22 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<MeteoraDlmmInputAccounts> {
         use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
-        
+
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(
                 "Invalid number of accounts for Meteora DLMM swap: expected at least 15, got {}",
                 ix.accounts.len()
             ));
         }
-        
+
         let parsed_accounts = get_parsed_accounts(tx)?;
-        
+
         // Extract bin arrays (all accounts after index 14)
         let mut bin_arrays = Vec::new();
         for i in 15..ix.accounts.len() {
             bin_arrays.push(create_account_meta(parsed_accounts, ix, i)?);
         }
-        
+
         Ok(MeteoraDlmmInputAccounts {
             lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
             bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
@@ -123,14 +98,9 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
             // Estimate number of bin arrays based on swap amount
             // It's safer to include more arrays - unused ones are ignored
             let num_arrays = bin_array::estimate_num_bin_arrays(input_amount.unwrap_or(0));
-            
-            bin_array::calculate_bin_arrays_for_swap(
-                &pool_data,
-                rpc,
-                pool,
-                swap_for_y,
-                num_arrays,
-            ).await
+
+            bin_array::calculate_bin_arrays_for_swap(&pool_data, rpc, pool, swap_for_y, num_arrays)
+                .await
         })?;
 
         // Determine token programs (assuming SPL token for now)
@@ -174,14 +144,33 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
     }
 
     fn to_list(&self) -> Vec<&AccountMeta> {
-        <Self as SwapAccountsToList>::to_list(self)
+        concat(vec![
+            vec![
+                &self.lb_pair,
+                &self.bin_array_bitmap_extension,
+                &self.reverse_x,
+                &self.reverse_y,
+                &self.user_token_in,
+                &self.user_token_out,
+                &self.token_x_mint,
+                &self.token_y_mint,
+                &self.oracle,
+                &self.host_fee_in,
+                &self.user,
+                &self.token_x_program,
+                &self.token_y_program,
+                &self.event_authority,
+                &self.program,
+            ],
+            self.bin_arrays.iter().collect(),
+        ])
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-    use crate::arb::pool::interface::{PoolAccountDataLoader, SwapInputAccountUtil};
+    use crate::arb::pool::interface::{PoolDataLoader, SwapInputAccountUtil};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::tx::ix::{is_meteora_damm_v2_swap, is_meteora_dlmm_swap};

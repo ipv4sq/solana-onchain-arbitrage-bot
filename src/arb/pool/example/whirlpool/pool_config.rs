@@ -1,5 +1,5 @@
 use crate::arb::pool::example::whirlpool::data::WhirlpoolPoolData;
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 

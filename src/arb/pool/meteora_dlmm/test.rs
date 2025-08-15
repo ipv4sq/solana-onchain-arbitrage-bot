@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
-    use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
+    use crate::arb::pool::interface::{PoolDataLoader, PoolConfigInit};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::pool::meteora_dlmm::bin_array;

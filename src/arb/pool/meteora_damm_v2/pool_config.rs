@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use anyhow::Result;

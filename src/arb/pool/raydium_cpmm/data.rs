@@ -1,6 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::interface::PoolAccountDataLoader;
+use crate::arb::pool::interface::PoolDataLoader;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -30,7 +30,7 @@ pub struct RaydiumCpmmAPoolData {
     pub padding: [u64; 31],
 }
 
-impl PoolAccountDataLoader for RaydiumCpmmAPoolData {
+impl PoolDataLoader for RaydiumCpmmAPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         // Raydium CPMM accounts have an 8-byte discriminator at the beginning
         if data.len() < 8 {

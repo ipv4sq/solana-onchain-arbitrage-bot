@@ -25,7 +25,7 @@ macro_rules! impl_swap_accounts_to_list {
     };
 }
 
-pub trait PoolAccountDataLoader: Sized {
+pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
 
     // mints

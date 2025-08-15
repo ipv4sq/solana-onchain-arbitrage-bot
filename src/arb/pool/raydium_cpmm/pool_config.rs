@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use crate::arb::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
 use crate::arb::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
 use crate::constants::addresses::SPL_TOKEN_KEY;

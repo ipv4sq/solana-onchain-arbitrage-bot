@@ -1,5 +1,7 @@
 use crate::arb::constant::known_pool_program::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
-use crate::arb::pool::interface::SwapAccountsToList;
+use crate::arb::constant::mint::MintPair;
+use crate::arb::pool::interface::{SwapAccountsToList, SwapInputAccountUtil};
+use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
 use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
@@ -7,6 +9,7 @@ use crate::constants::helpers::{ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
+use solana_transaction_status::option_serializer::OptionSerializer;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
     UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
@@ -61,9 +64,7 @@ pub fn extract_mev_instruction(
         .meta
         .as_ref()
         .and_then(|meta| match &meta.inner_instructions {
-            solana_transaction_status::option_serializer::OptionSerializer::Some(inner) => {
-                Some(inner)
-            }
+            OptionSerializer::Some(inner) => Some(inner),
             _ => None,
         })
         .and_then(|inner| inner.iter().find(|i| i.index == mev_idx as u8));
@@ -111,28 +112,21 @@ pub fn parse_swap_inner_ix(
 
     match ix.program_id.as_str() {
         PoolOwnerPrograms::METEORA_DLMM => {
-            let accounts = parse_meteora_dlmm(ix, tx)?;
-
-            // Parse instruction data (assuming it's base58 encoded)
-            let data = bs58::decode(&ix.data)
-                .into_vec()
-                .unwrap_or_else(|_| Vec::new());
-
-            // Get pool address (the lb_pair account)
-            let pool_address = accounts.lb_pair.pubkey;
-
-            // Convert accounts to string format
-            let account_strings = accounts
-                .to_list()
-                .into_iter()
-                .map(|acc| acc.pubkey.to_string())
-                .collect();
-
+            let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
             Ok(SwapInstruction {
                 dex_type: DexType::MeteoraDlmm,
-                pool_address,
-                accounts: account_strings,
-                data,
+                pool_address: accounts.lb_pair.pubkey,
+                accounts: accounts.to_list().into_iter().cloned().collect(),
+                mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
+            })
+        }
+        PoolOwnerPrograms::METEORA_DAMM_V2 => {
+            let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
+            Ok(SwapInstruction {
+                dex_type: DexType::MeteoraDammV2,
+                pool_address: accounts.pool.pubkey,
+                accounts: accounts.to_list().into_iter().cloned().collect(),
+                mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
             })
         }
         _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id)),

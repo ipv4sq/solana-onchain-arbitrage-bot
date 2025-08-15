@@ -6,7 +6,7 @@ use crate::constants::helpers::ToPubkey;
 
 
 // DEX types that can be identified in the transaction
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum DexType {
     RaydiumV4,
     RaydiumCp,

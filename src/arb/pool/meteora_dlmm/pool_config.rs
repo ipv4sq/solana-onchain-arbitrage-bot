@@ -1,5 +1,5 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use crate::arb::pool::meteora_dlmm::bin_array;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;

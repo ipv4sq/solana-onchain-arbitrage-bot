@@ -1,5 +1,5 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-use crate::arb::pool::interface::PoolAccountDataLoader;
+use crate::arb::pool::interface::PoolDataLoader;
 use crate::arb::pool::meteora_dlmm::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,
 };
@@ -43,7 +43,7 @@ pub struct MeteoraDlmmPoolData {
     pub _reserved: [u8; 22],
 }
 
-impl PoolAccountDataLoader for MeteoraDlmmPoolData {
+impl PoolDataLoader for MeteoraDlmmPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(

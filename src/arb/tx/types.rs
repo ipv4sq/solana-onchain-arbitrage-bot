@@ -1,6 +1,8 @@
 use crate::arb::tx::constants::DexType;
 use anyhow::anyhow;
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use crate::arb::constant::mint::MintPair;
 
 #[derive(Debug)]
 pub struct SmbInstruction {
@@ -21,14 +23,6 @@ pub struct SmbIxParameter {
 }
 
 impl SmbIxParameter {
-    // Parse instruction data bytes into SmbIxParameter
-    // Expected format (17 bytes):
-    // - [0]: discriminator (1 byte) - should be 28 for arbitrage
-    // - [1..9]: minimum_profit (8 bytes, little-endian u64)
-    // - [9..13]: compute_unit_limit (4 bytes, little-endian u32)
-    // - [13]: no_failure_mode (1 byte, boolean)
-    // - [14..16]: reserved (2 bytes, little-endian u16)
-    // - [16]: use_flashloan (1 byte, boolean)
     pub fn from_bytes(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() >= 17 {
             Ok(Self {
@@ -69,8 +63,8 @@ impl SmbIxParameter {
 pub struct SwapInstruction {
     pub dex_type: DexType,
     pub pool_address: Pubkey,
-    pub accounts: Vec<String>,
-    pub data: Vec<u8>,
+    pub accounts: Vec<AccountMeta>,
+    pub mints: MintPair,
 }
 
 #[cfg(test)]

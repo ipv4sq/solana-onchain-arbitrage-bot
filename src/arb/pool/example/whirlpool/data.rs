@@ -1,7 +1,7 @@
 use solana_program::pubkey::Pubkey;
 use borsh::{BorshDeserialize, BorshSerialize};
 use crate::arb::constant::known_pool_program::WHIRLPOOL_PROGRAM;
-use crate::arb::pool::interface::PoolAccountDataLoader;
+use crate::arb::pool::interface::PoolDataLoader;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
@@ -27,7 +27,7 @@ pub struct WhirlpoolPoolData {
     pub reward_infos: [WhirlpoolRewardInfo; 3],
 }
 
-impl PoolAccountDataLoader for WhirlpoolPoolData {
+impl PoolDataLoader for WhirlpoolPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         // Whirlpool accounts always have an 8-byte discriminator at the beginning
         if data.len() < 8 {

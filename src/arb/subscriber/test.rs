@@ -9,7 +9,13 @@ mod test {
         let client = get_test_rpc_client();
         let tx = get_tx_by_sig(&client, sig).unwrap();
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
-        
+
         on_mev_bot_transaction(&tx, ix, inner);
+        // what do you want from this?
+        /*
+        1. pool address
+        2. desired_mint and the_other_mint
+        3. save to database.
+         */
     }
 }

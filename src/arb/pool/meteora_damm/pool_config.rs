@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -7,7 +7,7 @@ use solana_program::pubkey::Pubkey;
 #[repr(C)]
 pub struct MeteoraDammV2AccountData {}
 
-impl PoolAccountDataLoader for MeteoraDammV2AccountData {
+impl PoolDataLoader for MeteoraDammV2AccountData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         // Raydium CPMM accounts have an 8-byte discriminator at the beginning
         if data.len() < 8 {
