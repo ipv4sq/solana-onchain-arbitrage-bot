@@ -107,12 +107,13 @@ pub trait SwapAccountsToList: Sized {
 }
 
 pub trait SwapInputAccountUtil<A, PD>: Sized {
-    fn retore_from(
+    fn restore_from(
         ix: &UiPartiallyDecodedInstruction,
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<A>;
 
     fn build_accounts(
+        payer: &Pubkey,
         pool: &Pubkey,
         pool_data: PD,
         input_mint: &Pubkey,

@@ -38,7 +38,7 @@ pub struct MeteoraDammV2InputAccount {
 impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     for MeteoraDammV2InputAccount
 {
-    fn retore_from(
+    fn restore_from(
         ix: &UiPartiallyDecodedInstruction,
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<MeteoraDammV2InputAccount> {
@@ -98,6 +98,7 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     }
 
     fn build_accounts(
+        payer: &Pubkey,
         pool: &Pubkey,
         pool_data: MeteoraDammV2PoolData,
         input_mint: &Pubkey,
@@ -248,20 +249,43 @@ mod tests {
 
     #[test]
     fn test_build_accounts() {
+        use spl_associated_token_account::get_associated_token_address_with_program_id;
+
         let pool = "6CXXieC355gteamwofSzJn8DiyrbKyYyXc3eBKmB81CF".to_pubkey();
         let pool_data = load_pool_data();
+        let input_mint = "So11111111111111111111111111111111111111112".to_pubkey();
+        let output_mint = "G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_pubkey();
 
         let result = MeteoraDammV2InputAccount::build_accounts(
+            &"4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5".to_pubkey(),
             &pool,
             pool_data,
-            &("So11111111111111111111111111111111111111112".to_pubkey()),
-            &("G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_pubkey()),
+            &input_mint,
+            &output_mint,
             Some(3226352439),
             Some(0),
             &get_test_rpc_client(),
         )
         .unwrap();
-        let expected = expected_account();
+
+        // Build expected with same logic as build_accounts
+        let payer = Pubkey::default();
+        let input_token_account = get_associated_token_address_with_program_id(
+            &payer,
+            &input_mint,
+            &TokenProgram::SPL_TOKEN.to_pubkey(),
+        );
+        let output_token_account = get_associated_token_address_with_program_id(
+            &payer,
+            &output_mint,
+            &TokenProgram::SPL_TOKEN.to_pubkey(),
+        );
+
+        let mut expected = expected_account();
+        expected.payer = payer.to_signer();
+        expected.input_token_account = input_token_account.to_writable();
+        expected.output_token_account = output_token_account.to_writable();
+
         assert_eq!(expected, result);
     }
 
