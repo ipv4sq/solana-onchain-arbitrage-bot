@@ -98,6 +98,7 @@ The `config.toml` must include:
 
 ## Coding Principles
 I am an experienced engineer with typescript, java, kotlin but not familiar with rust, I need you advise on best practice and help me code.
+This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
 
 ### General
 - DO NOT USE /// for comments, it looks annoying, normal // will be good
