@@ -2,8 +2,9 @@
 mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
     use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
-    use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
+    use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+    use crate::arb::pool::meteora_dlmm::bin_array;
     use crate::arb::pool::meteora_dlmm::pool_config::*;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use anyhow::Result;
@@ -62,7 +63,7 @@ mod tests {
 
         for (i, expected_idx) in expected_indices.iter().enumerate() {
             let expected_pda =
-                MeteoraDlmmPoolData::get_bin_array_pda(&POOL_ADDRESS.to_pubkey(), *expected_idx);
+                bin_array::get_bin_array_pda(&POOL_ADDRESS.to_pubkey(), *expected_idx);
             assert_eq!(
                 result.bin_arrays[i].pubkey, expected_pda,
                 "Bin array {} should match expected PDA for index {}",
@@ -77,7 +78,7 @@ mod tests {
         // Note: bin arrays are dynamic based on the swap size and liquidity distribution
         // The expected values here are from a specific historical transaction
         let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
-        let expected = MeteoraDlmmSwapAccounts {
+        let expected = MeteoraDlmmInputAccounts {
             lb_pair: "8ztFxjFPfVUtEf4SLSapcFj8GW2dxyUA9no2bLPq7H7V".to_writable(),
             bin_array_bitmap_extension: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
             reverse_x: "64GTWbkiCgZt62EMccjFHRoT1MQAQviDioa63NCj37w8".to_writable(),
@@ -210,7 +211,7 @@ mod tests {
 
         // Generate PDAs for indices -2 to 4 to match expected
         for index in -2..=4 {
-            let pda = MeteoraDlmmPoolData::get_bin_array_pda(&pool, index);
+            let pda = bin_array::get_bin_array_pda(&pool, index);
             println!("Index {}: {}", index, pda);
         }
 
@@ -225,7 +226,7 @@ mod tests {
         ];
 
         for (expected_pda, expected_index) in expected {
-            let generated_pda = MeteoraDlmmPoolData::get_bin_array_pda(&pool, expected_index);
+            let generated_pda = bin_array::get_bin_array_pda(&pool, expected_index);
             let matches = generated_pda.to_string() == expected_pda;
             println!(
                 "Index {}: {} - {}",

@@ -1,9 +1,15 @@
-use solana_program::instruction::AccountMeta;
+use crate::arb::pool::interface::{SwapAccountsToList, SwapInputAccountUtil};
+use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use anyhow::Result;
 use itertools::concat;
-use crate::arb::pool::interface::SwapAccountsToList;
-
+use solana_client::rpc_client::RpcClient;
+use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
+use solana_transaction_status::{
+    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
+};
 #[derive(Debug, Clone, PartialEq)]
-pub struct MeteoraDlmmSwapAccounts {
+pub struct MeteoraDlmmInputAccounts {
     pub lb_pair: AccountMeta,
     pub bin_array_bitmap_extension: AccountMeta,
     pub reverse_x: AccountMeta,
@@ -22,7 +28,7 @@ pub struct MeteoraDlmmSwapAccounts {
     pub bin_arrays: Vec<AccountMeta>,
 }
 
-impl SwapAccountsToList for MeteoraDlmmSwapAccounts {
+impl SwapAccountsToList for MeteoraDlmmInputAccounts {
     fn to_list(&self) -> Vec<&AccountMeta> {
         concat(vec![
             vec![
@@ -44,5 +50,50 @@ impl SwapAccountsToList for MeteoraDlmmSwapAccounts {
             ],
             self.bin_arrays.iter().collect(),
         ])
+    }
+}
+
+impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
+    for MeteoraDlmmInputAccounts
+{
+    fn restore_from(
+        ix: &UiPartiallyDecodedInstruction,
+        tx: &EncodedConfirmedTransactionWithStatusMeta,
+    ) -> Result<MeteoraDlmmInputAccounts> {
+        todo!()
+    }
+
+    fn build_accounts(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: MeteoraDlmmPoolData,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+        input_amount: Option<u64>,
+        output_amount: Option<u64>,
+        rpc: &RpcClient,
+    ) -> anyhow::Result<MeteoraDlmmInputAccounts> {
+        todo!()
+    }
+
+    fn to_list(&self) -> Vec<&AccountMeta> {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+
+    fn expected_result() -> MeteoraDlmmInputAccounts {
+        
+    }
+    #[test]
+    fn test_build_accounts() {
+
+    }
+
+    fn test_restore_from() {
+
     }
 }

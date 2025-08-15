@@ -1,6 +1,7 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
+use crate::arb::pool::meteora_dlmm::bin_array;
+use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::constants::addresses::SPL_TOKEN_KEY;
 use crate::constants::helpers::ToAccountMeta;
@@ -11,7 +12,7 @@ pub const DLMM_EVENT_AUTHORITY: &str = "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVn
 
 pub type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmPoolData>;
 
-impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmSwapAccounts> for MeteoraDlmmPoolConfig {
+impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDlmmPoolConfig {
     fn init(
         pool: &Pubkey,
         account_data: MeteoraDlmmPoolData,
@@ -34,7 +35,7 @@ impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmSwapAccounts> for MeteoraDlm
         output_mint: &Pubkey,
         amount_in: Option<u64>,
         amount_out: Option<u64>,
-    ) -> Result<MeteoraDlmmSwapAccounts> {
+    ) -> Result<MeteoraDlmmInputAccounts> {
         // Default to small swap bin arrays
         // For actual swaps, should call build_accounts_with_amount
         self.build_accounts_with_amount(payer, input_mint, output_mint, 0)
@@ -49,19 +50,20 @@ impl MeteoraDlmmPoolConfig {
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         amount_in: u64,
-    ) -> Result<MeteoraDlmmSwapAccounts> {
+    ) -> Result<MeteoraDlmmInputAccounts> {
         // Determine swap direction
         let is_a_to_b = input_mint == &self.data.token_x_mint;
 
         // Calculate required bin arrays based on amount (using estimation)
-        let bin_arrays = self.data.estimate_bin_arrays_for_swap(
+        let bin_arrays = bin_array::estimate_bin_arrays_for_swap(
+            &self.data,
             &self.pool,
             self.data.active_id,
             amount_in,
             is_a_to_b,
         );
 
-        Ok(MeteoraDlmmSwapAccounts {
+        Ok(MeteoraDlmmInputAccounts {
             lb_pair: self.pool.to_writable(),
             bin_array_bitmap_extension: METEORA_DLMM_PROGRAM.to_program(),
             reverse_x: self.data.reserve_x.to_writable(),

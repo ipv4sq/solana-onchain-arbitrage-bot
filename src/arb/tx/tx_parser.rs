@@ -1,6 +1,6 @@
 use crate::arb::constant::known_pool_program::KnownPoolPrograms;
 use crate::arb::pool::interface::SwapAccountsToList;
-use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
+use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
 use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::{ToPubkey, ToSignature};
@@ -153,7 +153,7 @@ pub fn parse_swap_inner_ix(
 pub fn parse_meteora_dlmm(
     ix: &UiPartiallyDecodedInstruction,
     tx: &EncodedConfirmedTransactionWithStatusMeta,
-) -> Result<MeteoraDlmmSwapAccounts> {
+) -> Result<MeteoraDlmmInputAccounts> {
     if ix.accounts.len() < 15 {
         return Err(anyhow::anyhow!(
             "Invalid number of accounts for Meteora DLMM swap"
@@ -162,7 +162,7 @@ pub fn parse_meteora_dlmm(
 
     let parsed_accounts = get_parsed_accounts(tx)?;
 
-    Ok(MeteoraDlmmSwapAccounts {
+    Ok(MeteoraDlmmInputAccounts {
         lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
         bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
         reverse_x: create_account_meta(parsed_accounts, ix, 2)?,

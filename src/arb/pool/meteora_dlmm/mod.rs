@@ -6,3 +6,4 @@ pub mod pool_data;
 #[cfg(test)]
 mod test;
 pub mod verified;
+mod bin_array;
