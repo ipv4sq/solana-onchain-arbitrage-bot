@@ -1,20 +1,16 @@
 use crate::arb::constant::known_pool_program::KnownPoolPrograms;
+use crate::arb::pool::interface::SwapAccountsToList;
+use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
-use crate::constants::addresses::TokenProgram;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
-use crate::dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
 use anyhow::Result;
-use clap::ArgAction::Set;
 use solana_client::rpc_client::RpcClient;
 use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, InnerInstructions,
-    UiInnerInstructions, UiInstruction, UiMessage, UiParsedInstruction,
-    UiPartiallyDecodedInstruction, UiTransactionStatusMeta,
+    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
+    UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
 use std::collections::{HashMap, HashSet};
-use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
-use crate::arb::pool::interface::SwapAccountsToList;
 
 pub fn get_tx_by_sig(
     client: &RpcClient,
@@ -120,25 +116,26 @@ pub fn parse_swap_inner_ix(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> Result<SwapInstruction> {
     use crate::arb::tx::constants::DexType;
-    
+
     match ix.program_id.as_str() {
         KnownPoolPrograms::METEORA_DLMM => {
             let accounts = parse_meteora_dlmm(ix, tx)?;
-            
+
             // Parse instruction data (assuming it's base58 encoded)
             let data = bs58::decode(&ix.data)
                 .into_vec()
                 .unwrap_or_else(|_| Vec::new());
-            
+
             // Get pool address (the lb_pair account)
             let pool_address = accounts.lb_pair.pubkey;
-            
+
             // Convert accounts to string format
-            let account_strings = accounts.to_list()
+            let account_strings = accounts
+                .to_list()
                 .into_iter()
                 .map(|acc| acc.pubkey.to_string())
                 .collect();
-            
+
             Ok(SwapInstruction {
                 dex_type: DexType::MeteoraDlmm,
                 pool_address,
@@ -146,7 +143,7 @@ pub fn parse_swap_inner_ix(
                 data,
             })
         }
-        _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id))
+        _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id)),
     }
 }
 
@@ -155,11 +152,13 @@ pub fn parse_meteora_dlmm(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> Result<MeteoraDlmmSwapAccounts> {
     use solana_program::instruction::AccountMeta;
-    
+
     if ix.accounts.len() < 15 {
-        return Err(anyhow::anyhow!("Invalid number of accounts for Meteora DLMM swap"));
+        return Err(anyhow::anyhow!(
+            "Invalid number of accounts for Meteora DLMM swap"
+        ));
     }
-    
+
     let parsed_accounts = match &tx.transaction.transaction {
         EncodedTransaction::Json(t) => match &t.message {
             UiMessage::Parsed(msg) => &msg.account_keys,
@@ -167,15 +166,20 @@ pub fn parse_meteora_dlmm(
         },
         _ => return Err(anyhow::anyhow!("Transaction is not in JSON format")),
     };
-    
+
     let create_account_meta = |index: usize| -> Result<AccountMeta> {
-        let account_key = ix.accounts.get(index)
+        let account_key = ix
+            .accounts
+            .get(index)
             .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
-        
-        let parsed_acc = parsed_accounts.iter()
+
+        let parsed_acc = parsed_accounts
+            .iter()
             .find(|acc| &acc.pubkey == account_key)
-            .ok_or_else(|| anyhow::anyhow!("Account {} not found in parsed accounts", account_key))?;
-        
+            .ok_or_else(|| {
+                anyhow::anyhow!("Account {} not found in parsed accounts", account_key)
+            })?;
+
         Ok(if parsed_acc.signer {
             account_key.to_signer()
         } else if parsed_acc.writable {
@@ -184,7 +188,7 @@ pub fn parse_meteora_dlmm(
             account_key.to_readonly()
         })
     };
-    
+
     Ok(MeteoraDlmmSwapAccounts {
         lb_pair: create_account_meta(0)?,
         bin_array_bitmap_extension: create_account_meta(1)?,
@@ -228,19 +232,26 @@ mod tests {
         assert_eq!(parsed.data.use_flashloan, true);
         assert_eq!(parsed.accounts.len(), 59);
         assert!(inner_ixs.instructions.len() > 0);
-        
+
         let swap_ixs = filter_swap_inner_ix(inner_ixs);
         assert!(!swap_ixs.is_empty());
-        
+
         for (program_id, ix) in swap_ixs.iter() {
             println!("Found swap instruction for program: {}", program_id);
             println!("Instruction has {} accounts", ix.accounts.len());
-            
+
             if program_id == KnownPoolPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
-                let swap_ix = parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
-                assert_eq!(swap_ix.dex_type, crate::arb::tx::constants::DexType::MeteoraDlmm);
+                let swap_ix =
+                    parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
+                assert_eq!(
+                    swap_ix.dex_type,
+                    crate::arb::tx::constants::DexType::MeteoraDlmm
+                );
                 assert!(swap_ix.accounts.len() >= 15);
-                println!("Successfully parsed Meteora DLMM swap with {} accounts", swap_ix.accounts.len());
+                println!(
+                    "Successfully parsed Meteora DLMM swap with {} accounts",
+                    swap_ix.accounts.len()
+                );
             }
         }
     }

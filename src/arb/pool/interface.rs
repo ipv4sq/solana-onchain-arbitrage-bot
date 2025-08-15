@@ -83,7 +83,7 @@ pub struct PoolConfig<T> {
 }
 
 pub trait PoolConfigInit<T, P>: Sized {
-    fn init(pool: &Pubkey, account_data: T, desired_mint: Pubkey) -> Result<Self>;
+    fn init(pool: &Pubkey, pool_data: T, desired_mint: Pubkey) -> Result<Self>;
     fn build_accounts(
         &self,
         payer: &Pubkey,

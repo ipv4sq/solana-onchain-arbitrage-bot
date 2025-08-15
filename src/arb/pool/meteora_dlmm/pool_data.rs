@@ -7,7 +7,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]
-pub struct MeteoraDlmmAccountData {
+pub struct MeteoraDlmmPoolData {
     pub parameters: StaticParameters,
     pub v_parameters: VariableParameters,
     pub bump_seed: [u8; 1],
@@ -43,7 +43,7 @@ pub struct MeteoraDlmmAccountData {
     pub _reserved: [u8; 22],
 }
 
-impl PoolAccountDataLoader for MeteoraDlmmAccountData {
+impl PoolAccountDataLoader for MeteoraDlmmPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(
@@ -51,7 +51,7 @@ impl PoolAccountDataLoader for MeteoraDlmmAccountData {
             ));
         }
 
-        MeteoraDlmmAccountData::try_from_slice(&data[8..])
+        MeteoraDlmmPoolData::try_from_slice(&data[8..])
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
@@ -72,7 +72,7 @@ impl PoolAccountDataLoader for MeteoraDlmmAccountData {
     }
 }
 
-impl MeteoraDlmmAccountData {
+impl MeteoraDlmmPoolData {
     // Estimation version - uses heuristics based on amount size
     pub fn estimate_bin_arrays_for_swap(
         &self,

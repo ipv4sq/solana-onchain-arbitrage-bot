@@ -3,7 +3,7 @@ mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
     use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
     use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
-    use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmAccountData;
+    use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::pool::meteora_dlmm::pool_config::*;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use anyhow::Result;
@@ -13,10 +13,10 @@ mod tests {
     // tx1: https://solscan.io/tx/2qVruJuf1dUTnUfG3ePnp4cRSg4WGK3P1AVUaB7MQdEJ7UMnzVdWL2677BNuPJJmowmvmfirEC9XvQ4uPZpcaTxw
     // tx2:
 
-    fn load_data() -> Result<MeteoraDlmmAccountData> {
+    fn load_data() -> Result<MeteoraDlmmPoolData> {
         let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
         let account =
-            MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+            MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
         Ok(account)
     }
 
@@ -62,7 +62,7 @@ mod tests {
 
         for (i, expected_idx) in expected_indices.iter().enumerate() {
             let expected_pda =
-                MeteoraDlmmAccountData::get_bin_array_pda(&POOL_ADDRESS.to_pubkey(), *expected_idx);
+                MeteoraDlmmPoolData::get_bin_array_pda(&POOL_ADDRESS.to_pubkey(), *expected_idx);
             assert_eq!(
                 result.bin_arrays[i].pubkey, expected_pda,
                 "Bin array {} should match expected PDA for index {}",
@@ -91,7 +91,7 @@ mod tests {
             user: "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_signer(),
             token_x_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
             token_y_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
-            event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
+            event_authority: DLMM_EVENT_AUTHORITY.to_readonly(),
             program: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
             bin_arrays: vec![
                 "9caL9WS3Y1RZ7L3wwXp4qa8hapTicbDY5GJJ3pteP7oX".to_writable(),
@@ -126,7 +126,7 @@ mod tests {
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
         let account =
-            MeteoraDlmmAccountData::load_data(&data).expect("Failed to parse account data");
+            MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
 
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
 
@@ -210,7 +210,7 @@ mod tests {
 
         // Generate PDAs for indices -2 to 4 to match expected
         for index in -2..=4 {
-            let pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool, index);
+            let pda = MeteoraDlmmPoolData::get_bin_array_pda(&pool, index);
             println!("Index {}: {}", index, pda);
         }
 
@@ -225,7 +225,7 @@ mod tests {
         ];
 
         for (expected_pda, expected_index) in expected {
-            let generated_pda = MeteoraDlmmAccountData::get_bin_array_pda(&pool, expected_index);
+            let generated_pda = MeteoraDlmmPoolData::get_bin_array_pda(&pool, expected_index);
             let matches = generated_pda.to_string() == expected_pda;
             println!(
                 "Index {}: {} - {}",
