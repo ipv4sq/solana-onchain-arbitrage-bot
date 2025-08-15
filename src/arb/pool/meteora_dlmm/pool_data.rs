@@ -1,6 +1,6 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
 use crate::arb::pool::interface::PoolAccountDataLoader;
-use crate::arb::pool::meteora_dlmm::data_type::{
+use crate::arb::pool::meteora_dlmm::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,
 };
 use borsh::{BorshDeserialize, BorshSerialize};

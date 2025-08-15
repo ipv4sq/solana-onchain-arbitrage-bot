@@ -1,6 +1,6 @@
 use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
 use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfig, PoolConfigInit};
-use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
+use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::constants::addresses::SPL_TOKEN_KEY;
 use crate::constants::helpers::ToAccountMeta;

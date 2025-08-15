@@ -1,7 +1,7 @@
 use crate::arb::pool::interface::PoolAccountDataLoader;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::meteora_damm_v2::data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
+use crate::arb::pool::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize)]
 #[repr(C)]

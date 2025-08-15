@@ -2,7 +2,7 @@
 mod tests {
     use crate::arb::constant::mint::WSOL_KEY;
     use crate::arb::pool::interface::{PoolAccountDataLoader, PoolConfigInit};
-    use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
+    use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::pool::meteora_dlmm::pool_config::*;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};

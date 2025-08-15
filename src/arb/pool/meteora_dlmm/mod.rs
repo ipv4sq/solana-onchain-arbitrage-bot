@@ -1,6 +1,6 @@
-pub mod account;
-pub mod data_type;
-pub mod ix_data;
+pub mod input_account;
+pub mod pool_data_type;
+pub mod input_data;
 pub mod pool_config;
 pub mod pool_data;
 #[cfg(test)]

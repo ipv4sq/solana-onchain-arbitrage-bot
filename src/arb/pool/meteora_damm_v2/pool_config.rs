@@ -24,8 +24,16 @@ impl PoolConfigInit<MeteoraDammV2PoolData, MeteoraDammV2SwapAccount> for Meteora
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         output_amount: Option<u64>,
-    ) -> anyhow::Result<MeteoraDammV2SwapAccount> {
+    ) -> Result<MeteoraDammV2SwapAccount> {
         todo!()
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_build_accounts() {
+
+    }
+}

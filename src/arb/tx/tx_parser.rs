@@ -1,6 +1,6 @@
 use crate::arb::constant::known_pool_program::KnownPoolPrograms;
 use crate::arb::pool::interface::SwapAccountsToList;
-use crate::arb::pool::meteora_dlmm::account::MeteoraDlmmSwapAccounts;
+use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmSwapAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
 use crate::constants::helpers::{ToAccountMeta, ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;

@@ -28,7 +28,7 @@ impl MeteoraDlmmIxData {
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::pool::meteora_dlmm::ix_data::MeteoraDlmmIxData;
+    use crate::arb::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
 
     static HEX_DATA: &str = "f8c69e91e17587c8ceaf31fc11ee01000000000000000000";
     
