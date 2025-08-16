@@ -88,44 +88,6 @@ pub struct TransactionMeta {
 
 ## Usage Pattern
 
-### Converting from Different Sources
-
-```rust
-use crate::arb::chain::unfied::{ToUnified, InstructionExtractor};
-
-// From RPC JSON
-let rpc_tx: EncodedConfirmedTransactionWithStatusMeta = fetch_from_rpc().await?;
-let unified_tx = rpc_tx.to_unified()?;
-
-// From gRPC Stream
-let grpc_update: TransactionUpdate = stream.next().await?;
-let unified_tx = grpc_update.to_unified()?;
-
-// Process uniformly regardless of source
-let mev_instructions = unified_tx.extract_mev_instructions();
-let swap_instructions = unified_tx.extract_swap_instructions();
-```
-
-### Processing Pipeline Integration
-
-```rust
-// Both data sources flow into the same processing logic
-async fn process_transaction(unified_tx: UnifiedTransaction) -> Result<()> {
-    // Extract MEV bot instructions
-    let mev_ixs = unified_tx.extract_mev_instructions();
-    
-    // Extract swap instructions from inner instructions
-    let swap_ixs = unified_tx.extract_swap_instructions();
-    
-    // Process swaps for arbitrage opportunities
-    for swap in swap_ixs {
-        analyze_arbitrage_opportunity(swap)?;
-    }
-    
-    Ok(())
-}
-```
-
 ## Conversion Details
 
 ### RPC JSON Conversion (`mapper/from_rpc.rs`)
