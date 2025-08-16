@@ -3,8 +3,8 @@ use crate::arb::constant::mint::MintPair;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
-use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
+use crate::arb::tx::custom_types::SwapInstruction;
+use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::{ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
@@ -15,6 +15,7 @@ use solana_transaction_status::{
     UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
 use std::collections::HashMap;
+use crate::arb::program::solana_mev_bot::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
 
 pub fn get_tx_by_sig(
     client: &RpcClient,
@@ -72,14 +73,14 @@ pub fn extract_mev_instruction(
     Some((mev_ix, inner_ixs?))
 }
 
-pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SmbInstruction> {
+pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SolanaMevBotIxInput> {
     let data_bytes = bs58::decode(&ix.data)
         .into_vec()
         .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-    let data = SmbIxParameter::from_bytes(&data_bytes)?;
+    let data = SolanaMevBotIxInputData::from_bytes(&data_bytes)?;
     let accounts = ix.accounts.iter().map(|acc| acc.to_pubkey()).collect();
 
-    Ok(SmbInstruction {
+    Ok(SolanaMevBotIxInput {
         program_id: ix.program_id.to_pubkey(),
         accounts,
         data,

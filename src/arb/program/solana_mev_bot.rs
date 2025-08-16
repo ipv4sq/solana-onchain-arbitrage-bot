@@ -1,18 +1,15 @@
-use crate::arb::constant::mint::MintPair;
-use crate::arb::constant::dex_type::DexType;
 use anyhow::anyhow;
-use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Debug)]
-pub struct SmbInstruction {
+pub struct SolanaMevBotIxInput {
     pub program_id: Pubkey,
     pub accounts: Vec<Pubkey>,
-    pub data: SmbIxParameter,
+    pub data: SolanaMevBotIxInputData,
 }
 
 #[derive(Debug)]
-pub struct SmbIxParameter {
+pub struct SolanaMevBotIxInputData {
     pub instruction_discriminator: u8,
     pub minimum_profit: u64,
     pub compute_unit_limit: u32,
@@ -22,7 +19,7 @@ pub struct SmbIxParameter {
     pub raw_data: Vec<u8>,
 }
 
-impl SmbIxParameter {
+impl SolanaMevBotIxInputData {
     pub fn from_bytes(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() >= 17 {
             Ok(Self {
@@ -59,25 +56,9 @@ impl SmbIxParameter {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SwapInstruction {
-    pub dex_type: DexType,
-    pub pool_address: Pubkey,
-    pub accounts: Vec<AccountMeta>,
-    pub mints: MintPair,
-}
-
-#[derive(Debug, Clone)]
-pub struct LitePool {
-    pub dex_type: DexType,
-    pub pool_address: Pubkey,
-    pub mints: MintPair,
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use crate::arb::program::solana_mev_bot::SolanaMevBotIxInputData;
     #[test]
     fn test_smb_ix_parameter_parsing() {
         // Test data from the actual transaction
@@ -90,7 +71,7 @@ mod tests {
             0x01, // use_flashloan = true
         ];
 
-        let params = SmbIxParameter::from_bytes(&data).unwrap();
+        let params = SolanaMevBotIxInputData::from_bytes(&data).unwrap();
 
         assert_eq!(params.instruction_discriminator, 28);
         assert_eq!(params.minimum_profit, 253345);
@@ -109,7 +90,7 @@ mod tests {
     fn test_smb_ix_parameter_invalid_data() {
         // Test with insufficient data
         let short_data = vec![0x1c, 0xa1];
-        let params = SmbIxParameter::from_bytes(&short_data).unwrap();
+        let params = SolanaMevBotIxInputData::from_bytes(&short_data).unwrap();
 
         assert_eq!(params.instruction_discriminator, 28);
         assert_eq!(params.minimum_profit, 0);

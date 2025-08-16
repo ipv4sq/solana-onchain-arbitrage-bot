@@ -1,5 +1,5 @@
 use crate::arb::constant::pool_owner::AnyPoolConfig;
-use crate::arb::tx::types::LitePool;
+use crate::arb::tx::custom_types::LitePool;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;

@@ -2,7 +2,7 @@ use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
 use crate::arb::global::db::{get_database, Database};
 use crate::arb::global::mem_pool::{mem_pool, MemPool};
 use crate::arb::tx::tx_parser::{convert_to_smb_ix, filter_swap_inner_ix, parse_swap_inner_ix};
-use crate::arb::tx::types::LitePool;
+use crate::arb::tx::custom_types::LitePool;
 use anyhow::Result;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,

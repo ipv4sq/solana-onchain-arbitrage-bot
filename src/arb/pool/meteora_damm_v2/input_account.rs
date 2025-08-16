@@ -1,6 +1,6 @@
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
-use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
+use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;

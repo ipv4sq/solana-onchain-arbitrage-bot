@@ -35,7 +35,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         ix: &UiPartiallyDecodedInstruction,
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
+        use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
 
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(

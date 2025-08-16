@@ -4,7 +4,7 @@ mod tests {
     use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
     use crate::arb::global::db::get_database;
     use crate::arb::constant::dex_type::DexType;
-    use crate::arb::tx::types::LitePool;
+    use crate::arb::tx::custom_types::LitePool;
     use crate::constants::helpers::ToPubkey;
 
     #[tokio::test]
