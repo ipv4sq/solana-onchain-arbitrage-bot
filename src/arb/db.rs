@@ -4,6 +4,7 @@ use solana_sdk::pubkey::Pubkey;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::env;
 use std::sync::Arc;
+use tokio::sync::OnceCell;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PoolMint {
@@ -20,6 +21,21 @@ pub struct Database {
     pool: Arc<PgPool>,
 }
 
+static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
+pub(super) async fn get_database() -> Result<Arc<Database>> {
+    DATABASE
+        .get_or_init(|| async {
+            Arc::new(
+                Database::new()
+                    .await
+                    .expect("Failed to initialize database"),
+            )
+        })
+        .await
+        .clone()
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("Failed to get database instance"))
+}
 impl Database {
     pub async fn new() -> Result<Self> {
         dotenv::dotenv().ok();
@@ -171,7 +187,9 @@ mod tests {
         let raydium_pools = db.list_pool_mints_by_dex("raydium_v4").await?;
         assert!(!raydium_pools.is_empty());
 
-        let found_pools = db.find_pools_by_mints(&desired_mint, &the_other_mint).await?;
+        let found_pools = db
+            .find_pools_by_mints(&desired_mint, &the_other_mint)
+            .await?;
         assert!(!found_pools.is_empty());
         assert_eq!(found_pools[0].pool_id, pool_id.to_string());
 

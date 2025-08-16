@@ -1,5 +1,5 @@
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
-use crate::arb::db::Database;
+use crate::arb::db::{get_database, Database};
 use crate::arb::subscriber::in_mem_pool::{mem_pool, MemPool};
 use crate::arb::tx::tx_parser::{convert_to_smb_ix, filter_swap_inner_ix, parse_swap_inner_ix};
 use crate::arb::tx::types::LitePool;
@@ -7,26 +7,7 @@ use anyhow::Result;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
-use std::sync::Arc;
-use tokio::sync::OnceCell;
 use tracing::{debug, info};
-
-static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
-
-pub(super) async fn get_database() -> Result<Arc<Database>> {
-    DATABASE
-        .get_or_init(|| async {
-            Arc::new(
-                Database::new()
-                    .await
-                    .expect("Failed to initialize database"),
-            )
-        })
-        .await
-        .clone()
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("Failed to get database instance"))
-}
 
 pub async fn on_mev_bot_transaction(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
