@@ -31,19 +31,19 @@ impl PoolDataLoader for PumpAmmPoolData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         self.base_mint
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         self.quote_mint
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         self.pool_base_token_account
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         self.pool_quote_token_account
     }
 }

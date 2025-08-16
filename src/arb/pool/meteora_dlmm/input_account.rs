@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::{SwapAccountsToList, SwapInputAccountUtil};
+use crate::arb::pool::interface::{InputAccountUtil};
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
@@ -8,6 +8,8 @@ use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
 };
+use crate::arb::constant::client::rpc_client;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {
     pub lb_pair: AccountMeta,
@@ -28,7 +30,7 @@ pub struct MeteoraDlmmInputAccounts {
     pub bin_arrays: Vec<AccountMeta>,
 }
 
-impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
+impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
     for MeteoraDlmmInputAccounts
 {
     fn restore_from(
@@ -80,7 +82,6 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
-        rpc: &RpcClient,
     ) -> Result<MeteoraDlmmInputAccounts> {
         use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
         use crate::arb::pool::meteora_dlmm::bin_array;
@@ -98,8 +99,8 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
             // Estimate number of bin arrays based on swap amount
             // It's safer to include more arrays - unused ones are ignored
             let num_arrays = bin_array::estimate_num_bin_arrays(input_amount.unwrap_or(0));
-
-            bin_array::calculate_bin_arrays_for_swap(&pool_data, rpc, pool, swap_for_y, num_arrays)
+            let rpc = rpc_client().clone();
+            bin_array::calculate_bin_arrays_for_swap(&pool_data, pool, swap_for_y, num_arrays)
                 .await
         })?;
 
@@ -170,7 +171,7 @@ impl SwapInputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-    use crate::arb::pool::interface::{PoolDataLoader, SwapInputAccountUtil};
+    use crate::arb::pool::interface::{PoolDataLoader, InputAccountUtil};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::tx::ix::{is_meteora_damm_v2_swap, is_meteora_dlmm_swap};

@@ -41,6 +41,33 @@ impl MintPair {
         }
     }
 
+    pub fn consists_of(&self, mint1: &Pubkey, mint2: &Pubkey) -> Result<()> {
+        if self.0 == *mint1 && self.1 == *mint2 {
+            Ok(())
+        } else if self.0 == *mint2 && self.1 == *mint1 {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Pair doesn't contain {} and {}, instead, it's {} and {}",
+                mint1,
+                mint2,
+                self.0,
+                self.1
+            ))
+        }
+    }
+
+    pub fn shall_contain(&self, mint: &Pubkey) -> Result<()> {
+        match self.0 == *mint || self.1 == *mint {
+            true => Ok(()),
+            false => Err(anyhow::anyhow!(
+                "This pool doesn't contain {} or {}",
+                self.0,
+                self.1
+            )),
+        }
+    }
+
     pub fn the_other_mint(&self) -> Result<Pubkey> {
         let desired_mint = self.desired_mint()?;
         if self.0 == desired_mint {

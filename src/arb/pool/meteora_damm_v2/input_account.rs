@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::SwapInputAccountUtil;
+use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::ToAccountMeta;
@@ -29,7 +29,7 @@ pub struct MeteoraDammV2InputAccount {
     pub meteora_program: AccountMeta,
 }
 
-impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
+impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     for MeteoraDammV2InputAccount
 {
     fn restore_from(
@@ -71,7 +71,6 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         output_amount: Option<u64>,
-        rpc: &RpcClient,
     ) -> Result<MeteoraDammV2InputAccount> {
         use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
         use crate::constants::addresses::TokenProgram;
@@ -153,7 +152,7 @@ impl SwapInputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
-    use crate::arb::pool::interface::SwapInputAccountUtil;
+    use crate::arb::pool::interface::InputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
     use crate::arb::tx::ix::is_meteora_damm_v2_swap;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;

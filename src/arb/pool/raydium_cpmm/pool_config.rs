@@ -11,8 +11,8 @@ const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxF
 
 pub type RaydiumCpmmPoolConfig = PoolConfig<RaydiumCpmmAPoolData>;
 
-impl PoolConfigInit<RaydiumCpmmAPoolData, RaydiumCpmmSwapAccounts> for RaydiumCpmmPoolConfig {
-    fn build_from_pool_data(
+impl PoolConfigInit<RaydiumCpmmAPoolData> for RaydiumCpmmPoolConfig {
+    fn from_pool_data(
         pool: &Pubkey,
         account_data: RaydiumCpmmAPoolData,
         desired_mint: Pubkey,
@@ -27,28 +27,28 @@ impl PoolConfigInit<RaydiumCpmmAPoolData, RaydiumCpmmSwapAccounts> for RaydiumCp
         })
     }
 
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        amount_in: Option<u64>,
-        amount_out: Option<u64>,
-    ) -> Result<RaydiumCpmmSwapAccounts> {
-        Ok(RaydiumCpmmSwapAccounts {
-            payer: payer.to_signer(),
-            authority: RAYDIUM_CPMM_AUTHORITY.to_pubkey().to_writable(),
-            amm_config: self.data.amm_config.to_writable(),
-            pool_state: self.pool.to_writable(),
-            input_token_account: ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
-            output_token_account: ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
-            input_vault: self.data.token_0_vault.to_writable(),
-            output_vault: self.data.token_1_vault.to_writable(),
-            input_token_program: SPL_TOKEN_KEY.to_readonly(),
-            output_token_program: SPL_TOKEN_KEY.to_readonly(),
-            input_token_mint: input_mint.to_writable(),
-            output_token_mint: output_mint.to_writable(),
-            observation_state: self.data.observation_key.to_writable(),
-        })
-    }
+    // fn build_accounts(
+    //     &self,
+    //     payer: &Pubkey,
+    //     input_mint: &Pubkey,
+    //     output_mint: &Pubkey,
+    //     amount_in: Option<u64>,
+    //     amount_out: Option<u64>,
+    // ) -> Result<RaydiumCpmmSwapAccounts> {
+    //     Ok(RaydiumCpmmSwapAccounts {
+    //         payer: payer.to_signer(),
+    //         authority: RAYDIUM_CPMM_AUTHORITY.to_pubkey().to_writable(),
+    //         amm_config: self.data.amm_config.to_writable(),
+    //         pool_state: self.pool.to_writable(),
+    //         input_token_account: ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
+    //         output_token_account: ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
+    //         input_vault: self.data.token_0_vault.to_writable(),
+    //         output_vault: self.data.token_1_vault.to_writable(),
+    //         input_token_program: SPL_TOKEN_KEY.to_readonly(),
+    //         output_token_program: SPL_TOKEN_KEY.to_readonly(),
+    //         input_token_mint: input_mint.to_writable(),
+    //         output_token_mint: output_mint.to_writable(),
+    //         observation_state: self.data.observation_key.to_writable(),
+    //     })
+    // }
 }

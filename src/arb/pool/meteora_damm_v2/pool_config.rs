@@ -5,8 +5,8 @@ use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 pub type MeteoraDammV2Config = PoolConfig<MeteoraDammV2PoolData>;
 
-impl PoolConfigInit<MeteoraDammV2PoolData, MeteoraDammV2InputAccount> for MeteoraDammV2Config {
-    fn build_from_pool_data(pool: &Pubkey, pool_data: MeteoraDammV2PoolData, desired_mint: Pubkey) -> Result<Self> {
+impl PoolConfigInit<MeteoraDammV2PoolData> for MeteoraDammV2Config {
+    fn from_pool_data(pool: &Pubkey, pool_data: MeteoraDammV2PoolData, desired_mint: Pubkey) -> Result<Self> {
         pool_data.shall_contain(&desired_mint)?;
         let minor_mint = pool_data.the_other_mint(pool)?;
         Ok(MeteoraDammV2Config {
@@ -15,17 +15,6 @@ impl PoolConfigInit<MeteoraDammV2PoolData, MeteoraDammV2InputAccount> for Meteor
             desired_mint,
             minor_mint,
         })
-    }
-
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        input_amount: Option<u64>,
-        output_amount: Option<u64>,
-    ) -> Result<MeteoraDammV2InputAccount> {
-        todo!()
     }
 }
 

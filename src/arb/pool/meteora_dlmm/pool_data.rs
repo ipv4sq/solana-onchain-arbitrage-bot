@@ -55,19 +55,19 @@ impl PoolDataLoader for MeteoraDlmmPoolData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         self.token_x_mint
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         self.token_y_mint
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         self.reserve_x
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         self.reserve_y
     }
 }

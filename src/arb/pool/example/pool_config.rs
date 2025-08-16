@@ -1,5 +1,5 @@
 use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
-use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -22,38 +22,31 @@ impl PoolDataLoader for ExampleAccountData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         todo!()
     }
 }
 
 type ExamplePoolConfig = PoolConfig<ExampleAccountData>;
 pub struct ExamplePoolSwapAccounts;
-impl PoolConfigInit<ExampleAccountData, ExamplePoolSwapAccounts> for ExamplePoolConfig {
-    fn build_from_pool_data(pool: &Pubkey, account_data: ExampleAccountData, desired_mint: Pubkey) -> Result<Self> {
-        todo!()
-    }
-
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        amount_in: Option<u64>,
-        amount_out: Option<u64>,
-    ) -> Result<ExamplePoolSwapAccounts> {
+impl PoolConfigInit<ExampleAccountData> for ExamplePoolConfig {
+    fn from_pool_data(
+        pool: &Pubkey,
+        account_data: ExampleAccountData,
+        desired_mint: Pubkey,
+    ) -> Result<Self> {
         todo!()
     }
 }

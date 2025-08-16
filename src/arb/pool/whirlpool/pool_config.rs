@@ -1,12 +1,12 @@
-use crate::arb::pool::example::whirlpool::data::WhirlpoolPoolData;
+use crate::arb::pool::whirlpool::data::WhirlpoolPoolData;
 use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 
 type WhirlpoolPoolConfig = PoolConfig<WhirlpoolPoolData>;
 pub struct WhirlpoolSwapAccounts {}
-impl PoolConfigInit<WhirlpoolPoolData, WhirlpoolSwapAccounts> for WhirlpoolPoolConfig {
-    fn build_from_pool_data(pool: &Pubkey, account_data: WhirlpoolPoolData, desired_mint: Pubkey) -> Result<Self> {
+impl PoolConfigInit<WhirlpoolPoolData> for WhirlpoolPoolConfig {
+    fn from_pool_data(pool: &Pubkey, account_data: WhirlpoolPoolData, desired_mint: Pubkey) -> Result<Self> {
         account_data.shall_contain(&desired_mint)?;
 
         Ok(WhirlpoolPoolConfig {
@@ -30,15 +30,5 @@ impl PoolConfigInit<WhirlpoolPoolData, WhirlpoolSwapAccounts> for WhirlpoolPoolC
             // ]),
         })
     }
-
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        amount_in: Option<u64>,
-        amount_out: Option<u64>,
-    ) -> Result<WhirlpoolSwapAccounts> {
-        todo!()
-    }
+    
 }

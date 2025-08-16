@@ -6,3 +6,4 @@ pub mod pump_amm;
 pub mod raydium_cpmm;
 pub mod meteora_damm_v2;
 mod util;
+mod whirlpool;

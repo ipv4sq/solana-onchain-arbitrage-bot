@@ -14,8 +14,8 @@ pub const DLMM_EVENT_AUTHORITY: &str = "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVn
 
 pub type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmPoolData>;
 
-impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDlmmPoolConfig {
-    fn build_from_pool_data(
+impl PoolConfigInit<MeteoraDlmmPoolData> for MeteoraDlmmPoolConfig {
+    fn from_pool_data(
         pool: &Pubkey,
         account_data: MeteoraDlmmPoolData,
         desired_mint: Pubkey,
@@ -28,19 +28,6 @@ impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDl
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
         })
-    }
-
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        amount_in: Option<u64>,
-        amount_out: Option<u64>,
-    ) -> Result<MeteoraDlmmInputAccounts> {
-        // Default to small swap bin arrays
-        // For actual swaps, should call build_accounts_with_amount
-        self.build_accounts_with_amount(payer, input_mint, output_mint, 0)
     }
 }
 

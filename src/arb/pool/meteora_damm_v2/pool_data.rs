@@ -55,19 +55,19 @@ impl PoolDataLoader for MeteoraDammV2PoolData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         self.token_a_mint
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         self.token_b_mint
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         self.token_a_vault
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         self.token_b_vault
     }
 }
@@ -123,10 +123,10 @@ pub mod test {
         );
 
         // Test trait methods work correctly
-        assert_eq!(pool_data.get_base_mint(), pool_data.token_a_mint);
-        assert_eq!(pool_data.get_quote_mint(), pool_data.token_b_mint);
-        assert_eq!(pool_data.get_base_vault(), pool_data.token_a_vault);
-        assert_eq!(pool_data.get_quote_vault(), pool_data.token_b_vault);
+        assert_eq!(pool_data.base_mint(), pool_data.token_a_mint);
+        assert_eq!(pool_data.quote_mint(), pool_data.token_b_mint);
+        assert_eq!(pool_data.base_vault(), pool_data.token_a_vault);
+        assert_eq!(pool_data.quote_vault(), pool_data.token_b_vault);
 
         println!("✓ All critical fields match the JSON data!");
         println!("✓ token_a_mint: {}", pool_data.token_a_mint);

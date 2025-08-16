@@ -44,19 +44,19 @@ impl PoolDataLoader for RaydiumCpmmAPoolData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         self.token_0_mint
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         self.token_1_mint
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         self.token_0_vault
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         self.token_1_vault
     }
 }

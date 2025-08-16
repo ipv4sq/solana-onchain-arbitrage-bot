@@ -16,7 +16,7 @@ pub async fn calculate_bin_arrays_for_swap(
         &[b"bitmap_extension", pool.as_ref()],
         &*METEORA_DLMM_PROGRAM,
     );
-    
+
     let bitmap_extension = rpc.get_account_data(&bitmap_extension_key).ok();
 
     let mut bin_array_pubkeys = get_bin_array_pubkeys_for_swap(
@@ -49,17 +49,17 @@ pub fn generate_bin_arrays_for_swap(
 ) -> Vec<Pubkey> {
     let current_array_index = bin_id_to_bin_array_index(active_bin_id);
     let mut bin_arrays = Vec::with_capacity(num_arrays);
-    
+
     // Always include the current bin array and adjacent ones
     // Start from current and go upward (for consistency with the test)
     // The program will handle the traversal based on swap direction
     // Including more arrays is safe - unused ones are ignored
-    
+
     for i in 0..num_arrays {
         let index = current_array_index + i as i32;
         bin_arrays.push(get_bin_array_pda(pool, index));
     }
-    
+
     bin_arrays
 }
 
@@ -71,7 +71,7 @@ pub fn estimate_num_bin_arrays(amount: u64) -> usize {
     match amount {
         // For test compatibility: this specific amount uses 3 arrays
         543235989680078 => 3,
-        0..=1_000_000_000_000 => 3,            // Small swaps: 3 arrays (<1T)  
+        0..=1_000_000_000_000 => 3,            // Small swaps: 3 arrays (<1T)
         1_000_000_000_001..=100_000_000_000_000 => 4,  // Medium swaps: 4 arrays (1T-100T)
         _ => 5,                                 // Large swaps: 5 arrays (>100T)
     }
@@ -94,7 +94,7 @@ pub fn get_bin_array_pubkeys_for_swap(
             start_bin_array_idx,
             bitmap_extension,
         )?;
-        
+
         if is_overflow {
             break;
         }
@@ -117,7 +117,7 @@ pub fn next_bin_array_index_with_liquidity(
     bitmap_extension: Option<&[u8]>,
 ) -> anyhow::Result<(i32, bool)> {
     let (min_bin_array_idx, max_bin_array_idx) = (-17, 17);
-    
+
     if swap_for_y {
         for idx in (min_bin_array_idx..=start_array_index).rev() {
             if is_bin_array_has_liquidity(pool_data, idx, bitmap_extension) {
@@ -131,7 +131,7 @@ pub fn next_bin_array_index_with_liquidity(
             }
         }
     }
-    
+
     Ok((0, true))
 }
 
@@ -144,12 +144,12 @@ pub fn is_bin_array_has_liquidity(
         let offset = get_bin_array_offset(bin_array_index);
         let bitmap_chunk = offset / 64;
         let bit_position = offset % 64;
-        
+
         if bitmap_chunk < 16 {
             return (pool_data.bin_array_bitmap[bitmap_chunk] & (1u64 << bit_position)) != 0;
         }
     }
-    
+
     false
 }
 
@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(bin_id_to_bin_array_index(70), 1);
         assert_eq!(bin_id_to_bin_array_index(139), 1);
         assert_eq!(bin_id_to_bin_array_index(140), 2);
-        
+
         assert_eq!(bin_id_to_bin_array_index(-1), -1);
         assert_eq!(bin_id_to_bin_array_index(-69), -1);
         assert_eq!(bin_id_to_bin_array_index(-70), -1);

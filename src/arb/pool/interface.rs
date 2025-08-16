@@ -1,8 +1,5 @@
 use crate::arb::constant::client::rpc_client;
 use crate::arb::constant::mint::MintPair;
-use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
-use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::constants::addresses::TokenProgram;
 use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
@@ -10,117 +7,68 @@ use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
 };
-use spl_associated_token_account::get_associated_token_address_with_program_id;
 
 pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
 
     // mints
-    fn get_base_mint(&self) -> Pubkey;
-    fn get_quote_mint(&self) -> Pubkey;
+    fn base_mint(&self) -> Pubkey;
+    fn quote_mint(&self) -> Pubkey;
 
     // vaults
-    fn get_base_vault(&self) -> Pubkey;
-    fn get_quote_vault(&self) -> Pubkey;
+    fn base_vault(&self) -> Pubkey;
+    fn quote_vault(&self) -> Pubkey;
 
     //
     fn consists_of(&self, mint1: &Pubkey, mint2: &Pubkey) -> Result<()> {
-        let base = self.get_base_mint();
-        let quote = self.get_quote_mint();
-        if base == *mint1 && quote == *mint2 {
-            return Ok(());
-        }
-        if base == *mint2 && quote == *mint1 {
-            return Ok(());
-        }
-        Err(anyhow::anyhow!(
-            "Pool doesn't contain {} and {}, instead, it's {} and {}",
-            mint1,
-            mint2,
-            base,
-            quote
-        ))
+        MintPair(self.base_mint(), self.quote_mint()).consists_of(mint1, mint2)
     }
 
     fn shall_contain(&self, mint: &Pubkey) -> Result<()> {
-        match self.get_base_mint() == *mint || self.get_quote_mint() == *mint {
-            true => Ok(()),
-            false => Err(anyhow::anyhow!(
-                "This pool doesn't contain {} or {}",
-                self.get_quote_mint(),
-                self.get_base_mint()
-            )),
-        }
+        MintPair(self.base_mint(), self.quote_mint()).shall_contain(mint)
     }
 
     fn the_other_mint(&self, excluded_mint: &Pubkey) -> Result<Pubkey> {
-        self.shall_contain(excluded_mint)?;
-        let base = self.get_base_mint();
-        let quote = self.get_quote_mint();
-        if base == *excluded_mint {
-            Ok(quote)
-        } else {
-            Ok(base)
-        }
+        MintPair(self.base_mint(), self.quote_mint()).the_other_mint()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct PoolConfig<Data>
-where
-    Data: PoolDataLoader,
-{
+pub struct PoolConfig<Data: PoolDataLoader> {
     pub pool: Pubkey,
     pub data: Data,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
 }
 
-pub trait PoolConfigInit<Data, Account>: Sized
-where
-    Data: PoolDataLoader,
-{
-    fn build_from_pool_data(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
+pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {
+    fn from_pool_data(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
 
     async fn from_address(pool: &Pubkey) -> Result<Self> {
         let client = rpc_client();
         let data = client.get_account_data(pool).await?;
         let pool_data = Data::load_data(&data)?;
-        let pair = MintPair(pool_data.get_base_mint(), pool_data.get_quote_mint());
-        let config = Self::build_from_pool_data(pool, pool_data, pair.the_other_mint()?);
+        let pair = MintPair(pool_data.base_mint(), pool_data.quote_mint());
+        let config = Self::from_pool_data(pool, pool_data, pair.the_other_mint()?);
         config
     }
+}
+
+pub trait InputAccountUtil<Account, Data>: Sized {
+    fn restore_from(
+        ix: &UiPartiallyDecodedInstruction,
+        tx: &EncodedConfirmedTransactionWithStatusMeta,
+    ) -> Result<Account>;
 
     fn build_accounts(
-        &self,
         payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: Data,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> Result<Account>;
-}
-
-pub trait SwapAccountsToList: Sized {
-    fn to_list(&self) -> Vec<&AccountMeta>;
-}
-
-pub trait SwapInputAccountUtil<A, PD>: Sized {
-    fn restore_from(
-        ix: &UiPartiallyDecodedInstruction,
-        tx: &EncodedConfirmedTransactionWithStatusMeta,
-    ) -> Result<A>;
-
-    fn build_accounts(
-        payer: &Pubkey,
-        pool: &Pubkey,
-        pool_data: PD,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        input_amount: Option<u64>,
-        output_amount: Option<u64>,
-        rpc: &RpcClient,
-    ) -> Result<A>;
 
     fn to_list(&self) -> Vec<&AccountMeta>;
 }

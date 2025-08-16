@@ -21,27 +21,27 @@ impl PoolDataLoader for MeteoraDammV2AccountData {
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
-    fn get_base_mint(&self) -> Pubkey {
+    fn base_mint(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_quote_mint(&self) -> Pubkey {
+    fn quote_mint(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_base_vault(&self) -> Pubkey {
+    fn base_vault(&self) -> Pubkey {
         todo!()
     }
 
-    fn get_quote_vault(&self) -> Pubkey {
+    fn quote_vault(&self) -> Pubkey {
         todo!()
     }
 }
 
 type MeteoraPoolConfig = PoolConfig<MeteoraDammV2AccountData>;
 pub struct MeteoraDammV2SwapAccounts;
-impl PoolConfigInit<MeteoraDammV2AccountData, MeteoraDammV2SwapAccounts> for MeteoraPoolConfig {
-    fn build_from_pool_data(
+impl PoolConfigInit<MeteoraDammV2AccountData> for MeteoraPoolConfig {
+    fn from_pool_data(
         pool: &Pubkey,
         account_data: MeteoraDammV2AccountData,
         desired_mint: Pubkey,
@@ -49,16 +49,6 @@ impl PoolConfigInit<MeteoraDammV2AccountData, MeteoraDammV2SwapAccounts> for Met
         todo!()
     }
 
-    fn build_accounts(
-        &self,
-        payer: &Pubkey,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        amount_in: Option<u64>,
-        amount_out: Option<u64>,
-    ) -> Result<MeteoraDammV2SwapAccounts> {
-        todo!()
-    }
 }
 
 impl MeteoraDammV2AccountData {}

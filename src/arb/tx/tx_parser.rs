@@ -1,6 +1,6 @@
 use crate::arb::constant::known_pool_program::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use crate::arb::constant::mint::MintPair;
-use crate::arb::pool::interface::{SwapAccountsToList, SwapInputAccountUtil};
+use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::tx::types::{SmbInstruction, SmbIxParameter, SwapInstruction};
