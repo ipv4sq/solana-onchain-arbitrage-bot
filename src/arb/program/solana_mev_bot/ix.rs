@@ -1,13 +1,8 @@
-use crate::arb::chain::tx::extract_ix_and_inners;
 use crate::arb::program::solana_mev_bot::ix_input::SolanaMevBotIxInput;
 use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
 use crate::constants::helpers::ToPubkey;
-use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions
-    , UiPartiallyDecodedInstruction,
-};
+use solana_transaction_status::UiPartiallyDecodedInstruction;
 
 pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SolanaMevBotIxInput> {
     let data_bytes = bs58::decode(&ix.data)
@@ -21,12 +16,6 @@ pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SolanaMev
         accounts,
         data,
     })
-}
-
-pub fn extract_mev_instruction(
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
-) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
-    extract_ix_and_inners(tx, |x| x.program_id == SMB_ONCHAIN_PROGRAM_ID)
 }
 
 

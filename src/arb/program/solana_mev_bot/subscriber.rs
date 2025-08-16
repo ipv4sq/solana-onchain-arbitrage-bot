@@ -1,22 +1,22 @@
 use crate::arb::chain::ix::extract_known_swap_inner_ix;
+use crate::arb::chain::tx::extract_ix_and_inners;
 use crate::arb::chain::types::LitePool;
-use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
-use crate::arb::global::db::{get_database, Database};
-use crate::arb::global::mem_pool::{mem_pool, MemPool};
-use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
+use crate::arb::global::db::get_database;
+use crate::arb::global::mem_pool::mem_pool;
+use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
-use tracing::{debug, info};
+use tracing::info;
 
-pub async fn on_mev_bot_transaction(
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
-    ix: &UiPartiallyDecodedInstruction,
-    inner: &UiInnerInstructions,
-) -> Result<()> {
+pub async fn entry(tx: &EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
+    let Some((ix, inner)) = extract_mev_instruction(tx) else {
+        return Ok(());
+    };
+
     let swaps = extract_known_swap_inner_ix(inner, tx);
-    for swap in swaps.iter() {
+    for swap in swaps {
         info!(
             "Recording pool {} with mints {:?} for {:?}",
             swap.pool_address, swap.mints, swap.dex_type
@@ -29,8 +29,13 @@ pub async fn on_mev_bot_transaction(
         record_pool_and_mints(&lite_pool).await?;
         mem_pool().add_if_not_exists(lite_pool)?;
     }
-
     Ok(())
+}
+
+pub fn extract_mev_instruction(
+    tx: &EncodedConfirmedTransactionWithStatusMeta,
+) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
+    extract_ix_and_inners(tx, |x| x.program_id == SMB_ONCHAIN_PROGRAM_ID)
 }
 
 pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {

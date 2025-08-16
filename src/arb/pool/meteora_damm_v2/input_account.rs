@@ -161,7 +161,7 @@ mod tests {
     use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
     use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
+    use crate::arb::program::solana_mev_bot::subscriber::extract_mev_instruction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =

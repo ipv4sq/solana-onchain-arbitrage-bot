@@ -1,7 +1,6 @@
 mod test {
     use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
-    use crate::arb::program::solana_mev_bot::subscriber::on_mev_bot_transaction;
+    use crate::arb::program::solana_mev_bot::subscriber::{entry, extract_mev_instruction};
     use crate::test::test_utils::get_test_rpc_client;
 
     #[tokio::test]
@@ -17,6 +16,6 @@ mod test {
 
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
 
-        on_mev_bot_transaction(&tx, &ix, &inner).await.unwrap();
+        entry(&tx).await.unwrap();
     }
 }
