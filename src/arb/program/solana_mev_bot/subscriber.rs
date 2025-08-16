@@ -1,6 +1,5 @@
 use crate::arb::chain::types::LitePool;
 use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
-use crate::arb::chain::tx_parser::{filter_swap_inner_ix, parse_swap_inner_ix};
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
 use crate::arb::global::db::{get_database, Database};
 use crate::arb::global::mem_pool::{mem_pool, MemPool};
@@ -9,6 +8,7 @@ use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
 use tracing::{debug, info};
+use crate::arb::chain::ix::{extract_swap_inner_ix, parse_swap_inner_ix};
 
 pub async fn on_mev_bot_transaction(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
@@ -16,7 +16,7 @@ pub async fn on_mev_bot_transaction(
     inner: &UiInnerInstructions,
 ) -> Result<()> {
     let _smb_ix = convert_to_smb_ix(ix)?;
-    let swap_instructions = filter_swap_inner_ix(inner);
+    let swap_instructions = extract_swap_inner_ix(inner);
 
     info!(
         "Found {} swap instructions to parse",

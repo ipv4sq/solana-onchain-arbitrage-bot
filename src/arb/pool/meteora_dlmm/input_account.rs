@@ -164,7 +164,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 #[cfg(test)]
 mod tests {
     use crate::arb::chain::ix::is_meteora_dlmm_swap;
-    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::rpc::fetch_tx_sync;
     use crate::arb::chain::tx_parser::extract_mev_instruction;
     use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
     use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};

@@ -160,7 +160,7 @@ mod tests {
     use crate::test::test_utils::get_test_rpc_client;
     use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
     use crate::arb::chain::ix::is_meteora_damm_v2_swap;
-    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::rpc::fetch_tx_sync;
     use crate::arb::chain::tx_parser::extract_mev_instruction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP

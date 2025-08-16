@@ -1,20 +1,12 @@
-use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
-use crate::arb::chain::types::SwapInstruction;
-use crate::arb::constant::mint::MintPair;
-use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
+use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use crate::arb::pool::interface::InputAccountUtil;
-use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::constants::helpers::{ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
-use anyhow::Result;
 use solana_transaction_status::option_serializer::OptionSerializer;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
     UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
-use std::collections::HashMap;
-
 pub fn extract_mev_instruction(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
@@ -54,94 +46,11 @@ pub fn extract_mev_instruction(
     Some((mev_ix, inner_ixs?))
 }
 
-pub fn filter_swap_inner_ix(
-    inner_instructions: &UiInnerInstructions,
-) -> HashMap<String, &UiPartiallyDecodedInstruction> {
-    inner_instructions
-        .instructions
-        .iter()
-        .filter_map(|x| match x {
-            UiInstruction::Parsed(i) => match i {
-                UiParsedInstruction::PartiallyDecoded(i) => Some(i),
-                _ => None,
-            },
-            UiInstruction::Compiled(_) => None,
-        })
-        .filter(|ix| {
-            // Only include recognized programs with sufficient accounts for a swap
-            RECOGNIZED_POOL_OWNER_PROGRAMS.contains(&ix.program_id) && ix.accounts.len() >= 5
-        })
-        .map(|ix| (ix.program_id.clone(), ix))
-        .collect()
-}
-
-pub fn parse_swap_inner_ix(
-    ix: &UiPartiallyDecodedInstruction,
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
-) -> Result<SwapInstruction> {
-    use crate::arb::constant::dex_type::DexType;
-
-    match ix.program_id.as_str() {
-        PoolOwnerPrograms::METEORA_DLMM => {
-            let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
-            Ok(SwapInstruction {
-                dex_type: DexType::MeteoraDlmm,
-                pool_address: accounts.lb_pair.pubkey,
-                accounts: accounts.to_list().into_iter().cloned().collect(),
-                mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
-            })
-        }
-        PoolOwnerPrograms::METEORA_DAMM_V2 => {
-            let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
-            Ok(SwapInstruction {
-                dex_type: DexType::MeteoraDammV2,
-                pool_address: accounts.pool.pubkey,
-                accounts: accounts.to_list().into_iter().cloned().collect(),
-                mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
-            })
-        }
-        _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id)),
-    }
-}
-
-pub fn parse_meteora_dlmm(
-    ix: &UiPartiallyDecodedInstruction,
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
-) -> Result<MeteoraDlmmInputAccounts> {
-    if ix.accounts.len() < 15 {
-        return Err(anyhow::anyhow!(
-            "Invalid number of accounts for Meteora DLMM swap"
-        ));
-    }
-
-    let parsed_accounts = get_parsed_accounts(tx)?;
-
-    Ok(MeteoraDlmmInputAccounts {
-        lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
-        bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
-        reverse_x: create_account_meta(parsed_accounts, ix, 2)?,
-        reverse_y: create_account_meta(parsed_accounts, ix, 3)?,
-        user_token_in: create_account_meta(parsed_accounts, ix, 4)?,
-        user_token_out: create_account_meta(parsed_accounts, ix, 5)?,
-        token_x_mint: create_account_meta(parsed_accounts, ix, 6)?,
-        token_y_mint: create_account_meta(parsed_accounts, ix, 7)?,
-        oracle: create_account_meta(parsed_accounts, ix, 8)?,
-        host_fee_in: create_account_meta(parsed_accounts, ix, 9)?,
-        user: create_account_meta(parsed_accounts, ix, 10)?,
-        token_x_program: create_account_meta(parsed_accounts, ix, 11)?,
-        token_y_program: create_account_meta(parsed_accounts, ix, 12)?,
-        event_authority: create_account_meta(parsed_accounts, ix, 13)?,
-        program: create_account_meta(parsed_accounts, ix, 14)?,
-        bin_arrays: (15..ix.accounts.len())
-            .map(|i| create_account_meta(parsed_accounts, ix, i))
-            .collect::<Result<Vec<_>>>()?,
-    })
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::arb::chain::ix::{extract_swap_inner_ix, parse_swap_inner_ix};
     use super::*;
-    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::rpc::fetch_tx_sync;
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
     use crate::test::test_utils::get_test_rpc_client;
@@ -163,7 +72,7 @@ mod tests {
         assert_eq!(parsed.accounts.len(), 59);
         assert!(inner_ixs.instructions.len() > 0);
 
-        let swap_ixs = filter_swap_inner_ix(inner_ixs);
+        let swap_ixs = extract_swap_inner_ix(inner_ixs);
         assert!(!swap_ixs.is_empty());
 
         for (program_id, ix) in swap_ixs.iter() {
