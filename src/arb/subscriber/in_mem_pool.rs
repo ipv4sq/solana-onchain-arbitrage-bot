@@ -36,7 +36,7 @@ impl MemPool {
 
                 tokio::spawn(async move {
                     let mem = mem_pool();
-                    mem.read().unwrap().add_to_registered(pool);
+                    let _ = mem.read().unwrap().add_to_registered(pool).await;
                 });
             }
             Some(_) => {}
