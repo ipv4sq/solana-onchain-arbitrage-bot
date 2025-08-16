@@ -36,9 +36,9 @@ data/
 
 ### Data Model Design
 
-#### UnifiedTransaction
+#### Transaction
 ```rust
-pub struct UnifiedTransaction {
+pub struct Transaction {
     pub signature: String,           // Transaction signature (base58)
     pub slot: u64,                  // Block slot number
     pub message: Message,            // Transaction message
