@@ -1,4 +1,9 @@
+use crate::arb::pool::interface::PoolConfigInit;
+use crate::arb::pool::meteora_damm_v2::pool_config::MeteoraDammV2Config;
+use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
+use crate::arb::tx::constants::DexType;
 use crate::constants::helpers::ToPubkey;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
@@ -38,4 +43,26 @@ lazy_static::lazy_static! {
         set.insert(PoolOwnerPrograms::METEORA_DAMM_V2.to_string());
         set
     };
+}
+
+pub enum AnyPoolConfig {
+    MeteoraDlmm(MeteoraDlmmPoolConfig),
+    MeteoraDammV2(MeteoraDammV2Config),
+    Unsupported,
+}
+
+impl AnyPoolConfig {
+    pub async fn from_address(pool: &Pubkey, dex_type: DexType) -> Result<AnyPoolConfig> {
+        match dex_type {
+            DexType::MeteoraDlmm => {
+                let c = MeteoraDlmmPoolConfig::from_address(&pool).await?;
+                Ok(AnyPoolConfig::MeteoraDlmm(c))
+            }
+            DexType::MeteoraDammV2 => {
+                let config = MeteoraDammV2Config::from_address(&pool).await?;
+                Ok(AnyPoolConfig::MeteoraDammV2(config))
+            }
+            _ => Ok(AnyPoolConfig::Unsupported),
+        }
+    }
 }
