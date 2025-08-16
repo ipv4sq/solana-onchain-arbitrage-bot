@@ -9,8 +9,6 @@ use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
 use anyhow::Result;
-use meteora_damm_cpi::accounts;
-use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
