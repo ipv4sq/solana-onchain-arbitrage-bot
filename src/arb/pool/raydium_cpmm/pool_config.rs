@@ -1,6 +1,7 @@
-use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
 use crate::arb::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
+use crate::arb::pool::util::ata;
 use crate::constants::addresses::SPL_TOKEN_KEY;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use anyhow::Result;
@@ -39,8 +40,8 @@ impl PoolConfigInit<RaydiumCpmmAPoolData, RaydiumCpmmSwapAccounts> for RaydiumCp
             authority: RAYDIUM_CPMM_AUTHORITY.to_pubkey().to_writable(),
             amm_config: self.data.amm_config.to_writable(),
             pool_state: self.pool.to_writable(),
-            input_token_account: Self::ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
-            output_token_account: Self::ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
+            input_token_account: ata(payer, input_mint, &*SPL_TOKEN_KEY).to_writable(),
+            output_token_account: ata(payer, output_mint, &*SPL_TOKEN_KEY).to_writable(),
             input_vault: self.data.token_0_vault.to_writable(),
             output_vault: self.data.token_1_vault.to_writable(),
             input_token_program: SPL_TOKEN_KEY.to_readonly(),

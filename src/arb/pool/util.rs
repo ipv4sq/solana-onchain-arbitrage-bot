@@ -1,4 +1,7 @@
 use anyhow::Result;
+use solana_program::pubkey::Pubkey;
+use spl_associated_token_account::get_associated_token_address_with_program_id;
+
 #[macro_export]
 macro_rules! impl_swap_accounts_to_list {
     ($struct_name:ident { $($field:ident),+ $(,)? }) => {
@@ -14,4 +17,8 @@ macro_rules! impl_swap_accounts_to_list {
     ($struct_name:ident, $($field:ident),+ $(,)?) => {
         impl_swap_accounts_to_list!($struct_name { $($field),+ });
     };
+}
+
+pub fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
+    get_associated_token_address_with_program_id(owner, mint, token_program)
 }

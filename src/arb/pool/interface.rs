@@ -66,9 +66,12 @@ pub trait PoolDataLoader: Sized {
 }
 
 #[derive(Debug, Clone)]
-pub struct PoolConfig<T> {
+pub struct PoolConfig<Data>
+where
+    Data: PoolDataLoader,
+{
     pub pool: Pubkey,
-    pub data: T,
+    pub data: Data,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
 }
@@ -79,7 +82,7 @@ where
 {
     fn build_from_pool_data(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
 
-    async fn from_pool_address(pool: &Pubkey) -> Result<Self> {
+    async fn from_address(pool: &Pubkey) -> Result<Self> {
         let client = rpc_client();
         let data = client.get_account_data(pool).await?;
         let pool_data = Data::load_data(&data)?;
@@ -96,10 +99,6 @@ where
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> Result<Account>;
-
-    fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
-        get_associated_token_address_with_program_id(owner, mint, token_program)
-    }
 }
 
 pub trait SwapAccountsToList: Sized {
