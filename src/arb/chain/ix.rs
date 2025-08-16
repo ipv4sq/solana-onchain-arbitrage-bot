@@ -1,17 +1,17 @@
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::mint::MintPair;
-use crate::arb::constant::pool_owner::{PoolOwnerPrograms};
+use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+use crate::arb::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiInstruction,
     UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
 use sqlx::encode::IsNull::No;
 use std::collections::HashMap;
-use crate::arb::pool::register::RECOGNIZED_POOL_OWNER_PROGRAMS;
 
 pub fn is_program_ix<'a>(
     ix: &'a UiInstruction,
@@ -41,7 +41,7 @@ pub fn extract_known_swap_inner_ix(
     filtered
         .values()
         .into_iter()
-        .filter_map(|x| parse_swap_inner_ix(x, tx).ok())
+        .filter_map(|x| AnyPoolConfig::from_ix(x, tx).ok())
         .collect()
 }
 
@@ -66,39 +66,13 @@ fn known_swap_to_map(
         .collect()
 }
 
-fn parse_swap_inner_ix(
-    ix: &UiPartiallyDecodedInstruction,
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
-) -> anyhow::Result<SwapInstruction> {
-    match ix.program_id.as_str() {
-        PoolOwnerPrograms::METEORA_DLMM => {
-            let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
-            Ok(SwapInstruction {
-                dex_type: DexType::MeteoraDlmm,
-                pool_address: accounts.lb_pair.pubkey,
-                accounts: accounts.to_list().into_iter().cloned().collect(),
-                mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
-            })
-        }
-        PoolOwnerPrograms::METEORA_DAMM_V2 => {
-            let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
-            Ok(SwapInstruction {
-                dex_type: DexType::MeteoraDammV2,
-                pool_address: accounts.pool.pubkey,
-                accounts: accounts.to_list().into_iter().cloned().collect(),
-                mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
-            })
-        }
-        _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::arb::chain::ix::{parse_swap_inner_ix, known_swap_to_map};
+    use crate::arb::chain::ix::known_swap_to_map;
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::constant::pool_owner::PoolOwnerPrograms;
     use crate::arb::global::rpc::fetch_tx_sync;
+    use crate::arb::pool::register::AnyPoolConfig;
     use crate::arb::program::solana_mev_bot::ix::{convert_to_smb_ix, extract_mev_instruction};
     use crate::test::test_utils::get_test_rpc_client;
 
@@ -128,7 +102,7 @@ mod tests {
 
             if program_id == PoolOwnerPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
                 let swap_ix =
-                    parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
+                    AnyPoolConfig::from_ix(ix, &tx).expect("Failed to parse swap instruction");
                 assert_eq!(swap_ix.dex_type, DexType::MeteoraDlmm);
                 assert!(swap_ix.accounts.len() >= 15);
                 println!(
