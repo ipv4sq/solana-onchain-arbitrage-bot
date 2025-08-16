@@ -1,5 +1,5 @@
 use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
-use crate::arb::tx::types::{LitePool, SwapInstruction};
+use crate::arb::tx::types::LitePool;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;

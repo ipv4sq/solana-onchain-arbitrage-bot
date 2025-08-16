@@ -1,3 +1,7 @@
+use crate::arb::constant::client::rpc_client;
+use crate::arb::constant::mint::MintPair;
+use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
+use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::constants::addresses::TokenProgram;
 use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
@@ -86,8 +90,18 @@ pub struct PoolConfig<T> {
     pub minor_mint: Pubkey,
 }
 
-pub trait PoolConfigInit<T, P>: Sized {
-    fn init(pool: &Pubkey, pool_data: T, desired_mint: Pubkey) -> Result<Self>;
+pub trait PoolConfigInit<Data, Account>: Sized {
+    fn init(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
+
+    async fn load(pool: &Pubkey) -> Result<Self> {
+        let client = rpc_client();
+        let data = client.get_account_data(pool).await?;
+        let pool_data = MeteoraDlmmPoolData::load_data(&data)?;
+        let pair = MintPair(pool_data.get_base_mint(), pool_data.get_base_mint());
+        let config = Self::init(pool, pool_data, pair.the_other_mint()?);
+        config
+    }
+
     fn build_accounts(
         &self,
         payer: &Pubkey,
@@ -95,7 +109,7 @@ pub trait PoolConfigInit<T, P>: Sized {
         output_mint: &Pubkey,
         input_amount: Option<u64>,
         output_amount: Option<u64>,
-    ) -> Result<P>;
+    ) -> Result<Account>;
 
     fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
         get_associated_token_address_with_program_id(owner, mint, token_program)

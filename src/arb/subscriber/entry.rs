@@ -1,21 +1,19 @@
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
 use crate::arb::db::Database;
 use crate::arb::subscriber::in_mem_pool::{mem_pool, MemPool};
-use crate::arb::tx::constants::DexType;
 use crate::arb::tx::tx_parser::{convert_to_smb_ix, filter_swap_inner_ix, parse_swap_inner_ix};
 use crate::arb::tx::types::LitePool;
 use anyhow::Result;
-use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
 use std::sync::Arc;
 use tokio::sync::OnceCell;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
 
-async fn get_database() -> Result<Arc<Database>> {
+pub(super) async fn get_database() -> Result<Arc<Database>> {
     DATABASE
         .get_or_init(|| async {
             Arc::new(
@@ -67,7 +65,6 @@ pub async fn on_mev_bot_transaction(
 
     info!("Successfully parsed {} swaps", mapped.len());
 
-
     for swap in mapped.iter() {
         info!(
             "Recording pool {} with mints {:?} for {:?}",
@@ -78,44 +75,29 @@ pub async fn on_mev_bot_transaction(
             pool_address: swap.pool_address.clone(),
             mints: swap.mints.clone(),
         };
-        record_pool_and_mints(&swap.pool_address, swap.dex_type, &swap.mints).await?;
+        record_pool_and_mints(&lite_pool).await?;
         mem_pool().add_if_not_exists(lite_pool)?;
     }
 
     Ok(())
 }
 
-pub(super) async fn record_pool_and_mints(
-    pool: &Pubkey,
-    dex_type: DexType,
-    mints: &MintPair,
-) -> Result<()> {
+pub(super) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
     let db = get_database().await?;
-    let dex_type_str = format!("{:?}", dex_type);
-
-    // Determine which mint is the desired one (WSOL or USDC for arbitrage)
-    let (desired_mint, the_other_mint) = if mints.0 == *WSOL_KEY || mints.0 == *USDC_KEY {
-        (Some(&mints.0), Some(&mints.1))
-    } else if mints.1 == *WSOL_KEY || mints.1 == *USDC_KEY {
-        (Some(&mints.1), Some(&mints.0))
-    } else {
-        // If neither is WSOL or USDC, skip recording
-        debug!(
-            "Skipping pool {} - no WSOL/USDC mint found in pair {:?}",
-            pool, mints
-        );
-        return Ok(());
-    };
+    let dex_type_str = format!("{:?}", lite_pool.dex_type);
+    let desired_mint = lite_pool.mints.desired_mint()?;
+    let the_other_mint = lite_pool.mints.the_other_mint()?;
 
     // Only record if we have a desired mint
-    if let (Some(desired), Some(other)) = (desired_mint, the_other_mint) {
-        info!(
-            "Recording pool {} with desired mint {} and other mint {} for {}",
-            pool, desired, other, dex_type_str
-        );
-        db.record_pool_and_mints(pool, desired, other, &dex_type_str)
-            .await
-    } else {
-        Ok(())
-    }
+    info!(
+        "Recording pool {} with desired mint {} and other mint {} for {}",
+        lite_pool.pool_address, desired_mint, the_other_mint, dex_type_str
+    );
+    db.record_pool_and_mints(
+        &lite_pool.pool_address,
+        &desired_mint,
+        &the_other_mint,
+        &dex_type_str,
+    )
+    .await
 }
