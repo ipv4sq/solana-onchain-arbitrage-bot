@@ -1,11 +1,12 @@
+use crate::arb::chain::data::Transaction;
 use solana_transaction_status::option_serializer::OptionSerializer;
 use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
-    UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
+    EncodedTransaction, UiInnerInstructions, UiInstruction, UiMessage, UiParsedInstruction,
+    UiPartiallyDecodedInstruction,
 };
 
 pub fn extract_ix_and_inners(
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
+    tx: &Transaction,
     mut interested_in: impl FnMut(&UiPartiallyDecodedInstruction) -> bool,
 ) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
     let message = match &tx.transaction.transaction {

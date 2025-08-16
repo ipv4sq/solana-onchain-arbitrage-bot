@@ -9,6 +9,7 @@ use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
 use tracing::info;
+use crate::arb::chain::data::Transaction;
 
 pub async fn entry(tx: &EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
     let Some((ix, inner)) = extract_mev_instruction(tx) else {
@@ -33,7 +34,7 @@ pub async fn entry(tx: &EncodedConfirmedTransactionWithStatusMeta) -> Result<()>
 }
 
 pub fn extract_mev_instruction(
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
+    tx: &Transaction,
 ) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
     extract_ix_and_inners(tx, |x| x.program_id == SMB_ONCHAIN_PROGRAM_ID)
 }
