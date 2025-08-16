@@ -1,8 +1,8 @@
+use crate::arb::constant::mint::MintPair;
 use crate::arb::tx::constants::DexType;
 use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use crate::arb::constant::mint::MintPair;
 
 #[derive(Debug)]
 pub struct SmbInstruction {
@@ -64,6 +64,13 @@ pub struct SwapInstruction {
     pub dex_type: DexType,
     pub pool_address: Pubkey,
     pub accounts: Vec<AccountMeta>,
+    pub mints: MintPair,
+}
+
+#[derive(Debug, Clone)]
+pub struct LitePool {
+    pub dex_type: DexType,
+    pub pool_address: Pubkey,
     pub mints: MintPair,
 }
 
