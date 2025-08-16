@@ -14,13 +14,13 @@ use solana_transaction_status::{
 use std::str::FromStr;
 
 use crate::arb::chain::data::ToUnified;
-use crate::arb::chain::data::UnifiedTransaction;
+use crate::arb::chain::data::Transaction;
 use crate::arb::chain::data::Message;
 use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::data::TransactionMeta;
 
 impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
-    fn to_unified(&self) -> Result<UnifiedTransaction> {
+    fn to_unified(&self) -> Result<Transaction> {
         let signatures = match &self.transaction.transaction {
             EncodedTransaction::Json(tx) => &tx.signatures,
             _ => bail!("Only JSON encoded transactions are supported"),
@@ -42,7 +42,7 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             .map(|m| convert_meta(m))
             .transpose()?;
         
-        Ok(UnifiedTransaction {
+        Ok(Transaction {
             signature,
             slot: self.slot,
             message,

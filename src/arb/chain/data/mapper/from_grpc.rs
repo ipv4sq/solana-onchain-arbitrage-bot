@@ -5,13 +5,13 @@ use std::str::FromStr;
 
 use crate::arb::subscriber::grpc_subscription::TransactionUpdate;
 use crate::arb::chain::data::ToUnified;
-use crate::arb::chain::data::UnifiedTransaction;
+use crate::arb::chain::data::Transaction;
 use crate::arb::chain::data::Message;
 use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::data::TransactionMeta;
 
 impl ToUnified for TransactionUpdate {
-    fn to_unified(&self) -> Result<UnifiedTransaction> {
+    fn to_unified(&self) -> Result<Transaction> {
         let transaction = self.transaction
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("TransactionUpdate has no transaction"))?;
@@ -100,7 +100,7 @@ impl ToUnified for TransactionUpdate {
             .map(|m| convert_grpc_meta(m, &unified_message.account_keys))
             .transpose()?;
         
-        Ok(UnifiedTransaction {
+        Ok(Transaction {
             signature: self.signature.clone(),
             slot: self.slot,
             message: unified_message,

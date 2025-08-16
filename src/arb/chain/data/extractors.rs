@@ -2,11 +2,11 @@ use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
 use crate::arb::chain::data::mapper::traits::InstructionExtractor;
-use super::transaction::UnifiedTransaction;
+use super::transaction::Transaction;
 use super::instruction::Instruction;
 use crate::arb::chain::types::SwapInstruction;
 
-impl InstructionExtractor for UnifiedTransaction {
+impl InstructionExtractor for Transaction {
     fn extract_mev_instructions(&self) -> Vec<Instruction> {
         // For now, return empty until we properly handle the MEV program ID
         // This will be implemented when integrating with the actual processing pipeline
