@@ -119,7 +119,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
         Ok(MeteoraDlmmInputAccounts {
             lb_pair: pool.to_writable(),
-            bin_array_bitmap_extension: METEORA_DLMM_PROGRAM.to_program(),
+            bin_array_bitmap_extension: (*METEORA_DLMM_PROGRAM).to_program(),
             reverse_x: pool_data.reserve_x.to_writable(),
             reverse_y: pool_data.reserve_y.to_writable(),
             user_token_in: user_token_in.to_writable(),
@@ -127,12 +127,12 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             token_x_mint: pool_data.token_x_mint.to_readonly(),
             token_y_mint: pool_data.token_y_mint.to_readonly(),
             oracle: pool_data.oracle.to_writable(),
-            host_fee_in: METEORA_DLMM_PROGRAM.to_program(),
+            host_fee_in: (*METEORA_DLMM_PROGRAM).to_program(),
             user: payer.to_signer(),
             token_x_program,
             token_y_program,
             event_authority: event_authority.to_readonly(),
-            program: METEORA_DLMM_PROGRAM.to_program(),
+            program: (*METEORA_DLMM_PROGRAM).to_program(),
             bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
         })
     }
@@ -194,7 +194,7 @@ mod tests {
             token_x_program: TokenProgram::SPL_TOKEN.to_program(),
             token_y_program: TokenProgram::SPL_TOKEN.to_program(),
             event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
-            program: METEORA_DLMM_PROGRAM.to_program(),
+            program: (*METEORA_DLMM_PROGRAM).to_program(),
             bin_arrays: vec![
                 "B2a1aWZxBSm1qWwEccceUzrkL76Ab9UYEesgmqdvv449".to_writable(),
                 "99NKxVHj9vRRQQQAYArBiB2L8wxPC9SEqKPdijYA5TXT".to_writable(),

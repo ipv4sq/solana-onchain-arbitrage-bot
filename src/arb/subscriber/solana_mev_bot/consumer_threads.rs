@@ -2,12 +2,24 @@ use crate::arb::program::solana_mev_bot::subscriber::{entry as process_mev_tx, e
 use crate::arb::subscriber::pubsub::{PubSubConfig, PubSubProcessor};
 use anyhow::Result;
 use once_cell::sync::Lazy;
+use solana_sdk::pubkey::Pubkey;
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 use std::ops::Deref;
 use std::sync::Arc;
 use tracing::info;
 
 const NAME: &str = "SolanaMevBotTransactionDetector";
+
+#[derive(Debug, Clone)]
+pub struct MevTransaction {
+    pub signature: String,
+    pub slot: u64,
+    pub input_mint: Pubkey,
+    pub output_mint: Pubkey,
+    pub amount_in: u64,
+    pub pools: Vec<Pubkey>,
+    pub instruction_index: usize,
+}
 
 struct MevProcessor(PubSubProcessor<EncodedConfirmedTransactionWithStatusMeta>);
 
@@ -49,6 +61,7 @@ pub async fn publish_mev_transaction(tx: EncodedConfirmedTransactionWithStatusMe
 pub fn try_publish_mev_transaction(tx: EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
     MEV_PROCESSOR.try_publish(tx)
 }
+
 
 #[cfg(test)]
 mod tests {
