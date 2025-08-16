@@ -33,8 +33,7 @@ impl MeteoraDlmmIxData {
 }
 
 pub fn is_meteora_dlmm_swap(ix: &UiInstruction) -> Option<&UiPartiallyDecodedInstruction> {
-    ix::is_program_ix(ix, PoolOwnerPrograms::METEORA_DLMM, Some(14))
-        .filter(|decoded| decoded.accounts.len() > 14)
+    ix::is_program_ix_with_min_accounts(ix, PoolOwnerPrograms::METEORA_DLMM, 10)
 }
 
 #[cfg(test)]

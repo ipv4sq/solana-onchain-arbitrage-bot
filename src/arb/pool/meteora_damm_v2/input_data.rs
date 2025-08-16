@@ -3,6 +3,7 @@ use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_transaction_status::{UiInstruction, UiPartiallyDecodedInstruction};
+use ix::is_program_ix_with_min_accounts;
 
 #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize)]
 pub struct MeteoraDammV2InputData {
@@ -37,9 +38,7 @@ impl MeteoraDammV2InputData {
     }
 }
 pub fn is_meteora_damm_v2_swap(ix: &UiInstruction) -> Option<&UiPartiallyDecodedInstruction> {
-    // METEORA_DAMM_V2 swap instructions have exactly 14 accounts
-    ix::is_program_ix(ix, PoolOwnerPrograms::METEORA_DAMM_V2, Some(14))
-        .filter(|decoded| decoded.accounts.len() == 14)
+    is_program_ix_with_min_accounts(ix, PoolOwnerPrograms::METEORA_DAMM_V2, 14)
 }
 #[cfg(test)]
 mod tests {

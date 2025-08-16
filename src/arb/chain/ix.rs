@@ -7,20 +7,18 @@ use solana_transaction_status::{
 };
 use std::collections::HashMap;
 
-pub fn is_program_ix<'a>(
+pub fn is_program_ix_with_min_accounts<'a>(
     ix: &'a UiInstruction,
     program_id: &str,
-    min_accounts: Option<usize>,
+    min_accounts: usize,
 ) -> Option<&'a UiPartiallyDecodedInstruction> {
     if let UiInstruction::Parsed(UiParsedInstruction::PartiallyDecoded(decoded)) = ix {
         if decoded.program_id == program_id {
-            if let Some(min) = min_accounts {
-                if decoded.accounts.len() >= min {
-                    return Some(decoded);
-                }
+            return if decoded.accounts.len() >= min_accounts {
+                Some(decoded)
             } else {
-                return Some(decoded);
-            }
+                None
+            };
         }
     }
     None
