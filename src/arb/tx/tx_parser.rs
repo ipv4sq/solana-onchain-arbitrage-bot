@@ -1,4 +1,4 @@
-use crate::arb::constant::known_pool_program::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
+use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use crate::arb::constant::mint::MintPair;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
@@ -111,7 +111,7 @@ pub fn parse_swap_inner_ix(
     ix: &UiPartiallyDecodedInstruction,
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> Result<SwapInstruction> {
-    use crate::arb::tx::constants::DexType;
+    use crate::arb::constant::dex_type::DexType;
 
     match ix.program_id.as_str() {
         PoolOwnerPrograms::METEORA_DLMM => {
@@ -172,6 +172,7 @@ pub fn parse_meteora_dlmm(
 
 #[cfg(test)]
 mod tests {
+    use crate::arb::constant::dex_type::DexType;
     use super::*;
     use crate::test::test_utils::get_test_rpc_client;
 
@@ -204,7 +205,7 @@ mod tests {
                     parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
                 assert_eq!(
                     swap_ix.dex_type,
-                    crate::arb::tx::constants::DexType::MeteoraDlmm
+                    DexType::MeteoraDlmm
                 );
                 assert!(swap_ix.accounts.len() >= 15);
                 println!(

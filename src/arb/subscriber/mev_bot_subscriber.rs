@@ -1,6 +1,6 @@
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
-use crate::arb::db::{get_database, Database};
-use crate::arb::subscriber::in_mem_pool::{mem_pool, MemPool};
+use crate::arb::global::db::{get_database, Database};
+use crate::arb::global::mem_pool::{mem_pool, MemPool};
 use crate::arb::tx::tx_parser::{convert_to_smb_ix, filter_swap_inner_ix, parse_swap_inner_ix};
 use crate::arb::tx::types::LitePool;
 use anyhow::Result;
@@ -63,7 +63,7 @@ pub async fn on_mev_bot_transaction(
     Ok(())
 }
 
-pub(super) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
+pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
     let db = get_database().await?;
     let dex_type_str = format!("{:?}", lite_pool.dex_type);
     let desired_mint = lite_pool.mints.desired_mint()?;

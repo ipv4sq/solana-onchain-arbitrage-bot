@@ -1,4 +1,4 @@
-use crate::arb::constant::known_pool_program::AnyPoolConfig;
+use crate::arb::constant::pool_owner::AnyPoolConfig;
 use crate::arb::tx::types::LitePool;
 use anyhow::Result;
 use once_cell::sync::Lazy;

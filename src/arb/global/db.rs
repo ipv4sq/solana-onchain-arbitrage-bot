@@ -22,7 +22,7 @@ pub struct Database {
 }
 
 static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
-pub(super) async fn get_database() -> Result<Arc<Database>> {
+pub(in crate::arb) async fn get_database() -> Result<Arc<Database>> {
     DATABASE
         .get_or_init(|| async {
             Arc::new(

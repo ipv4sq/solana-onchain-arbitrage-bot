@@ -71,7 +71,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> Result<MeteoraDammV2InputAccount> {
-        use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
+        use crate::arb::constant::pool_owner::PoolOwnerPrograms;
         use crate::constants::addresses::TokenProgram;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
@@ -150,7 +150,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
+    use crate::arb::constant::pool_owner::PoolOwnerPrograms;
     use crate::arb::pool::interface::InputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;

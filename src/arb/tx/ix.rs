@@ -1,4 +1,4 @@
-use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
+use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use solana_transaction_status::{
     UiInstruction, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };

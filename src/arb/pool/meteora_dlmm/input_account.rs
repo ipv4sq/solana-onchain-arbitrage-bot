@@ -81,7 +81,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
+        use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
         use crate::arb::pool::meteora_dlmm::bin_array;
         use crate::constants::addresses::TokenProgram;
         use crate::constants::helpers::{ToAccountMeta, ToPubkey};
@@ -167,7 +167,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
+    use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
     use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;

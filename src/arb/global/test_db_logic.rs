@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use super::super::entry::record_pool_and_mints;
+    use crate::arb::subscriber::mev_bot_subscriber::record_pool_and_mints;
     use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
-    use crate::arb::db::get_database;
-    use crate::arb::tx::constants::DexType;
+    use crate::arb::global::db::get_database;
+    use crate::arb::constant::dex_type::DexType;
     use crate::arb::tx::types::LitePool;
     use crate::constants::helpers::ToPubkey;
 

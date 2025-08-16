@@ -1,5 +1,5 @@
 use crate::arb::constant::mint::MintPair;
-use crate::arb::tx::constants::DexType;
+use crate::arb::constant::dex_type::DexType;
 use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;

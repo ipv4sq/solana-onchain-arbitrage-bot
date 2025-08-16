@@ -3,5 +3,5 @@ mod pool;
 mod constant;
 mod analyzer;
 mod subscriber;
-pub mod db;
+mod global;
 
