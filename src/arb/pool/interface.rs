@@ -1,11 +1,10 @@
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::Instruction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::global::rpc::rpc_client;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
-};
 
 pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
@@ -55,8 +54,8 @@ pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {
 
 pub trait InputAccountUtil<Account, Data>: Sized {
     fn restore_from(
-        ix: &UiPartiallyDecodedInstruction,
-        tx: &EncodedConfirmedTransactionWithStatusMeta,
+        ix: &Instruction,
+        tx: &Transaction,
     ) -> Result<Account>;
 
     fn build_accounts(

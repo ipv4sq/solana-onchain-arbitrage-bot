@@ -1,9 +1,9 @@
+use crate::arb::chain::data::Transaction;
 use crate::arb::program::solana_mev_bot::subscriber::{entry as process_mev_tx, entry};
 use crate::arb::subscriber::pubsub::{PubSubConfig, PubSubProcessor};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_sdk::pubkey::Pubkey;
-use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 use std::ops::Deref;
 use std::sync::Arc;
 use tracing::info;
@@ -21,7 +21,7 @@ pub struct MevTransaction {
     pub instruction_index: usize,
 }
 
-struct MevProcessor(PubSubProcessor<EncodedConfirmedTransactionWithStatusMeta>);
+struct MevProcessor(PubSubProcessor<Transaction>);
 
 impl MevProcessor {
     fn new() -> Self {
@@ -45,7 +45,7 @@ impl MevProcessor {
 }
 
 impl Deref for MevProcessor {
-    type Target = PubSubProcessor<EncodedConfirmedTransactionWithStatusMeta>;
+    type Target = PubSubProcessor<Transaction>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -54,11 +54,11 @@ impl Deref for MevProcessor {
 
 static MEV_PROCESSOR: Lazy<Arc<MevProcessor>> = Lazy::new(|| Arc::new(MevProcessor::new()));
 
-pub async fn publish_mev_transaction(tx: EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
+pub async fn publish_mev_transaction(tx: Transaction) -> Result<()> {
     MEV_PROCESSOR.publish(tx).await
 }
 
-pub fn try_publish_mev_transaction(tx: EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
+pub fn try_publish_mev_transaction(tx: Transaction) -> Result<()> {
     MEV_PROCESSOR.try_publish(tx)
 }
 

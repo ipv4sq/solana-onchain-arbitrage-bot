@@ -1,3 +1,5 @@
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::Instruction;
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::mint::MintPair;
@@ -10,9 +12,6 @@ use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
-};
 use std::collections::HashSet;
 
 lazy_static::lazy_static! {
@@ -46,10 +45,11 @@ impl AnyPoolConfig {
     }
 
     pub fn from_ix(
-        ix: &UiPartiallyDecodedInstruction,
-        tx: &EncodedConfirmedTransactionWithStatusMeta,
+        ix: &Instruction,
+        tx: &Transaction,
     ) -> Result<SwapInstruction> {
-        match ix.program_id.as_str() {
+        let program_id_str = ix.program_id.to_string();
+        match program_id_str.as_str() {
             PoolOwnerPrograms::METEORA_DLMM => {
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
                 Ok(SwapInstruction {
@@ -68,7 +68,7 @@ impl AnyPoolConfig {
                     mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
                 })
             }
-            _ => Err(anyhow::anyhow!("Unsupported program: {}", ix.program_id)),
+            _ => Err(anyhow::anyhow!("Unsupported program: {}", program_id_str)),
         }
     }
 }

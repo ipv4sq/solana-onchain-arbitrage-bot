@@ -1,13 +1,12 @@
+use crate::arb::chain::account::create_account_meta;
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::Instruction;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
-};
-use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
 
 #[derive(Debug, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
@@ -33,8 +32,8 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     for MeteoraDammV2InputAccount
 {
     fn restore_from(
-        ix: &UiPartiallyDecodedInstruction,
-        tx: &EncodedConfirmedTransactionWithStatusMeta,
+        ix: &Instruction,
+        _tx: &Transaction,
     ) -> Result<MeteoraDammV2InputAccount> {
         if ix.accounts.len() < 14 {
             return Err(anyhow::anyhow!(
@@ -43,23 +42,21 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             ));
         }
 
-        let parsed_accounts = get_parsed_accounts(tx)?;
-
         Ok(MeteoraDammV2InputAccount {
-            pool_authority: create_account_meta(parsed_accounts, ix, 0)?,
-            pool: create_account_meta(parsed_accounts, ix, 1)?,
-            input_token_account: create_account_meta(parsed_accounts, ix, 2)?,
-            output_token_account: create_account_meta(parsed_accounts, ix, 3)?,
-            token_a_vault: create_account_meta(parsed_accounts, ix, 4)?,
-            token_b_vault: create_account_meta(parsed_accounts, ix, 5)?,
-            token_a_mint: create_account_meta(parsed_accounts, ix, 6)?,
-            token_b_mint: create_account_meta(parsed_accounts, ix, 7)?,
-            payer: create_account_meta(parsed_accounts, ix, 8)?,
-            token_a_program: create_account_meta(parsed_accounts, ix, 9)?,
-            token_b_program: create_account_meta(parsed_accounts, ix, 10)?,
-            referral_token_program: create_account_meta(parsed_accounts, ix, 11)?,
-            event_authority: create_account_meta(parsed_accounts, ix, 12)?,
-            meteora_program: create_account_meta(parsed_accounts, ix, 13)?,
+            pool_authority: create_account_meta(ix, 0)?,
+            pool: create_account_meta(ix, 1)?,
+            input_token_account: create_account_meta(ix, 2)?,
+            output_token_account: create_account_meta(ix, 3)?,
+            token_a_vault: create_account_meta(ix, 4)?,
+            token_b_vault: create_account_meta(ix, 5)?,
+            token_a_mint: create_account_meta(ix, 6)?,
+            token_b_mint: create_account_meta(ix, 7)?,
+            payer: create_account_meta(ix, 8)?,
+            token_a_program: create_account_meta(ix, 9)?,
+            token_b_program: create_account_meta(ix, 10)?,
+            referral_token_program: create_account_meta(ix, 11)?,
+            event_authority: create_account_meta(ix, 12)?,
+            meteora_program: create_account_meta(ix, 13)?,
         })
     }
 

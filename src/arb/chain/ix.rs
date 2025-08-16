@@ -1,31 +1,29 @@
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiInstruction,
-    UiParsedInstruction, UiPartiallyDecodedInstruction,
-};
 use std::collections::HashMap;
 
 pub fn is_program_ix_with_min_accounts<'a>(
-    ix: &'a UiInstruction,
+    ix: &'a Instruction,
     program_id: &str,
     min_accounts: usize,
-) -> Option<&'a UiPartiallyDecodedInstruction> {
-    if let UiInstruction::Parsed(UiParsedInstruction::PartiallyDecoded(decoded)) = ix {
-        if decoded.program_id == program_id {
-            return if decoded.accounts.len() >= min_accounts {
-                Some(decoded)
-            } else {
-                None
-            };
+) -> Option<&'a Instruction> {
+    use crate::constants::helpers::ToPubkey;
+    if ix.program_id == program_id.to_pubkey() {
+        if ix.accounts.len() >= min_accounts {
+            Some(ix)
+        } else {
+            None
         }
+    } else {
+        None
     }
-    None
 }
 
 pub fn extract_known_swap_inner_ix(
-    inners: &UiInnerInstructions,
-    tx: &EncodedConfirmedTransactionWithStatusMeta,
+    inners: &InnerInstructions,
+    tx: &Transaction,
 ) -> Vec<SwapInstruction> {
     let filtered = known_swap_to_map(inners);
 
@@ -37,21 +35,17 @@ pub fn extract_known_swap_inner_ix(
 }
 
 pub fn known_swap_to_map(
-    inner_instructions: &UiInnerInstructions,
-) -> HashMap<String, &UiPartiallyDecodedInstruction> {
+    inner_instructions: &InnerInstructions,
+) -> HashMap<String, &Instruction> {
     inner_instructions
         .instructions
         .iter()
-        .filter_map(|x| match x {
-            UiInstruction::Parsed(i) => match i {
-                UiParsedInstruction::PartiallyDecoded(i) => Some(i),
-                _ => None,
-            },
-            UiInstruction::Compiled(_) => None,
-        })
         .filter(|ix| {
-            (*RECOGNIZED_POOL_OWNER_PROGRAMS).contains(&ix.program_id) && ix.accounts.len() >= 5
+            (*RECOGNIZED_POOL_OWNER_PROGRAMS).iter().any(|p| {
+                use crate::constants::helpers::ToPubkey;
+                ix.program_id == p.to_pubkey()
+            }) && ix.accounts.len() >= 5
         })
-        .map(|ix| (ix.program_id.clone(), ix))
+        .map(|ix| (ix.program_id.to_string(), ix))
         .collect()
 }

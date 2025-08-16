@@ -1,7 +1,4 @@
-use crate::arb::chain::ix;
-use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use hex;
-use solana_transaction_status::{UiInstruction, UiPartiallyDecodedInstruction};
 
 #[derive(Debug, PartialEq)]
 pub struct MeteoraDlmmIxData {
@@ -32,9 +29,6 @@ impl MeteoraDlmmIxData {
     }
 }
 
-pub fn is_meteora_dlmm_swap(ix: &UiInstruction) -> Option<&UiPartiallyDecodedInstruction> {
-    ix::is_program_ix_with_min_accounts(ix, PoolOwnerPrograms::METEORA_DLMM, 10)
-}
 
 #[cfg(test)]
 mod tests {

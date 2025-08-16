@@ -10,6 +10,7 @@ use solana_transaction_status::{
     UiInstruction,
     UiParsedInstruction,
     option_serializer::OptionSerializer,
+    parse_accounts::ParsedAccount,
 };
 use std::str::FromStr;
 
@@ -60,7 +61,7 @@ fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
     let instructions: Vec<Instruction> = msg.instructions
         .iter()
         .enumerate()
-        .map(|(idx, ix)| convert_parsed_instruction(ix, idx, &account_keys))
+        .map(|(idx, ix)| convert_parsed_instruction(ix, idx, &account_keys, &msg.account_keys))
         .collect::<Result<_>>()?;
     
     Ok(Message {
@@ -76,6 +77,11 @@ fn convert_raw_message(msg: &UiRawMessage) -> Result<Message> {
         .map(|k| Pubkey::from_str(k).map_err(Into::into))
         .collect::<Result<_>>()?;
     
+    // Get header information for account metadata
+    let num_required_signatures = msg.header.num_required_signatures as usize;
+    let num_readonly_signed_accounts = msg.header.num_readonly_signed_accounts as usize;
+    let num_readonly_unsigned_accounts = msg.header.num_readonly_unsigned_accounts as usize;
+    
     let instructions: Vec<Instruction> = msg.instructions
         .iter()
         .enumerate()
@@ -87,10 +93,30 @@ fn convert_raw_message(msg: &UiRawMessage) -> Result<Message> {
             let accounts: Vec<AccountMeta> = ix.accounts
                 .iter()
                 .map(|&account_idx| {
-                    let pubkey = account_keys.get(account_idx as usize)
+                    let account_idx = account_idx as usize;
+                    let pubkey = account_keys.get(account_idx)
                         .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
                         .clone();
-                    Ok(AccountMeta::new_readonly(pubkey, false))
+                    
+                    // Determine if account is signer/writable based on position
+                    let is_signer = account_idx < num_required_signatures;
+                    let is_writable = if is_signer {
+                        account_idx < (num_required_signatures - num_readonly_signed_accounts)
+                    } else {
+                        let non_signer_idx = account_idx - num_required_signatures;
+                        let num_writable_unsigned = account_keys.len() - num_required_signatures - num_readonly_unsigned_accounts;
+                        non_signer_idx < num_writable_unsigned
+                    };
+                    
+                    Ok(if is_signer && is_writable {
+                        AccountMeta::new(pubkey, true)
+                    } else if is_signer {
+                        AccountMeta::new_readonly(pubkey, true)
+                    } else if is_writable {
+                        AccountMeta::new(pubkey, false)
+                    } else {
+                        AccountMeta::new_readonly(pubkey, false)
+                    })
                 })
                 .collect::<Result<_>>()?;
             
@@ -114,7 +140,7 @@ fn convert_raw_message(msg: &UiRawMessage) -> Result<Message> {
     })
 }
 
-fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pubkey]) -> Result<Instruction> {
+fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pubkey], parsed_accounts: &[ParsedAccount]) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
             let program_id = account_keys.get(compiled.program_id_index as usize)
@@ -127,7 +153,16 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
                     let pubkey = account_keys.get(account_idx as usize)
                         .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
                         .clone();
-                    Ok(AccountMeta::new_readonly(pubkey, false))
+                    let parsed_acc = parsed_accounts.get(account_idx as usize)
+                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in parsed_accounts"))?;
+                    
+                    Ok(if parsed_acc.signer {
+                        AccountMeta::new(pubkey, true)
+                    } else if parsed_acc.writable {
+                        AccountMeta::new(pubkey, false)
+                    } else {
+                        AccountMeta::new_readonly(pubkey, false)
+                    })
                 })
                 .collect::<Result<_>>()?;
             
@@ -149,9 +184,20 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
                     
                     let accounts: Vec<AccountMeta> = decoded.accounts
                         .iter()
-                        .map(|acc| {
-                            let pubkey = Pubkey::from_str(acc)?;
-                            Ok(AccountMeta::new_readonly(pubkey, false))
+                        .map(|acc_str| {
+                            let pubkey = Pubkey::from_str(acc_str)?;
+                            // Find the parsed account info for this pubkey
+                            let parsed_acc = parsed_accounts.iter()
+                                .find(|pa| pa.pubkey == *acc_str)
+                                .ok_or_else(|| anyhow::anyhow!("Account {} not found in parsed_accounts", acc_str))?;
+                            
+                            Ok(if parsed_acc.signer {
+                                AccountMeta::new(pubkey, true)
+                            } else if parsed_acc.writable {
+                                AccountMeta::new(pubkey, false)
+                            } else {
+                                AccountMeta::new_readonly(pubkey, false)
+                            })
                         })
                         .collect::<Result<_>>()?;
                     
@@ -244,10 +290,12 @@ fn convert_ui_instruction_to_unified(ix: &UiInstruction, idx: usize) -> Result<I
                 UiParsedInstruction::PartiallyDecoded(decoded) => {
                     let program_id = Pubkey::from_str(&decoded.program_id)?;
                     
+                    // For inner instructions, we don't have account metadata
+                    // so we default to readonly
                     let accounts: Vec<AccountMeta> = decoded.accounts
                         .iter()
-                        .map(|acc| {
-                            let pubkey = Pubkey::from_str(acc)?;
+                        .map(|acc_str| {
+                            let pubkey = Pubkey::from_str(acc_str)?;
                             Ok(AccountMeta::new_readonly(pubkey, false))
                         })
                         .collect::<Result<_>>()?;

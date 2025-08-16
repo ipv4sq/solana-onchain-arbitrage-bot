@@ -1,13 +1,12 @@
-use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
+use crate::arb::chain::account::create_account_meta;
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::Instruction;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
-};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {
@@ -31,8 +30,8 @@ pub struct MeteoraDlmmInputAccounts {
 
 impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for MeteoraDlmmInputAccounts {
     fn restore_from(
-        ix: &UiPartiallyDecodedInstruction,
-        tx: &EncodedConfirmedTransactionWithStatusMeta,
+        ix: &Instruction,
+        _tx: &Transaction,
     ) -> Result<MeteoraDlmmInputAccounts> {
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(
@@ -41,30 +40,28 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             ));
         }
 
-        let parsed_accounts = get_parsed_accounts(tx)?;
-
         // Extract bin arrays (all accounts after index 14)
         let mut bin_arrays = Vec::new();
         for i in 15..ix.accounts.len() {
-            bin_arrays.push(create_account_meta(parsed_accounts, ix, i)?);
+            bin_arrays.push(create_account_meta(ix, i)?);
         }
 
         Ok(MeteoraDlmmInputAccounts {
-            lb_pair: create_account_meta(parsed_accounts, ix, 0)?,
-            bin_array_bitmap_extension: create_account_meta(parsed_accounts, ix, 1)?,
-            reverse_x: create_account_meta(parsed_accounts, ix, 2)?,
-            reverse_y: create_account_meta(parsed_accounts, ix, 3)?,
-            user_token_in: create_account_meta(parsed_accounts, ix, 4)?,
-            user_token_out: create_account_meta(parsed_accounts, ix, 5)?,
-            token_x_mint: create_account_meta(parsed_accounts, ix, 6)?,
-            token_y_mint: create_account_meta(parsed_accounts, ix, 7)?,
-            oracle: create_account_meta(parsed_accounts, ix, 8)?,
-            host_fee_in: create_account_meta(parsed_accounts, ix, 9)?,
-            user: create_account_meta(parsed_accounts, ix, 10)?,
-            token_x_program: create_account_meta(parsed_accounts, ix, 11)?,
-            token_y_program: create_account_meta(parsed_accounts, ix, 12)?,
-            event_authority: create_account_meta(parsed_accounts, ix, 13)?,
-            program: create_account_meta(parsed_accounts, ix, 14)?,
+            lb_pair: create_account_meta(ix, 0)?,
+            bin_array_bitmap_extension: create_account_meta(ix, 1)?,
+            reverse_x: create_account_meta(ix, 2)?,
+            reverse_y: create_account_meta(ix, 3)?,
+            user_token_in: create_account_meta(ix, 4)?,
+            user_token_out: create_account_meta(ix, 5)?,
+            token_x_mint: create_account_meta(ix, 6)?,
+            token_y_mint: create_account_meta(ix, 7)?,
+            oracle: create_account_meta(ix, 8)?,
+            host_fee_in: create_account_meta(ix, 9)?,
+            user: create_account_meta(ix, 10)?,
+            token_x_program: create_account_meta(ix, 11)?,
+            token_y_program: create_account_meta(ix, 12)?,
+            event_authority: create_account_meta(ix, 13)?,
+            program: create_account_meta(ix, 14)?,
             bin_arrays,
         })
     }

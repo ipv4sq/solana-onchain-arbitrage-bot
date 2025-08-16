@@ -1,17 +1,16 @@
+use crate::arb::chain::data::Transaction;
+use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::ix::extract_known_swap_inner_ix;
 use crate::arb::chain::tx::extract_ix_and_inners;
 use crate::arb::chain::types::LitePool;
 use crate::arb::global::db::get_database;
 use crate::arb::global::mem_pool::mem_pool;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
+use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
-use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
-};
 use tracing::info;
-use crate::arb::chain::data::Transaction;
 
-pub async fn entry(tx: &EncodedConfirmedTransactionWithStatusMeta) -> Result<()> {
+pub async fn entry(tx: &Transaction) -> Result<()> {
     let Some((ix, inner)) = extract_mev_instruction(tx) else {
         return Ok(());
     };
@@ -35,8 +34,8 @@ pub async fn entry(tx: &EncodedConfirmedTransactionWithStatusMeta) -> Result<()>
 
 pub fn extract_mev_instruction(
     tx: &Transaction,
-) -> Option<(&UiPartiallyDecodedInstruction, &UiInnerInstructions)> {
-    extract_ix_and_inners(tx, |x| x.program_id == SMB_ONCHAIN_PROGRAM_ID)
+) -> Option<(&Instruction, &InnerInstructions)> {
+    extract_ix_and_inners(tx, |program_id| *program_id == SMB_ONCHAIN_PROGRAM_ID.to_pubkey())
 }
 
 pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
