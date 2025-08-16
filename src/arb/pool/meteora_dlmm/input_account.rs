@@ -99,7 +99,6 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
             // Estimate number of bin arrays based on swap amount
             // It's safer to include more arrays - unused ones are ignored
             let num_arrays = bin_array::estimate_num_bin_arrays(input_amount.unwrap_or(0));
-            let rpc = rpc_client().clone();
             bin_array::calculate_bin_arrays_for_swap(&pool_data, pool, swap_for_y, num_arrays)
                 .await
         })?;
@@ -224,7 +223,6 @@ mod tests {
             &"So11111111111111111111111111111111111111112".to_pubkey(),
             Some(543235989680078),
             Some(0),
-            &get_test_rpc_client(),
         )
         .unwrap();
         assert_eq!(result, expected_result())
