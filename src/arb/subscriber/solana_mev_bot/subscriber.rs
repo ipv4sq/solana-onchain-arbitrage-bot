@@ -47,7 +47,7 @@ impl MevBotSubscriber {
     }
 
     async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
-        try_publish_mev_transaction(tx_update.transaction.unwrap());
+        // try_publish_mev_transaction(tx_update.transaction.unwrap());
         Ok(())
     }
 }
