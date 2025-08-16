@@ -1,6 +1,5 @@
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
-use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
@@ -8,6 +7,8 @@ use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
 };
+use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
+
 #[derive(Debug, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
     pub pool_authority: AccountMeta,
@@ -154,12 +155,13 @@ mod tests {
     use crate::arb::pool::interface::InputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;
-    use crate::arb::tx::ix::is_meteora_damm_v2_swap;
-    use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
     use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
+    use crate::arb::chain::ix::is_meteora_damm_v2_swap;
+    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::tx_parser::extract_mev_instruction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =
@@ -167,7 +169,7 @@ mod tests {
 
     fn get_tx() -> EncodedConfirmedTransactionWithStatusMeta {
         let client = get_test_rpc_client();
-        get_tx_by_sig(&client, TX).unwrap()
+        fetch_tx_sync(&client, TX).unwrap()
     }
 
     fn expected_account() -> MeteoraDammV2InputAccount {

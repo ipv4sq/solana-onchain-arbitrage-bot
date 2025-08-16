@@ -1,6 +1,7 @@
 mod test {
+    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::tx_parser::extract_mev_instruction;
     use crate::arb::subscriber::mev_bot_subscriber::on_mev_bot_transaction;
-    use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::test::test_utils::get_test_rpc_client;
 
     #[tokio::test]
@@ -9,7 +10,7 @@ mod test {
 
         let tx = tokio::task::spawn_blocking(move || {
             let client = get_test_rpc_client();
-            get_tx_by_sig(&client, sig).unwrap()
+            fetch_tx_sync(&client, sig).unwrap()
         })
         .await
         .unwrap();

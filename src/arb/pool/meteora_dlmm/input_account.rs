@@ -1,3 +1,4 @@
+use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
@@ -28,15 +29,11 @@ pub struct MeteoraDlmmInputAccounts {
     pub bin_arrays: Vec<AccountMeta>,
 }
 
-impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
-    for MeteoraDlmmInputAccounts
-{
+impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for MeteoraDlmmInputAccounts {
     fn restore_from(
         ix: &UiPartiallyDecodedInstruction,
         tx: &EncodedConfirmedTransactionWithStatusMeta,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
-
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(
                 "Invalid number of accounts for Meteora DLMM swap: expected at least 15, got {}",
@@ -97,8 +94,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
             // Estimate number of bin arrays based on swap amount
             // It's safer to include more arrays - unused ones are ignored
             let num_arrays = bin_array::estimate_num_bin_arrays(input_amount.unwrap_or(0));
-            bin_array::calculate_bin_arrays_for_swap(&pool_data, pool, swap_for_y, num_arrays)
-                .await
+            bin_array::calculate_bin_arrays_for_swap(&pool_data, pool, swap_for_y, num_arrays).await
         })?;
 
         // Determine token programs (assuming SPL token for now)
@@ -167,12 +163,13 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
 
 #[cfg(test)]
 mod tests {
+    use crate::arb::chain::ix::is_meteora_dlmm_swap;
+    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::chain::tx_parser::extract_mev_instruction;
     use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
     use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-    use crate::arb::tx::ix::is_meteora_dlmm_swap;
-    use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
@@ -229,7 +226,7 @@ mod tests {
     #[test]
     fn test_restore_from() {
         let tx = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
-        let tx = get_tx_by_sig(&get_test_rpc_client(), tx).unwrap();
+        let tx = fetch_tx_sync(&get_test_rpc_client(), tx).unwrap();
         let (_, inner) = extract_mev_instruction(&tx).unwrap();
         let dlmm_swap = inner
             .instructions

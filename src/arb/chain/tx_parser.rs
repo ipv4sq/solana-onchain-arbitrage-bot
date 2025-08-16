@@ -1,38 +1,19 @@
-use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
+use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
+use crate::arb::chain::custom_types::SwapInstruction;
 use crate::arb::constant::mint::MintPair;
+use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::tx::custom_types::SwapInstruction;
-use crate::arb::tx::account::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::{ToPubkey, ToSignature};
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
-use solana_client::rpc_client::RpcClient;
 use solana_transaction_status::option_serializer::OptionSerializer;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInnerInstructions,
     UiInstruction, UiMessage, UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
 use std::collections::HashMap;
-use crate::arb::program::solana_mev_bot::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
-
-pub fn get_tx_by_sig(
-    client: &RpcClient,
-    signature: &str,
-) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
-    let sig = signature.to_sig();
-
-    let config = solana_client::rpc_config::RpcTransactionConfig {
-        encoding: Some(solana_transaction_status::UiTransactionEncoding::JsonParsed),
-        commitment: None,
-        max_supported_transaction_version: Some(0),
-    };
-
-    client
-        .get_transaction_with_config(&sig, config)
-        .map_err(|e| anyhow::anyhow!("Failed to fetch transaction: {}", e))
-}
 
 pub fn extract_mev_instruction(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
@@ -71,20 +52,6 @@ pub fn extract_mev_instruction(
         .and_then(|inner| inner.iter().find(|i| i.index == mev_idx as u8));
 
     Some((mev_ix, inner_ixs?))
-}
-
-pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SolanaMevBotIxInput> {
-    let data_bytes = bs58::decode(&ix.data)
-        .into_vec()
-        .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-    let data = SolanaMevBotIxInputData::from_bytes(&data_bytes)?;
-    let accounts = ix.accounts.iter().map(|acc| acc.to_pubkey()).collect();
-
-    Ok(SolanaMevBotIxInput {
-        program_id: ix.program_id.to_pubkey(),
-        accounts,
-        data,
-    })
 }
 
 pub fn filter_swap_inner_ix(
@@ -173,15 +140,17 @@ pub fn parse_meteora_dlmm(
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::constant::dex_type::DexType;
     use super::*;
+    use crate::arb::chain::ix::convert_to_smb_ix;
+    use crate::arb::chain::tx::fetch_tx_sync;
+    use crate::arb::constant::dex_type::DexType;
     use crate::test::test_utils::get_test_rpc_client;
 
     #[test]
     fn test_modular_functions() {
         let client = get_test_rpc_client();
         let sig = "2GNmMyHst1qd9B6FLAwBqrD6VdpxzLVxTZBuNSGYHt3Y5KtX93W6WWZGbsTfKKkbZcGi1M4KZRPQcev2VNpxLyck";
-        let tx = get_tx_by_sig(&client, sig).expect("Failed to fetch transaction");
+        let tx = fetch_tx_sync(&client, sig).expect("Failed to fetch transaction");
         let (raw_instruction, inner_ixs) =
             extract_mev_instruction(&tx).expect("Failed to extract MEV instruction");
         let parsed = convert_to_smb_ix(raw_instruction).expect("Failed to parse raw instruction");
@@ -204,10 +173,7 @@ mod tests {
             if program_id == PoolOwnerPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
                 let swap_ix =
                     parse_swap_inner_ix(ix, &tx).expect("Failed to parse swap instruction");
-                assert_eq!(
-                    swap_ix.dex_type,
-                    DexType::MeteoraDlmm
-                );
+                assert_eq!(swap_ix.dex_type, DexType::MeteoraDlmm);
                 assert!(swap_ix.accounts.len() >= 15);
                 println!(
                     "Successfully parsed Meteora DLMM swap with {} accounts",
