@@ -1,5 +1,5 @@
-use crate::arb::chain::custom_types::LitePool;
-use crate::arb::chain::ix::convert_to_smb_ix;
+use crate::arb::chain::types::LitePool;
+use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
 use crate::arb::chain::tx_parser::{filter_swap_inner_ix, parse_swap_inner_ix};
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
 use crate::arb::global::db::{get_database, Database};

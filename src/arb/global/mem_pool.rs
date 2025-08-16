@@ -3,7 +3,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::arb::chain::custom_types::LitePool;
+use crate::arb::chain::types::LitePool;
 
 static MEM_POOL: Lazy<Arc<MemPool>> = Lazy::new(|| Arc::new(MemPool::new()));
 

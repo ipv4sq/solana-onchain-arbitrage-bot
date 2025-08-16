@@ -1,5 +1,5 @@
 use crate::arb::chain::account::{create_account_meta, get_parsed_accounts};
-use crate::arb::chain::custom_types::SwapInstruction;
+use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use crate::arb::pool::interface::InputAccountUtil;
@@ -141,9 +141,9 @@ pub fn parse_meteora_dlmm(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arb::chain::ix::convert_to_smb_ix;
     use crate::arb::chain::tx::fetch_tx_sync;
     use crate::arb::constant::dex_type::DexType;
+    use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
     use crate::test::test_utils::get_test_rpc_client;
 
     #[test]
