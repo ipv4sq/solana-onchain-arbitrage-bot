@@ -1,5 +1,4 @@
 use crate::arb::pool::interface::{PoolConfigInit, PoolDataLoader};
-use crate::arb::pool::pump_amm::account::PumpAmmAccountSwapAccounts;
 use crate::arb::pool::pump_amm::data::{PumpAmmPoolConfig, PumpAmmPoolData};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;

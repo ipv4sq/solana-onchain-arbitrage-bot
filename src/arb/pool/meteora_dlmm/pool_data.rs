@@ -1,4 +1,3 @@
-use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
 use crate::arb::pool::interface::PoolDataLoader;
 use crate::arb::pool::meteora_dlmm::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,

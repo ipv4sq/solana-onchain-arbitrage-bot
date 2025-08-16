@@ -1,6 +1,6 @@
+use crate::arb::pool::interface::PoolDataLoader;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
-use crate::arb::pool::interface::PoolDataLoader;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]

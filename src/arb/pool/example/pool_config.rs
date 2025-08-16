@@ -1,4 +1,3 @@
-use crate::arb::constant::known_pool_program::RAYDIUM_CPMM_PROGRAM;
 use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};

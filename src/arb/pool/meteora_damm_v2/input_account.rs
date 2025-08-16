@@ -3,7 +3,6 @@ use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::tx::util::{create_account_meta, get_parsed_accounts};
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
-use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
@@ -154,8 +153,8 @@ mod tests {
     use crate::arb::constant::known_pool_program::PoolOwnerPrograms;
     use crate::arb::pool::interface::InputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-    use crate::arb::tx::ix::is_meteora_damm_v2_swap;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;
+    use crate::arb::tx::ix::is_meteora_damm_v2_swap;
     use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
@@ -211,8 +210,6 @@ mod tests {
 
     #[test]
     fn test_build_accounts() {
-        use spl_associated_token_account::get_associated_token_address_with_program_id;
-
         let pool = "6CXXieC355gteamwofSzJn8DiyrbKyYyXc3eBKmB81CF".to_pubkey();
         let pool_data = load_pool_data();
         let input_mint = "So11111111111111111111111111111111111111112".to_pubkey();
@@ -226,7 +223,6 @@ mod tests {
             &output_mint,
             Some(3226352439),
             Some(0),
-            &get_test_rpc_client(),
         )
         .unwrap();
 

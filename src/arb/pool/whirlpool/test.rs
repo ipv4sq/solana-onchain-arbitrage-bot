@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::pool::whirlpool::data::WhirlpoolPoolData;
     use crate::arb::pool::interface::PoolDataLoader;
+    use crate::arb::pool::whirlpool::data::WhirlpoolPoolData;
     use crate::constants::helpers::ToPubkey;
 
     #[test]

@@ -1,7 +1,6 @@
 use crate::arb::constant::client::rpc_client;
 use crate::arb::constant::mint::MintPair;
 use anyhow::Result;
-use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{

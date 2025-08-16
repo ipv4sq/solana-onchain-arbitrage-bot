@@ -1,7 +1,7 @@
-use solana_program::pubkey::Pubkey;
-use borsh::{BorshDeserialize, BorshSerialize};
 use crate::arb::constant::known_pool_program::WHIRLPOOL_PROGRAM;
 use crate::arb::pool::interface::PoolDataLoader;
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
 #[repr(C)]

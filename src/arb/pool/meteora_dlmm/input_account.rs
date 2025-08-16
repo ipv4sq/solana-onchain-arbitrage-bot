@@ -1,14 +1,12 @@
-use crate::arb::pool::interface::{InputAccountUtil};
+use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
-use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiPartiallyDecodedInstruction,
 };
-use crate::arb::constant::client::rpc_client;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {
@@ -170,13 +168,13 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::constant::known_pool_program::METEORA_DLMM_PROGRAM;
-    use crate::arb::pool::interface::{PoolDataLoader, InputAccountUtil};
+    use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-    use crate::arb::tx::ix::{is_meteora_damm_v2_swap, is_meteora_dlmm_swap};
+    use crate::arb::tx::ix::is_meteora_dlmm_swap;
     use crate::arb::tx::tx_parser::{extract_mev_instruction, get_tx_by_sig};
     use crate::constants::addresses::TokenProgram;
-    use crate::constants::helpers::{ToAccountMeta, ToPubkey, ToSignature};
+    use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;
     use base64::engine::general_purpose;

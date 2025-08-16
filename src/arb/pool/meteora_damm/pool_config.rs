@@ -1,4 +1,4 @@
-use crate::arb::pool::interface::{PoolDataLoader, PoolConfig, PoolConfigInit};
+use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;

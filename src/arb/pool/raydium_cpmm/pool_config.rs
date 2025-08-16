@@ -1,9 +1,5 @@
 use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
-use crate::arb::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
 use crate::arb::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
-use crate::arb::pool::util::ata;
-use crate::constants::addresses::SPL_TOKEN_KEY;
-use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 

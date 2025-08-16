@@ -1,4 +1,3 @@
-use anyhow::Result;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use solana_client::nonblocking::rpc_client::RpcClient;
