@@ -39,8 +39,7 @@ impl MemPool {
 
                 let pool_clone = pool.clone();
                 tokio::spawn(async move {
-                    let mem = mem_pool();
-                    let _ = MemPool::add_to_registered_static(mem, pool_clone).await;
+                    let _ = MemPool::add_to_registered_static(pool_clone).await;
                 });
             }
             Some(_) => {}
@@ -49,7 +48,9 @@ impl MemPool {
         Ok(())
     }
 
-    async fn add_to_registered_static(mem: Arc<MemPool>, pool: LitePool) -> Result<()> {
+    async fn add_to_registered_static(pool: LitePool) -> Result<()> {
+        let mem = mem_pool();
+
         let _config = MeteoraDlmmPoolConfig::load_from_address(&pool.pool_address).await?;
         mem.queued
             .write()
