@@ -50,8 +50,7 @@ pub fn known_swap_to_map(
             UiInstruction::Compiled(_) => None,
         })
         .filter(|ix| {
-            // Only include recognized programs with sufficient accounts for a swap
-            RECOGNIZED_POOL_OWNER_PROGRAMS.contains(&ix.program_id) && ix.accounts.len() >= 5
+            (*RECOGNIZED_POOL_OWNER_PROGRAMS).contains(&ix.program_id) && ix.accounts.len() >= 5
         })
         .map(|ix| (ix.program_id.clone(), ix))
         .collect()
