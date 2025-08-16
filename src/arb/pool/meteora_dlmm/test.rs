@@ -28,7 +28,7 @@ mod tests {
         let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
 
         let config =
-            MeteoraDlmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
+            MeteoraDlmmPoolConfig::build_from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
                 .unwrap();
 
         // Build accounts with the specific amount
@@ -103,7 +103,7 @@ mod tests {
             ],
         };
         let config =
-            MeteoraDlmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
+            MeteoraDlmmPoolConfig::build_from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
                 .unwrap();
 
         let result = config

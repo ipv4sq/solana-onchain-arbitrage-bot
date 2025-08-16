@@ -42,7 +42,7 @@ impl PoolDataLoader for ExampleAccountData {
 type ExamplePoolConfig = PoolConfig<ExampleAccountData>;
 pub struct ExamplePoolSwapAccounts;
 impl PoolConfigInit<ExampleAccountData, ExamplePoolSwapAccounts> for ExamplePoolConfig {
-    fn init(pool: &Pubkey, account_data: ExampleAccountData, desired_mint: Pubkey) -> Result<Self> {
+    fn build_from_pool_data(pool: &Pubkey, account_data: ExampleAccountData, desired_mint: Pubkey) -> Result<Self> {
         todo!()
     }
 

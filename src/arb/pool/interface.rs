@@ -12,23 +12,6 @@ use solana_transaction_status::{
 };
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 
-#[macro_export]
-macro_rules! impl_swap_accounts_to_list {
-    ($struct_name:ident { $($field:ident),+ $(,)? }) => {
-        impl $crate::arb::pool::interface::SwapAccountsToList for $struct_name {
-            fn to_list(&self) -> Vec<&AccountMeta> {
-                vec![
-                    $(&self.$field),+
-                ]
-            }
-        }
-    };
-    // Alternate syntax without braces for backwards compatibility
-    ($struct_name:ident, $($field:ident),+ $(,)?) => {
-        impl_swap_accounts_to_list!($struct_name { $($field),+ });
-    };
-}
-
 pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
 
@@ -90,15 +73,18 @@ pub struct PoolConfig<T> {
     pub minor_mint: Pubkey,
 }
 
-pub trait PoolConfigInit<Data, Account>: Sized {
-    fn init(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
+pub trait PoolConfigInit<Data, Account>: Sized
+where
+    Data: PoolDataLoader,
+{
+    fn build_from_pool_data(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
 
-    async fn load(pool: &Pubkey) -> Result<Self> {
+    async fn from_pool_address(pool: &Pubkey) -> Result<Self> {
         let client = rpc_client();
         let data = client.get_account_data(pool).await?;
-        let pool_data = MeteoraDlmmPoolData::load_data(&data)?;
-        let pair = MintPair(pool_data.get_base_mint(), pool_data.get_base_mint());
-        let config = Self::init(pool, pool_data, pair.the_other_mint()?);
+        let pool_data = Data::load_data(&data)?;
+        let pair = MintPair(pool_data.get_base_mint(), pool_data.get_quote_mint());
+        let config = Self::build_from_pool_data(pool, pool_data, pair.the_other_mint()?);
         config
     }
 

@@ -4,6 +4,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use crate::arb::pool::interface::PoolConfigInit;
 
 static MEM_POOL: Lazy<Arc<MemPool>> = Lazy::new(|| Arc::new(MemPool::new()));
 
@@ -51,7 +52,7 @@ impl MemPool {
     async fn add_to_registered_static(pool: LitePool) -> Result<()> {
         let mem = mem_pool();
 
-        let _config = MeteoraDlmmPoolConfig::load_from_address(&pool.pool_address).await?;
+        let _config = MeteoraDlmmPoolConfig::from_pool_address(&pool.pool_address).await?;
         mem.queued
             .write()
             .map_err(|e| anyhow::anyhow!("Write lock poisoned: {}", e))?

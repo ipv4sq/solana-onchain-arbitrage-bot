@@ -6,7 +6,7 @@ use solana_program::pubkey::Pubkey;
 pub type MeteoraDammV2Config = PoolConfig<MeteoraDammV2PoolData>;
 
 impl PoolConfigInit<MeteoraDammV2PoolData, MeteoraDammV2InputAccount> for MeteoraDammV2Config {
-    fn init(pool: &Pubkey, pool_data: MeteoraDammV2PoolData, desired_mint: Pubkey) -> Result<Self> {
+    fn build_from_pool_data(pool: &Pubkey, pool_data: MeteoraDammV2PoolData, desired_mint: Pubkey) -> Result<Self> {
         pool_data.shall_contain(&desired_mint)?;
         let minor_mint = pool_data.the_other_mint(pool)?;
         Ok(MeteoraDammV2Config {

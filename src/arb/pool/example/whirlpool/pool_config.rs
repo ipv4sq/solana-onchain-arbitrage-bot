@@ -6,7 +6,7 @@ use solana_program::pubkey::Pubkey;
 type WhirlpoolPoolConfig = PoolConfig<WhirlpoolPoolData>;
 pub struct WhirlpoolSwapAccounts {}
 impl PoolConfigInit<WhirlpoolPoolData, WhirlpoolSwapAccounts> for WhirlpoolPoolConfig {
-    fn init(pool: &Pubkey, account_data: WhirlpoolPoolData, desired_mint: Pubkey) -> Result<Self> {
+    fn build_from_pool_data(pool: &Pubkey, account_data: WhirlpoolPoolData, desired_mint: Pubkey) -> Result<Self> {
         account_data.shall_contain(&desired_mint)?;
 
         Ok(WhirlpoolPoolConfig {

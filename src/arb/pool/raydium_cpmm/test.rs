@@ -22,7 +22,7 @@ mod tests {
         let account = load_data().unwrap();
         let payer = "JDDadtcuCMTNy4Y8CDQ5VmL33yqbWRPPmapJdF7sxCvF".to_pubkey();
         let config =
-            RaydiumCpmmPoolConfig::init(&POOL_ADDRESS.to_pubkey(), account, *WSOL_KEY).unwrap();
+            RaydiumCpmmPoolConfig::build_from_pool_data(&POOL_ADDRESS.to_pubkey(), account, *WSOL_KEY).unwrap();
 
         let expected = RaydiumCpmmSwapAccounts {
             payer: payer.to_signer(),

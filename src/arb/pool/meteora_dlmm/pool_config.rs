@@ -15,7 +15,7 @@ pub const DLMM_EVENT_AUTHORITY: &str = "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVn
 pub type MeteoraDlmmPoolConfig = PoolConfig<MeteoraDlmmPoolData>;
 
 impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDlmmPoolConfig {
-    fn init(
+    fn build_from_pool_data(
         pool: &Pubkey,
         account_data: MeteoraDlmmPoolData,
         desired_mint: Pubkey,
@@ -45,15 +45,6 @@ impl PoolConfigInit<MeteoraDlmmPoolData, MeteoraDlmmInputAccounts> for MeteoraDl
 }
 
 impl MeteoraDlmmPoolConfig {
-    pub async fn load_from_address(pool: &Pubkey) -> Result<MeteoraDlmmPoolConfig> {
-        let client = rpc_client();
-        let data = client.get_account_data(pool).await?;
-        let pool_data = MeteoraDlmmPoolData::load_data(&data)?;
-        let pair = MintPair(pool_data.get_base_mint(), pool_data.get_base_mint());
-        let config = MeteoraDlmmPoolConfig::init(pool, pool_data, pair.the_other_mint()?);
-        config
-    }
-
     pub fn build_accounts_with_amount(
         &self,
         payer: &Pubkey,

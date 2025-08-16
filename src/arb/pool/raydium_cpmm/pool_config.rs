@@ -11,7 +11,7 @@ const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxF
 pub type RaydiumCpmmPoolConfig = PoolConfig<RaydiumCpmmAPoolData>;
 
 impl PoolConfigInit<RaydiumCpmmAPoolData, RaydiumCpmmSwapAccounts> for RaydiumCpmmPoolConfig {
-    fn init(
+    fn build_from_pool_data(
         pool: &Pubkey,
         account_data: RaydiumCpmmAPoolData,
         desired_mint: Pubkey,

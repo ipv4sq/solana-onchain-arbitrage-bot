@@ -5,7 +5,7 @@ use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 
 impl PoolConfigInit<PumpAmmPoolData, PumpAmmAccountSwapAccounts> for PumpAmmPoolConfig {
-    fn init(pool: &Pubkey, account_data: PumpAmmPoolData, desired_mint: Pubkey) -> Result<Self> {
+    fn build_from_pool_data(pool: &Pubkey, account_data: PumpAmmPoolData, desired_mint: Pubkey) -> Result<Self> {
         account_data.shall_contain(&desired_mint)?;
 
         Ok(PumpAmmPoolConfig {
