@@ -1,7 +1,7 @@
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::mint::MintPair;
-use crate::arb::constant::pool_owner::{PoolOwnerPrograms, RECOGNIZED_POOL_OWNER_PROGRAMS};
+use crate::arb::constant::pool_owner::{PoolOwnerPrograms};
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -9,7 +9,9 @@ use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiInstruction,
     UiParsedInstruction, UiPartiallyDecodedInstruction,
 };
+use sqlx::encode::IsNull::No;
 use std::collections::HashMap;
+use crate::arb::pool::register::RECOGNIZED_POOL_OWNER_PROGRAMS;
 
 pub fn is_program_ix<'a>(
     ix: &'a UiInstruction,
@@ -30,7 +32,20 @@ pub fn is_program_ix<'a>(
     None
 }
 
-pub fn extract_swap_inner_ix(
+pub fn extract_known_swap_inner_ix(
+    inners: &UiInnerInstructions,
+    tx: &EncodedConfirmedTransactionWithStatusMeta,
+) -> Vec<SwapInstruction> {
+    let filtered = known_swap_to_map(inners);
+
+    filtered
+        .values()
+        .into_iter()
+        .filter_map(|x| parse_swap_inner_ix(x, tx).ok())
+        .collect()
+}
+
+fn known_swap_to_map(
     inner_instructions: &UiInnerInstructions,
 ) -> HashMap<String, &UiPartiallyDecodedInstruction> {
     inner_instructions
@@ -51,7 +66,7 @@ pub fn extract_swap_inner_ix(
         .collect()
 }
 
-pub fn parse_swap_inner_ix(
+fn parse_swap_inner_ix(
     ix: &UiPartiallyDecodedInstruction,
     tx: &EncodedConfirmedTransactionWithStatusMeta,
 ) -> anyhow::Result<SwapInstruction> {
@@ -80,7 +95,7 @@ pub fn parse_swap_inner_ix(
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::chain::ix::{extract_swap_inner_ix, parse_swap_inner_ix};
+    use crate::arb::chain::ix::{parse_swap_inner_ix, known_swap_to_map};
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::constant::pool_owner::PoolOwnerPrograms;
     use crate::arb::global::rpc::fetch_tx_sync;
@@ -104,7 +119,7 @@ mod tests {
         assert_eq!(parsed.accounts.len(), 59);
         assert!(inner_ixs.instructions.len() > 0);
 
-        let swap_ixs = extract_swap_inner_ix(inner_ixs);
+        let swap_ixs = known_swap_to_map(inner_ixs);
         assert!(!swap_ixs.is_empty());
 
         for (program_id, ix) in swap_ixs.iter() {

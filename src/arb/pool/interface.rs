@@ -1,5 +1,5 @@
-use crate::arb::global::rpc::rpc_client;
 use crate::arb::constant::mint::MintPair;
+use crate::arb::global::rpc::rpc_client;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -70,4 +70,8 @@ pub trait InputAccountUtil<Account, Data>: Sized {
     ) -> Result<Account>;
 
     fn to_list(&self) -> Vec<&AccountMeta>;
+
+    fn to_list_cloned(&self) -> Vec<AccountMeta> {
+        self.to_list().into_iter().cloned().collect()
+    }
 }

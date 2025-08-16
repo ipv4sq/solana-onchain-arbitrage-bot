@@ -1,4 +1,4 @@
-use crate::arb::constant::pool_owner::AnyPoolConfig;
+use crate::arb::pool::register::AnyPoolConfig;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;

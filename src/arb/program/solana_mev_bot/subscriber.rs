@@ -1,53 +1,22 @@
+use crate::arb::chain::ix::extract_known_swap_inner_ix;
 use crate::arb::chain::types::LitePool;
-use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
 use crate::arb::constant::mint::{MintPair, USDC_KEY, WSOL_KEY};
 use crate::arb::global::db::{get_database, Database};
 use crate::arb::global::mem_pool::{mem_pool, MemPool};
+use crate::arb::program::solana_mev_bot::ix::convert_to_smb_ix;
 use anyhow::Result;
 use solana_transaction_status::{
     EncodedConfirmedTransactionWithStatusMeta, UiInnerInstructions, UiPartiallyDecodedInstruction,
 };
 use tracing::{debug, info};
-use crate::arb::chain::ix::{extract_swap_inner_ix, parse_swap_inner_ix};
 
 pub async fn on_mev_bot_transaction(
     tx: &EncodedConfirmedTransactionWithStatusMeta,
     ix: &UiPartiallyDecodedInstruction,
     inner: &UiInnerInstructions,
 ) -> Result<()> {
-    let _smb_ix = convert_to_smb_ix(ix)?;
-    let swap_instructions = extract_swap_inner_ix(inner);
-
-    info!(
-        "Found {} swap instructions to parse",
-        swap_instructions.len()
-    );
-
-    let mapped = swap_instructions
-        .values()
-        .into_iter()
-        .filter_map(|x| match parse_swap_inner_ix(x, tx) {
-            Ok(swap) => {
-                debug!(
-                    "Successfully parsed swap: {:?} on pool {}",
-                    swap.dex_type, swap.pool_address
-                );
-                Some(swap)
-            }
-            Err(e) => {
-                tracing::warn!(
-                    "Failed to parse swap instruction. Program: {}, Error: {}",
-                    x.program_id,
-                    e
-                );
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-
-    info!("Successfully parsed {} swaps", mapped.len());
-
-    for swap in mapped.iter() {
+    let swaps = extract_known_swap_inner_ix(inner, tx);
+    for swap in swaps.iter() {
         info!(
             "Recording pool {} with mints {:?} for {:?}",
             swap.pool_address, swap.mints, swap.dex_type
