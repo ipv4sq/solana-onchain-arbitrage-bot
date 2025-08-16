@@ -1,4 +1,4 @@
-use crate::arb::constant::client::rpc_client;
+use crate::arb::global::rpc::rpc_client;
 use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use solana_program::pubkey::Pubkey;

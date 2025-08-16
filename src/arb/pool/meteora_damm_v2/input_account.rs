@@ -159,9 +159,9 @@ mod tests {
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
     use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
-    use crate::arb::chain::ix::is_meteora_damm_v2_swap;
-    use crate::arb::chain::rpc::fetch_tx_sync;
-    use crate::arb::chain::tx_parser::extract_mev_instruction;
+    use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
+    use crate::arb::global::rpc::fetch_tx_sync;
+    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =

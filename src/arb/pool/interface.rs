@@ -1,4 +1,4 @@
-use crate::arb::constant::client::rpc_client;
+use crate::arb::global::rpc::rpc_client;
 use crate::arb::constant::mint::MintPair;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
