@@ -2,6 +2,7 @@ use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::Transaction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::global::rpc::rpc_client;
+use crate::arb::pool::register::AnyPoolConfig;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -59,8 +60,18 @@ pub struct TradeDirection {
 
 pub trait InputAccountUtil<Account, Data>: Sized {
     fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<Account>;
-    
-    
+
+    /*
+    1. This is just for building the right list of accounts with correct permission set.
+    2. If there is any bin array, it would quickly estimate.
+     */
+    fn build_accounts_no_matter_direction_size(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: &Data,
+    ) -> Result<Account>;
+
+    // This is the most accurate version, for you to generate swap instructions directly in the future
     fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,

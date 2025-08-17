@@ -1,11 +1,12 @@
 use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::Transaction;
-use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
+use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader, TradeDirection};
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use sqlx::encode::IsNull::No;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {
@@ -62,6 +63,22 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         })
     }
 
+    fn build_accounts_no_matter_direction_size(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: &MeteoraDlmmPoolData,
+    ) -> Result<MeteoraDlmmInputAccounts> {
+        Self::build_accounts_with_direction_and_size(
+            payer,
+            pool,
+            pool_data,
+            &pool_data.base_mint(),
+            &pool_data.quote_mint(),
+            None,
+            None,
+        )
+    }
+
     fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
@@ -74,7 +91,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
         use crate::arb::pool::meteora_dlmm::bin_array;
         use crate::constants::addresses::TokenProgram;
-        use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+        use crate::constants::helpers::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         // Determine swap direction (swap_for_y means swapping X for Y)

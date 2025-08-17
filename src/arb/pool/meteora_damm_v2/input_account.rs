@@ -1,12 +1,13 @@
 use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::Transaction;
-use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
+use crate::arb::pool::interface::{InputAccountUtil, PoolConfig, PoolDataLoader, TradeDirection};
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::pool::util::ata;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use sqlx::encode::IsNull::No;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
@@ -55,6 +56,22 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             event_authority: ix.account_at(12)?,
             meteora_program: ix.account_at(13)?,
         })
+    }
+
+    fn build_accounts_no_matter_direction_size(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: &MeteoraDammV2PoolData,
+    ) -> Result<MeteoraDammV2InputAccount> {
+        Self::build_accounts_with_direction_and_size(
+            payer,
+            pool,
+            pool_data,
+            &pool_data.base_mint(),
+            &pool_data.quote_mint(),
+            None,
+            None,
+        )
     }
 
     fn build_accounts_with_direction_and_size(
