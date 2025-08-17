@@ -18,7 +18,7 @@ impl ToUnified for TransactionUpdate {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Transaction has no message"))?;
         
-        let account_keys: Vec<Pubkey> = message.account_keys
+        let mut account_keys: Vec<Pubkey> = message.account_keys
             .iter()
             .map(|key_bytes| {
                 if key_bytes.len() != 32 {
@@ -29,6 +29,24 @@ impl ToUnified for TransactionUpdate {
                 Ok(Pubkey::from(array))
             })
             .collect::<Result<_>>()?;
+        
+        // Add loaded addresses from address lookup tables if present in meta
+        if let Some(meta) = self.meta.as_ref() {
+            for addr_bytes in &meta.loaded_writable_addresses {
+                if addr_bytes.len() == 32 {
+                    let mut array = [0u8; 32];
+                    array.copy_from_slice(addr_bytes);
+                    account_keys.push(Pubkey::from(array));
+                }
+            }
+            for addr_bytes in &meta.loaded_readonly_addresses {
+                if addr_bytes.len() == 32 {
+                    let mut array = [0u8; 32];
+                    array.copy_from_slice(addr_bytes);
+                    account_keys.push(Pubkey::from(array));
+                }
+            }
+        }
         
         let instructions: Vec<Instruction> = message.instructions
             .iter()

@@ -24,9 +24,26 @@ async fn main() -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .expect("Failed to set global default subscriber");
 
+    info!("Starting Solana MEV Bot Listener");
 
+    // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
+    let _ = &arb::subscriber::solana_mev_bot::consumer::MEV_TX_CONSUMER;
+    info!("MEV transaction consumer initialized");
 
-    todo!()
+    // 2. Start the SolanaMevBotOnchainListener
+    let listener_handle = tokio::spawn(async move {
+        if let Err(e) = arb::subscriber::solana_mev_bot::producer::start_mev_bot_subscriber().await {
+            tracing::error!("MEV bot subscriber error: {}", e);
+        }
+    });
+
+    // 3. Block until Ctrl+C
+    info!("Press Ctrl+C to shutdown");
+    tokio::signal::ctrl_c().await?;
+    info!("Shutting down...");
+
+    listener_handle.abort();
+    Ok(())
 }
 
 // #[tokio::main]

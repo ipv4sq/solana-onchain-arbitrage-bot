@@ -6,12 +6,12 @@ use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use tracing::info;
 
-pub struct MevBotSubscriber {
+pub struct SolanaMevBotOnchainListener {
     client: SolanaGrpcClient,
     program_id: Pubkey,
 }
 
-impl MevBotSubscriber {
+impl SolanaMevBotOnchainListener {
     pub fn from_env(program_id: Pubkey) -> Result<Self> {
         Ok(Self {
             client: SolanaGrpcClient::from_env()?,
@@ -41,6 +41,7 @@ impl MevBotSubscriber {
 
     async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
         use crate::arb::subscriber::solana_mev_bot::consumer::try_publish_mev_transaction as try_publish;
+        info!("Received transaction: {:?}", tx_update.signature);
         if let Err(e) = tx_update.to_unified().and_then(try_publish) {
             tracing::error!("Failed to publish SMB transaction: {} to the consumer", e);
         }
@@ -49,6 +50,6 @@ impl MevBotSubscriber {
 }
 
 pub async fn start_mev_bot_subscriber() -> Result<()> {
-    let subscriber = MevBotSubscriber::from_env(SMB_ONCHAIN_PROGRAM_ID.to_pubkey())?;
+    let subscriber = SolanaMevBotOnchainListener::from_env(SMB_ONCHAIN_PROGRAM_ID.to_pubkey())?;
     subscriber.start(true).await // auto_retry = true
 }
