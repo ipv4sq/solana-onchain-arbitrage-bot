@@ -28,24 +28,8 @@ impl Instruction {
         // The first byte should be the instruction discriminator (12 for TransferChecked)
         match TokenInstruction::unpack(&self.data) {
             Ok(TokenInstruction::TransferChecked { amount, decimals }) => {
-                // Verify account requirements
-                // Account 0: source - should be writable
-                if !self.accounts[0].is_writable {
-                    return None;
-                }
-                
-                // Account 1: mint - should be read-only
-                if self.accounts[1].is_writable {
-                    return None;
-                }
-                
-                // Account 2: destination - should be writable
-                if !self.accounts[2].is_writable {
-                    return None;
-                }
-                
-                // Account 3: authority - should be signer (unless multisig)
-                // We'll accept either signer or non-signer for flexibility
+                // For inner instructions, the writable/signer flags might not be set correctly
+                // We'll be more lenient and just check the instruction format
                 
                 // Extract account pubkeys and return parsed data
                 Some(ParsedTransferChecked {

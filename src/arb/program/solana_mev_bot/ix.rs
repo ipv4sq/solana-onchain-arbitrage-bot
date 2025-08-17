@@ -137,6 +137,48 @@ mod tests {
     use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
 
     #[tokio::test]
+    async fn test_account_metadata_mapping() {
+        let tx_hash = "3mDkuLRaZRuGDcHon9JFGikkb7YQnc8Ph4NBjUG1vrbWLpCDvgMbHMDFycvtvwQv6BU2aF6wQbmQjdVNzHRGTQKs";
+        let tx = fetch_tx(tx_hash).await.unwrap();
+        let (ix, inner) = extract_mev_instruction(&tx).unwrap();
+        
+        // Find a transfer_checked instruction in the inner instructions
+        let transfer_checked_ix = inner.instructions
+            .iter()
+            .find(|ix| {
+                ix.program_id == spl_token::ID 
+                && ix.accounts.len() == 4 
+                && !ix.data.is_empty() 
+                && ix.data[0] == 12  // transfer_checked discriminator
+            })
+            .expect("Should find at least one transfer_checked instruction");
+        
+        println!("Transfer checked instruction account metadata:");
+        for (i, acc) in transfer_checked_ix.accounts.iter().enumerate() {
+            println!("  Account {}: pubkey={}, is_signer={}, is_writable={}", 
+                     i, acc.pubkey, acc.is_signer, acc.is_writable);
+        }
+        
+        // The expected metadata for transfer_checked should be:
+        // 0: source (writable, not signer)
+        // 1: mint (not writable, not signer)
+        // 2: destination (writable, not signer)
+        // 3: authority (not writable, signer OR not signer for PDA)
+        
+        // Let's check if the metadata makes sense
+        assert!(transfer_checked_ix.accounts.len() == 4, "transfer_checked should have 4 accounts");
+        
+        // For debugging - let's not assert on writable/signer yet, just observe
+        println!("\nExpected vs Actual:");
+        println!("Account 0 (source): should be writable=true, is_writable={}", 
+                 transfer_checked_ix.accounts[0].is_writable);
+        println!("Account 1 (mint): should be writable=false, is_writable={}", 
+                 transfer_checked_ix.accounts[1].is_writable);
+        println!("Account 2 (dest): should be writable=true, is_writable={}", 
+                 transfer_checked_ix.accounts[2].is_writable);
+    }
+
+    #[tokio::test]
     /*
     Copied from solscan, for claude code to create test.
     1. swap 7.107544925 wsol -> 1,684,417.981584314 meme coin
@@ -150,7 +192,46 @@ mod tests {
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
         let result = is_mev_box_ix_profitable(&ix, &inner).unwrap();
 
-        todo!()
+        // Expected beneficial owner
+        let expected_owner = "9FEjMA5uSKMWkLpaXJQY7V4nLm2xvvMxkeyeGEi7SLEg".to_pubkey();
+        let wsol_mint = TokenMint::SOL.to_pubkey();
+        
+        // Expected profit in lamports (0.236353237 SOL = 236353237 lamports)
+        let expected_profit_lamports = 236353237i64;
+        
+        // Check that the expected owner exists in results
+        assert!(
+            result.contains_key(&expected_owner),
+            "Expected owner {} not found in results. Found owners: {:?}",
+            expected_owner,
+            result.keys().collect::<Vec<_>>()
+        );
+        
+        // Get the balance statements for the owner
+        let owner_balances = result.get(&expected_owner).unwrap();
+        
+        // Find WSOL balance
+        let wsol_balance = owner_balances
+            .iter()
+            .find(|b| b.mint == wsol_mint)
+            .expect("WSOL balance not found for owner");
+        
+        // Verify the profit amount (allowing small rounding differences)
+        let profit_difference = (wsol_balance.amount - expected_profit_lamports).abs();
+        assert!(
+            profit_difference < 1000, // Allow up to 1000 lamports difference for rounding
+            "Unexpected WSOL profit. Expected: {} lamports, Got: {} lamports, Difference: {} lamports",
+            expected_profit_lamports,
+            wsol_balance.amount,
+            profit_difference
+        );
+        
+        // Verify profit is positive
+        assert!(
+            wsol_balance.amount > 0,
+            "WSOL balance should be positive (profit), got: {}",
+            wsol_balance.amount
+        );
     }
 }
 

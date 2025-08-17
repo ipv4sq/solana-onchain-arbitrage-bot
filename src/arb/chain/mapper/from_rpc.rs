@@ -7,6 +7,7 @@ use solana_transaction_status::{
     UiParsedInstruction, UiParsedMessage, UiRawMessage,
 };
 use std::str::FromStr;
+use crate::constants::addresses::TOKEN_2022_KEY;
 
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::mapper::traits::ToUnified;
@@ -271,6 +272,76 @@ fn convert_parsed_instruction(
     }
 }
 
+// Infer SPL Token instruction account metadata based on instruction type
+fn infer_spl_token_account_meta(
+    account_indices: &[u8],
+    data: &[u8],
+    account_keys: &[Pubkey],
+) -> Result<Vec<AccountMeta>> {
+    // Get instruction discriminator (first byte)
+    let discriminator = data.first().copied().unwrap_or(0);
+    
+    let accounts: Vec<AccountMeta> = account_indices
+        .iter()
+        .enumerate()
+        .map(|(idx, &account_idx)| {
+            let pubkey = account_keys
+                .get(account_idx as usize)
+                .ok_or_else(|| anyhow::anyhow!("Invalid account index in SPL Token instruction"))?
+                .clone();
+            
+            // Determine metadata based on instruction type and account position
+            let meta = match discriminator {
+                3 => {
+                    // Transfer instruction (3 accounts)
+                    match idx {
+                        0 => AccountMeta::new(pubkey, false),       // source (writable)
+                        1 => AccountMeta::new(pubkey, false),       // destination (writable)
+                        2 => AccountMeta::new_readonly(pubkey, false), // authority
+                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
+                    }
+                }
+                12 => {
+                    // TransferChecked instruction (4+ accounts)
+                    match idx {
+                        0 => AccountMeta::new(pubkey, false),       // source (writable)
+                        1 => AccountMeta::new_readonly(pubkey, false), // mint (readonly)
+                        2 => AccountMeta::new(pubkey, false),       // destination (writable)
+                        3 => AccountMeta::new_readonly(pubkey, false), // authority
+                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
+                    }
+                }
+                7 => {
+                    // MintTo instruction (3 accounts)
+                    match idx {
+                        0 => AccountMeta::new(pubkey, false),       // mint (writable)
+                        1 => AccountMeta::new(pubkey, false),       // destination (writable)
+                        2 => AccountMeta::new_readonly(pubkey, false), // mint authority
+                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
+                    }
+                }
+                8 => {
+                    // Burn instruction (3 accounts)
+                    match idx {
+                        0 => AccountMeta::new(pubkey, false),       // source (writable)
+                        1 => AccountMeta::new(pubkey, false),       // mint (writable)
+                        2 => AccountMeta::new_readonly(pubkey, false), // authority
+                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
+                    }
+                }
+                _ => {
+                    // Unknown instruction type, use conservative defaults
+                    AccountMeta::new_readonly(pubkey, false)
+                }
+            };
+            
+            Ok(meta)
+        })
+        .collect::<Result<_>>()?;
+    
+    Ok(accounts)
+}
+
 fn convert_meta(
     meta: &solana_transaction_status::UiTransactionStatusMeta,
     account_keys: &[Pubkey],
@@ -330,22 +401,28 @@ fn convert_ui_instruction_to_unified(
                 .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index in inner instruction"))?
                 .clone();
 
-            let accounts: Vec<AccountMeta> = compiled
-                .accounts
-                .iter()
-                .map(|&account_idx| {
-                    let pubkey = account_keys
-                        .get(account_idx as usize)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Invalid account index in inner instruction")
-                        })?
-                        .clone();
-                    // For inner instructions, we don't have full metadata, default to readonly
-                    Ok(AccountMeta::new_readonly(pubkey, false))
-                })
-                .collect::<Result<_>>()?;
-
             let data = bs58::decode(&compiled.data).into_vec().unwrap_or_default();
+            
+            // Infer account metadata based on instruction type
+            let accounts: Vec<AccountMeta> = if program_id == spl_token::ID || program_id == *TOKEN_2022_KEY {
+                // Handle SPL Token instructions
+                infer_spl_token_account_meta(&compiled.accounts, &data, account_keys)?
+            } else {
+                // For other programs, default to readonly (conservative approach)
+                compiled
+                    .accounts
+                    .iter()
+                    .map(|&account_idx| {
+                        let pubkey = account_keys
+                            .get(account_idx as usize)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!("Invalid account index in inner instruction")
+                            })?
+                            .clone();
+                        Ok(AccountMeta::new_readonly(pubkey, false))
+                    })
+                    .collect::<Result<_>>()?
+            };
 
             Ok(Instruction {
                 program_id,
