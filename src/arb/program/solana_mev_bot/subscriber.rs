@@ -1,11 +1,10 @@
+use crate::arb::chain::data::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::data::Transaction;
-use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
-use crate::arb::chain::data::util::instruction::extract_known_swap_inner_ix;
 use crate::arb::chain::types::LitePool;
 use crate::arb::global::db::get_database;
 use crate::arb::global::mem_pool::mem_pool;
-use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use crate::constants::helpers::ToPubkey;
+use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use tracing::info;
 
@@ -14,7 +13,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
         return Ok(());
     };
 
-    let swaps = extract_known_swap_inner_ix(inner, tx);
+    let swaps = tx.extract_known_swap_inner_ix(inner);
     for swap in swaps {
         info!(
             "Recording pool {} with mints {:?} for {:?}",
@@ -31,9 +30,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
     Ok(())
 }
 
-pub fn extract_mev_instruction(
-    tx: &Transaction,
-) -> Option<(&Instruction, &InnerInstructions)> {
+pub fn extract_mev_instruction(tx: &Transaction) -> Option<(&Instruction, &InnerInstructions)> {
     tx.extract_ix_and_inners(|program_id| *program_id == SMB_ONCHAIN_PROGRAM_ID.to_pubkey())
 }
 
