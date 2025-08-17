@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::arb::constant::mev_bot::{
-    FLASHLOAN_ACCOUNT_ID, SmbFeeCollector, EMV_BOT_PROGRAM_ID,
+    SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID,
 };
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
@@ -37,6 +37,7 @@ use solana_program::system_program;
 use spl_associated_token_account::ID as associated_token_program_id;
 use spl_token::ID as token_program_id;
 use std::str::FromStr;
+use crate::arb::global::rpc;
 
 pub async fn build_and_send_transaction(
     wallet_kp: &Keypair,
@@ -96,7 +97,7 @@ pub async fn build_and_send_transaction(
     for (i, client) in rpc_clients.iter().enumerate() {
         debug!("Sending transaction through RPC client {}", i);
 
-        let signature = match send_transaction_with_retries(client, &tx, max_retries).await {
+        let signature = match rpc::send_tx_with_retry(&tx, max_retries).await {
             Ok(sig) => sig,
             Err(e) => {
                 error!("Failed to send transaction through RPC client {}: {}", i, e);
@@ -149,22 +150,6 @@ fn gas_instructions(config: &Config) -> (Vec<Instruction>, u32) {
     let unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
 
     (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
-}
-
-async fn send_transaction_with_retries(
-    client: &RpcClient,
-    tx: &VersionedTransaction,
-    max_retries: u64,
-) -> anyhow::Result<Signature> {
-    Ok(client.send_transaction_with_config(
-        tx,
-        solana_client::rpc_config::RpcSendTransactionConfig {
-            skip_preflight: true,
-            max_retries: Some(max_retries as usize),
-            preflight_commitment: Some(CommitmentLevel::Confirmed),
-            ..Default::default()
-        },
-    )?)
 }
 
 /// Helper function to derive the vault token account PDA address for a given mint

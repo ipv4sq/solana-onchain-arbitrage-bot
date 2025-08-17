@@ -1,5 +1,7 @@
+use crate::arb::chain::util::alt::fetch_address_lookup_tables;
+use crate::arb::constant::mev_bot::{SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID};
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
-use crate::arb::global::rpc::rpc_client;
+use crate::arb::global::rpc::{rpc_client, send_tx_with_retry};
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -7,7 +9,6 @@ use crate::arb::pool::register::AnyPoolConfig;
 use crate::arb::pool::util::ata_sol_token;
 use crate::constants::addresses::TokenProgram;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
-use crate::arb::constant::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, EMV_BOT_PROGRAM_ID};
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
@@ -23,8 +24,38 @@ use solana_sdk::transaction::VersionedTransaction;
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
 
-pub fn send_fx() {
-    todo!()
+pub async fn build_and_send(
+    wallet: &Keypair,
+    compute_unit_limit: u32,
+    unit_price: u64,
+    pools: Vec<AnyPoolConfig>,
+    minimum_profit: u64,
+) -> Result<()> {
+    let rpc = rpc_client();
+    let blockhash = rpc.get_latest_blockhash().await?;
+
+    let alt_keys = vec![
+        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
+        "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
+    ];
+
+    let alts = fetch_address_lookup_tables(&rpc, &alt_keys).await?;
+
+    let tx = build_tx(
+        wallet,
+        compute_unit_limit,
+        unit_price,
+        pools,
+        blockhash,
+        &alts,
+        minimum_profit,
+    )
+    .await?;
+
+    let signature = send_tx_with_retry(&tx, 3).await?;
+    println!("Transaction sent: {}", signature);
+
+    Ok(())
 }
 
 pub async fn build_tx(
