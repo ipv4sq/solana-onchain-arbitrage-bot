@@ -1,4 +1,4 @@
 pub mod consumer_threads;
-pub mod subscriber;
+pub mod grpc_subscription;
 
 
