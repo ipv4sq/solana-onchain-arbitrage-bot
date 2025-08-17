@@ -1,7 +1,6 @@
 use crate::arb::chain::data::Transaction;
 use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
-use crate::arb::chain::ix::extract_known_swap_inner_ix;
-use crate::arb::chain::tx::extract_ix_and_inners;
+use crate::arb::chain::data::util::instruction::extract_known_swap_inner_ix;
 use crate::arb::chain::types::LitePool;
 use crate::arb::global::db::get_database;
 use crate::arb::global::mem_pool::mem_pool;
@@ -35,7 +34,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 pub fn extract_mev_instruction(
     tx: &Transaction,
 ) -> Option<(&Instruction, &InnerInstructions)> {
-    extract_ix_and_inners(tx, |program_id| *program_id == SMB_ONCHAIN_PROGRAM_ID.to_pubkey())
+    tx.extract_ix_and_inners(|program_id| *program_id == SMB_ONCHAIN_PROGRAM_ID.to_pubkey())
 }
 
 pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {

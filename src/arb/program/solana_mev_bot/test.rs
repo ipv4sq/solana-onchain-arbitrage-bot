@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::chain::ix::known_swap_to_map;
+    use crate::arb::chain::data::util::instruction::known_swap_to_map;
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::constant::pool_owner::PoolOwnerPrograms;
     use crate::arb::global::rpc::fetch_tx_sync;

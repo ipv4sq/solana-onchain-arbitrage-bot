@@ -4,6 +4,10 @@ use crate::arb::chain::types::SwapInstruction;
 use crate::arb::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use std::collections::HashMap;
 
+impl Instruction {
+    
+}
+
 pub fn is_program_ix_with_min_accounts<'a>(
     ix: &'a Instruction,
     program_id: &str,

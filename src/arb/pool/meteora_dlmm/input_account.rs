@@ -1,4 +1,4 @@
-use crate::arb::chain::account::create_account_meta;
+use crate::arb::chain::data::util::account::create_account_meta;
 use crate::arb::chain::data::Transaction;
 use crate::arb::chain::data::instruction::Instruction;
 use crate::arb::pool::interface::InputAccountUtil;

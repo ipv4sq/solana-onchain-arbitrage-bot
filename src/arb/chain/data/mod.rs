@@ -3,8 +3,9 @@ pub mod mapper;
 pub mod message;
 pub mod meta;
 pub mod transaction;
+pub mod util;
 
-pub use mapper::traits::{InstructionExtractor, ToUnified};
+pub use mapper::traits::ToUnified;
 pub use message::Message;
 pub use meta::TransactionMeta;
 pub use transaction::Transaction;
