@@ -2,6 +2,8 @@ use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
+use crate::constants::addresses::TokenProgram;
+use crate::constants::helpers::ToPubkey;
 
 const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";
 
@@ -20,6 +22,8 @@ impl PoolConfigInit<RaydiumCpmmAPoolData> for RaydiumCpmmPoolConfig {
             data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
+            desired_mint_token_program: TokenProgram::SPL_TOKEN.to_pubkey(),
+            minor_mint_token_program: TokenProgram::TOKEN_2022.to_pubkey(),
         })
     }
 

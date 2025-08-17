@@ -2,7 +2,6 @@ use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::Transaction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::global::rpc::rpc_client;
-use crate::arb::pool::register::AnyPoolConfig;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -38,6 +37,8 @@ pub struct PoolConfig<Data: PoolDataLoader> {
     pub data: Data,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
+    pub desired_mint_token_program: Pubkey,
+    pub minor_mint_token_program: Pubkey,
 }
 
 pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {

@@ -68,15 +68,57 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        Self::build_accounts_with_direction_and_size(
-            payer,
+        use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
+        use crate::arb::pool::meteora_dlmm::bin_array;
+        use crate::constants::addresses::TokenProgram;
+        use crate::constants::helpers::ToAccountMeta;
+        use spl_associated_token_account::get_associated_token_address_with_program_id;
+
+        let token_x_mint = &pool_data.token_x_mint;
+        let token_y_mint = &pool_data.token_y_mint;
+        
+        let bin_arrays = bin_array::generate_bin_arrays_for_swap(
+            pool_data.active_id,
             pool,
-            pool_data,
-            &pool_data.base_mint(),
-            &pool_data.quote_mint(),
-            None,
-            None,
-        )
+            true,
+            5,
+        );
+
+        let token_x_program = TokenProgram::SPL_TOKEN.to_program();
+        let token_y_program = TokenProgram::SPL_TOKEN.to_program();
+
+        let user_token_x = get_associated_token_address_with_program_id(
+            payer,
+            token_x_mint,
+            &token_x_program.pubkey,
+        );
+        let user_token_y = get_associated_token_address_with_program_id(
+            payer,
+            token_y_mint,
+            &token_y_program.pubkey,
+        );
+
+        let event_authority =
+            Pubkey::find_program_address(&[b"__event_authority"], &*METEORA_DLMM_PROGRAM).0;
+
+        Ok(MeteoraDlmmInputAccounts {
+            lb_pair: pool.to_writable(),
+            bin_array_bitmap_extension: (*METEORA_DLMM_PROGRAM).to_program(),
+            reverse_x: pool_data.reserve_x.to_writable(),
+            reverse_y: pool_data.reserve_y.to_writable(),
+            user_token_in: user_token_x.to_writable(),
+            user_token_out: user_token_y.to_writable(),
+            token_x_mint: pool_data.token_x_mint.to_readonly(),
+            token_y_mint: pool_data.token_y_mint.to_readonly(),
+            oracle: pool_data.oracle.to_writable(),
+            host_fee_in: (*METEORA_DLMM_PROGRAM).to_program(),
+            user: payer.to_signer(),
+            token_x_program,
+            token_y_program,
+            event_authority: event_authority.to_readonly(),
+            program: (*METEORA_DLMM_PROGRAM).to_program(),
+            bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
+        })
     }
 
     fn build_accounts_with_direction_and_size(

@@ -1,11 +1,18 @@
 use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
+use crate::constants::addresses::TokenProgram;
+use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
+
 pub type MeteoraDammV2Config = PoolConfig<MeteoraDammV2PoolData>;
 
 impl PoolConfigInit<MeteoraDammV2PoolData> for MeteoraDammV2Config {
-    fn from_pool_data(pool: &Pubkey, pool_data: MeteoraDammV2PoolData, desired_mint: Pubkey) -> Result<Self> {
+    fn from_pool_data(
+        pool: &Pubkey,
+        pool_data: MeteoraDammV2PoolData,
+        desired_mint: Pubkey,
+    ) -> Result<Self> {
         pool_data.shall_contain(&desired_mint)?;
         let minor_mint = pool_data.the_other_mint(pool)?;
         Ok(MeteoraDammV2Config {
@@ -13,15 +20,14 @@ impl PoolConfigInit<MeteoraDammV2PoolData> for MeteoraDammV2Config {
             data: pool_data,
             desired_mint,
             minor_mint,
+            desired_mint_token_program: TokenProgram::SPL_TOKEN.to_pubkey(),
+            minor_mint_token_program: TokenProgram::TOKEN_2022.to_pubkey(),
         })
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_build_accounts() {
-
-    }
+    fn test_build_accounts() {}
 }

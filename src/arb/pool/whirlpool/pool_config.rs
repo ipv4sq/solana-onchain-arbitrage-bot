@@ -1,12 +1,18 @@
 use crate::arb::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::pool::whirlpool::data::WhirlpoolPoolData;
+use crate::constants::addresses::TokenProgram;
+use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 
 type WhirlpoolPoolConfig = PoolConfig<WhirlpoolPoolData>;
 pub struct WhirlpoolSwapAccounts {}
 impl PoolConfigInit<WhirlpoolPoolData> for WhirlpoolPoolConfig {
-    fn from_pool_data(pool: &Pubkey, account_data: WhirlpoolPoolData, desired_mint: Pubkey) -> Result<Self> {
+    fn from_pool_data(
+        pool: &Pubkey,
+        account_data: WhirlpoolPoolData,
+        desired_mint: Pubkey,
+    ) -> Result<Self> {
         account_data.shall_contain(&desired_mint)?;
 
         Ok(WhirlpoolPoolConfig {
@@ -14,6 +20,8 @@ impl PoolConfigInit<WhirlpoolPoolData> for WhirlpoolPoolConfig {
             data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
+            desired_mint_token_program: TokenProgram::SPL_TOKEN.to_pubkey(),
+            minor_mint_token_program: TokenProgram::TOKEN_2022.to_pubkey(),
             // readonly_accounts: vec![
             //     // TODO memo program
             //     desired_mint,
@@ -30,5 +38,4 @@ impl PoolConfigInit<WhirlpoolPoolData> for WhirlpoolPoolConfig {
             // ]),
         })
     }
-    
 }

@@ -1,14 +1,16 @@
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
 use crate::arb::pool::interface::InputAccountUtil;
+use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
+use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::register::AnyPoolConfig;
 use crate::arb::pool::util::ata_sol_token;
 use crate::constants::addresses::TokenProgram;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use crate::constants::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, SMB_ONCHAIN_PROGRAM_ID};
 use crate::util::random_select;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
-use solana_program::instruction::Instruction;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
@@ -54,7 +56,7 @@ fn create_invoke_mev_instruction(
             FLASHLOAN_ACCOUNT_ID.to_readonly(),
             derive_vault_token_account(
                 &SMB_ONCHAIN_PROGRAM_ID.to_pubkey(),
-                &Mints::WSOL.to_pubkey(),
+                &Mints::WSOL.to_pubkey(), // default to wsol mint base for flashloan
             )
             .0
             .to_writable(),
@@ -62,21 +64,27 @@ fn create_invoke_mev_instruction(
     }
     // let the_other_mint_account = ata(&wallet.pubkey(), )
     for pool in pools {
-        match pool {
+        let pool_specific_accounts: Vec<AccountMeta> = match pool {
             AnyPoolConfig::MeteoraDlmm(c) => {
-                // MeteoraDlmmInputAccounts::build_accounts(
-                //     &wallet.pubkey(),
-                //     &c.pool,
-                //     &c.data,
-                //
-                // );
-                todo!()
+                MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
+                    &wallet.pubkey(),
+                    &c.pool,
+                    &c.data,
+                )?
+                .to_list_cloned()
             }
-            AnyPoolConfig::MeteoraDammV2(_) => {}
-            AnyPoolConfig::Unsupported => {}
-        }
+            AnyPoolConfig::MeteoraDammV2(c) => {
+                MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
+                    &wallet.pubkey(),
+                    &c.pool,
+                    &c.data,
+                )?
+                .to_list_cloned()
+            }
+            AnyPoolConfig::Unsupported => return Err(anyhow!("Unsupported pool type")),
+        };
+        accounts.extend(pool_specific_accounts);
     }
-    // default to wsol mint base for flashloan
     todo!()
 }
 

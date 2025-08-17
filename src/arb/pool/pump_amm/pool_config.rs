@@ -2,6 +2,8 @@ use crate::arb::pool::interface::{PoolConfigInit, PoolDataLoader};
 use crate::arb::pool::pump_amm::data::{PumpAmmPoolConfig, PumpAmmPoolData};
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
+use crate::constants::addresses::TokenProgram;
+use crate::constants::helpers::ToPubkey;
 
 impl PoolConfigInit<PumpAmmPoolData> for PumpAmmPoolConfig {
     fn from_pool_data(
@@ -16,6 +18,8 @@ impl PoolConfigInit<PumpAmmPoolData> for PumpAmmPoolConfig {
             data: account_data,
             desired_mint,
             minor_mint: account_data.the_other_mint(&desired_mint)?,
+            desired_mint_token_program: TokenProgram::SPL_TOKEN.to_pubkey(),
+            minor_mint_token_program: TokenProgram::TOKEN_2022.to_pubkey(),
             // readonly_accounts: vec![
             //     desired_mint,
             //     *PUMP_PROGRAM,
