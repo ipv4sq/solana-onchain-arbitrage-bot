@@ -14,18 +14,55 @@ pub mod util;
 
 use clap::{App, Arg};
 use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use arb::program;
+use std::fs;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Failed to set global default subscriber");
+    // Create logs directory if it doesn't exist
+    let logs_dir = Path::new("logs");
+    if !logs_dir.exists() {
+        fs::create_dir(logs_dir)?;
+    }
+    
+    // Create a file for logging with timestamp
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let log_file_path = format!("logs/bot_{}.log", timestamp);
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(&log_file_path)?;
+    
+    // Create file layer for logging to file
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::sync::Arc::new(file))
+        .with_ansi(false)  // No color codes in file
+        .with_line_number(true)
+        .with_file(true);
+    
+    // Create console layer for logging to stdout
+    let console_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_ansi(true);  // Color codes for console
+    
+    // Combine both layers with filtering
+    // Default to info level, but exclude sqlx debug/trace logs
+    let filter = tracing_subscriber::EnvFilter::new(
+        std::env::var("RUST_LOG")
+            .unwrap_or_else(|_| "info,sqlx=warn".to_string())
+    );
+    
+    tracing_subscriber::registry()
+        .with(console_layer)
+        .with(file_layer)
+        .with(filter)
+        .init();
 
     info!("Starting Solana MEV Bot Listener");
+    info!("Logs are being written to: {}", log_file_path);
 
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
     let _ = &program::mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;

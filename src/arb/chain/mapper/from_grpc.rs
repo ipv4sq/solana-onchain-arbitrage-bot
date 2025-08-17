@@ -234,18 +234,19 @@ fn convert_grpc_meta(
 fn convert_grpc_token_balance(
     balance: &yellowstone_grpc_proto::prelude::TokenBalance,
 ) -> Result<TokenBalance> {
+    // The mint, owner, and program_id are already base58 encoded strings
     Ok(TokenBalance {
         account_index: balance.account_index as u8,
-        mint: bs58::encode(&balance.mint).into_string(),
+        mint: balance.mint.clone(),
         owner: if balance.owner.is_empty() {
             None
         } else {
-            Some(bs58::encode(&balance.owner).into_string())
+            Some(balance.owner.clone())
         },
         program_id: if balance.program_id.is_empty() {
             None
         } else {
-            Some(bs58::encode(&balance.program_id).into_string())
+            Some(balance.program_id.clone())
         },
         ui_token_amount: UiTokenAmount {
             amount: balance.ui_token_amount.as_ref()

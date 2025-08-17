@@ -26,6 +26,18 @@ cargo check
 cp config.toml.example config.toml
 ```
 
+## Logging
+
+The bot logs to both console and file simultaneously:
+
+- **Log Directory**: `/logs/` (created automatically on first run)
+- **Log File Format**: `bot_YYYYMMDD_HHMMSS.log` (e.g., `bot_20250817_164316.log`)
+- **View Latest Logs**: Use `./tail_logs.sh` to tail the most recent log file
+- **Manual Tail**: `tail -f logs/bot_*.log`
+- **Log Level**: Controlled by `RUST_LOG` environment variable (default: `info`)
+
+The `/logs` directory is in `.gitignore` so log files won't be committed to the repository.
+
 ## Architecture
 
 ### Core Components
