@@ -1,10 +1,10 @@
 use crate::arb::chain::instruction::Instruction;
+use crate::arb::chain::Transaction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::global::rpc::rpc_client;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use crate::arb::chain::Transaction;
 
 pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;
@@ -52,11 +52,13 @@ pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {
     }
 }
 
+pub struct TradeDirection {
+    pub from: Pubkey,
+    pub to: Pubkey,
+}
+
 pub trait InputAccountUtil<Account, Data>: Sized {
-    fn restore_from(
-        ix: &Instruction,
-        tx: &Transaction,
-    ) -> Result<Account>;
+    fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<Account>;
 
     fn build_accounts(
         payer: &Pubkey,
@@ -67,6 +69,8 @@ pub trait InputAccountUtil<Account, Data>: Sized {
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> Result<Account>;
+
+    fn get_trade_direction(self) -> TradeDirection;
 
     fn to_list(&self) -> Vec<&AccountMeta>;
 

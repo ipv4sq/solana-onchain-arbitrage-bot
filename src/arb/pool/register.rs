@@ -49,21 +49,41 @@ impl AnyPoolConfig {
         let program_id_str = ix.program_id.to_string();
         match program_id_str.as_str() {
             PoolOwnerPrograms::METEORA_DLMM => {
+                use crate::arb::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
+                
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
+                let trade_direction = accounts.clone().get_trade_direction();
+                
+                let data_hex = hex::encode(&ix.data);
+                let ix_data = MeteoraDlmmIxData::load_ix_data(&data_hex);
+                
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDlmm,
                     pool_address: accounts.lb_pair.pubkey,
                     accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
+                    amount_in: ix_data.amount_in,
+                    amount_out: ix_data.min_amount_out,
+                    trade_direction: (trade_direction.from, trade_direction.to),
                 })
             }
             PoolOwnerPrograms::METEORA_DAMM_V2 => {
+                use crate::arb::pool::meteora_damm_v2::input_data::MeteoraDammV2InputData;
+                
                 let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
+                let trade_direction = accounts.clone().get_trade_direction();
+                
+                let data_hex = hex::encode(&ix.data);
+                let ix_data = MeteoraDammV2InputData::load_from_hex(&data_hex)?;
+                
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
                     accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
+                    amount_in: ix_data.amount_in,
+                    amount_out: ix_data.minimum_amount_out,
+                    trade_direction: (trade_direction.from, trade_direction.to),
                 })
             }
             _ => Err(anyhow::anyhow!("Unsupported program: {}", program_id_str)),

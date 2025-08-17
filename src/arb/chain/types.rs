@@ -9,6 +9,9 @@ pub struct SwapInstruction {
     pub pool_address: Pubkey,
     pub accounts: Vec<AccountMeta>,
     pub mints: MintPair,
+    pub amount_in: u64,
+    pub amount_out: u64,
+    pub trade_direction: (Pubkey, Pubkey),
 }
 
 #[derive(Debug, Clone)]

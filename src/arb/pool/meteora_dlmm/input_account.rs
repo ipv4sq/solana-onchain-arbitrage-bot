@@ -1,6 +1,6 @@
 use crate::arb::chain::util::instruction::create_account_meta;
 use crate::arb::chain::instruction::Instruction;
-use crate::arb::pool::interface::InputAccountUtil;
+use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
@@ -132,6 +132,45 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             program: (*METEORA_DLMM_PROGRAM).to_program(),
             bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
         })
+    }
+
+    fn get_trade_direction(self) -> TradeDirection {
+        use spl_associated_token_account::get_associated_token_address_with_program_id;
+        
+        let user = self.user.pubkey;
+        let token_x_program = self.token_x_program.pubkey;
+        let token_y_program = self.token_y_program.pubkey;
+        
+        let expected_ata_x = get_associated_token_address_with_program_id(
+            &user,
+            &self.token_x_mint.pubkey,
+            &token_x_program,
+        );
+        
+        let expected_ata_y = get_associated_token_address_with_program_id(
+            &user,
+            &self.token_y_mint.pubkey,
+            &token_y_program,
+        );
+        
+        if self.user_token_in.pubkey == expected_ata_x {
+            TradeDirection {
+                from: self.token_x_mint.pubkey,
+                to: self.token_y_mint.pubkey,
+            }
+        } else if self.user_token_in.pubkey == expected_ata_y {
+            TradeDirection {
+                from: self.token_y_mint.pubkey,
+                to: self.token_x_mint.pubkey,
+            }
+        } else {
+            panic!(
+                "Invalid user_token_in: {} doesn't match expected ATA for token X {} or token Y {}",
+                self.user_token_in.pubkey,
+                expected_ata_x,
+                expected_ata_y
+            )
+        }
     }
 
     fn to_list(&self) -> Vec<&AccountMeta> {
