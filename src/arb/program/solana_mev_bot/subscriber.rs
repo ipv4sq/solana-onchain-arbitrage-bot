@@ -1,5 +1,4 @@
-use crate::arb::chain::data::instruction::{InnerInstructions, Instruction};
-use crate::arb::chain::data::Transaction;
+use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::types::LitePool;
 use crate::arb::global::db::get_database;
 use crate::arb::global::mem_pool::mem_pool;
@@ -7,6 +6,7 @@ use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use tracing::info;
+use crate::arb::chain::Transaction;
 
 pub async fn entry(tx: &Transaction) -> Result<()> {
     let Some((ix, inner)) = extract_mev_instruction(tx) else {

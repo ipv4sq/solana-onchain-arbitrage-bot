@@ -1,4 +1,4 @@
-use crate::arb::chain::data::instruction::Instruction;
+use crate::arb::chain::instruction::Instruction;
 use solana_program::instruction::AccountMeta;
 
 impl Instruction {

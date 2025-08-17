@@ -1,5 +1,5 @@
-use super::message::Message;
-use super::meta::TransactionMeta;
+use crate::arb::chain::message::Message;
+use crate::arb::chain::meta::TransactionMeta;
 
 #[derive(Debug, Clone)]
 pub struct Transaction {

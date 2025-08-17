@@ -1,4 +1,3 @@
-use crate::arb::chain::data::Transaction;
 use crate::arb::program::solana_mev_bot::subscriber::entry as process_mev_tx;
 use crate::arb::subscriber::pubsub::{PubSubConfig, PubSubProcessor};
 use anyhow::Result;
@@ -7,6 +6,7 @@ use solana_sdk::pubkey::Pubkey;
 use std::ops::Deref;
 use std::sync::Arc;
 use tracing::info;
+use crate::arb::chain::Transaction;
 
 const NAME: &str = "SolanaMevBotTransactionDetector";
 
@@ -66,8 +66,8 @@ pub fn try_publish_mev_transaction(tx: Transaction) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arb::chain::data::{Message, TransactionMeta};
     use solana_sdk::pubkey::Pubkey;
+    use crate::arb::chain::{Message, TransactionMeta};
 
     fn create_mock_transaction(slot: u64) -> Transaction {
         Transaction {

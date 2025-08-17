@@ -1,5 +1,4 @@
-use crate::arb::chain::data::instruction::Instruction;
-use crate::arb::chain::data::Transaction;
+use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::mint::MintPair;
@@ -14,6 +13,7 @@ use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
+use crate::arb::chain::Transaction;
 
 lazy_static::lazy_static! {
     pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {

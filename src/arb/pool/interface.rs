@@ -1,10 +1,10 @@
-use crate::arb::chain::data::Transaction;
-use crate::arb::chain::data::instruction::Instruction;
+use crate::arb::chain::instruction::Instruction;
 use crate::arb::constant::mint::MintPair;
 use crate::arb::global::rpc::rpc_client;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use crate::arb::chain::Transaction;
 
 pub trait PoolDataLoader: Sized {
     fn load_data(data: &[u8]) -> Result<Self>;

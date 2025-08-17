@@ -1,24 +1,16 @@
-use anyhow::{Result, bail};
-use solana_sdk::pubkey::Pubkey;
+use anyhow::{bail, Result};
 use solana_sdk::instruction::AccountMeta;
+use solana_sdk::pubkey::Pubkey;
 use solana_transaction_status::{
-    EncodedConfirmedTransactionWithStatusMeta,
-    EncodedTransaction,
-    UiMessage,
-    UiParsedMessage,
-    UiRawMessage,
-    UiInstruction,
-    UiParsedInstruction,
-    option_serializer::OptionSerializer,
-    parse_accounts::ParsedAccount,
+    option_serializer::OptionSerializer, parse_accounts::ParsedAccount,
+    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInstruction, UiMessage,
+    UiParsedInstruction, UiParsedMessage, UiRawMessage,
 };
 use std::str::FromStr;
 
-use crate::arb::chain::data::ToUnified;
-use crate::arb::chain::data::Transaction;
-use crate::arb::chain::data::Message;
-use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
-use crate::arb::chain::data::TransactionMeta;
+use crate::arb::chain::instruction::{InnerInstructions, Instruction};
+use crate::arb::chain::mapper::traits::ToUnified;
+use crate::arb::chain::{Message, Transaction, TransactionMeta};
 
 impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
     fn to_unified(&self) -> Result<Transaction> {
@@ -26,18 +18,22 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             EncodedTransaction::Json(tx) => &tx.signatures,
             _ => bail!("Only JSON encoded transactions are supported"),
         };
-        
-        let signature = signatures.first()
+
+        let signature = signatures
+            .first()
             .ok_or_else(|| anyhow::anyhow!("Transaction has no signatures"))?
             .clone();
-        
+
         // Get loaded addresses from meta if available
-        let loaded_addresses = self.transaction.meta.as_ref()
-            .and_then(|m| match &m.loaded_addresses {
-                OptionSerializer::Some(addrs) => Some(addrs),
-                _ => None
-            });
-        
+        let loaded_addresses =
+            self.transaction
+                .meta
+                .as_ref()
+                .and_then(|m| match &m.loaded_addresses {
+                    OptionSerializer::Some(addrs) => Some(addrs),
+                    _ => None,
+                });
+
         let message = match &self.transaction.transaction {
             EncodedTransaction::Json(tx) => match &tx.message {
                 UiMessage::Parsed(msg) => convert_parsed_message(msg)?,
@@ -45,11 +41,14 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             },
             _ => bail!("Only JSON encoded transactions are supported"),
         };
-        
-        let meta = self.transaction.meta.as_ref()
+
+        let meta = self
+            .transaction
+            .meta
+            .as_ref()
             .map(|m| convert_meta(m, &message.account_keys))
             .transpose()?;
-        
+
         Ok(Transaction {
             signature,
             slot: self.slot,
@@ -60,17 +59,19 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
 }
 
 fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
-    let account_keys: Vec<Pubkey> = msg.account_keys
+    let account_keys: Vec<Pubkey> = msg
+        .account_keys
         .iter()
         .map(|k| Pubkey::from_str(&k.pubkey).map_err(Into::into))
         .collect::<Result<_>>()?;
-    
-    let instructions: Vec<Instruction> = msg.instructions
+
+    let instructions: Vec<Instruction> = msg
+        .instructions
         .iter()
         .enumerate()
         .map(|(idx, ix)| convert_parsed_instruction(ix, idx, &account_keys, &msg.account_keys))
         .collect::<Result<_>>()?;
-    
+
     Ok(Message {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
@@ -83,14 +84,15 @@ fn convert_raw_message(msg: &UiRawMessage) -> Result<Message> {
 }
 
 fn convert_raw_message_with_loaded(
-    msg: &UiRawMessage, 
-    loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>
+    msg: &UiRawMessage,
+    loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>,
 ) -> Result<Message> {
-    let mut account_keys: Vec<Pubkey> = msg.account_keys
+    let mut account_keys: Vec<Pubkey> = msg
+        .account_keys
         .iter()
         .map(|k| Pubkey::from_str(k).map_err(Into::into))
         .collect::<Result<_>>()?;
-    
+
     // Add loaded addresses if available
     if let Some(loaded) = loaded_addresses {
         // Add writable loaded addresses
@@ -102,38 +104,44 @@ fn convert_raw_message_with_loaded(
             account_keys.push(Pubkey::from_str(addr)?);
         }
     }
-    
+
     // Get header information for account metadata
     let num_required_signatures = msg.header.num_required_signatures as usize;
     let num_readonly_signed_accounts = msg.header.num_readonly_signed_accounts as usize;
     let num_readonly_unsigned_accounts = msg.header.num_readonly_unsigned_accounts as usize;
-    
-    let instructions: Vec<Instruction> = msg.instructions
+
+    let instructions: Vec<Instruction> = msg
+        .instructions
         .iter()
         .enumerate()
         .map(|(idx, ix)| {
-            let program_id = account_keys.get(ix.program_id_index as usize)
+            let program_id = account_keys
+                .get(ix.program_id_index as usize)
                 .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?
                 .clone();
-            
-            let accounts: Vec<AccountMeta> = ix.accounts
+
+            let accounts: Vec<AccountMeta> = ix
+                .accounts
                 .iter()
                 .map(|&account_idx| {
                     let account_idx = account_idx as usize;
-                    let pubkey = account_keys.get(account_idx)
+                    let pubkey = account_keys
+                        .get(account_idx)
                         .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
                         .clone();
-                    
+
                     // Determine if account is signer/writable based on position
                     let is_signer = account_idx < num_required_signatures;
                     let is_writable = if is_signer {
                         account_idx < (num_required_signatures - num_readonly_signed_accounts)
                     } else {
                         let non_signer_idx = account_idx - num_required_signatures;
-                        let num_writable_unsigned = account_keys.len() - num_required_signatures - num_readonly_unsigned_accounts;
+                        let num_writable_unsigned = account_keys.len()
+                            - num_required_signatures
+                            - num_readonly_unsigned_accounts;
                         non_signer_idx < num_writable_unsigned
                     };
-                    
+
                     Ok(if is_signer && is_writable {
                         AccountMeta::new(pubkey, true)
                     } else if is_signer {
@@ -145,11 +153,11 @@ fn convert_raw_message_with_loaded(
                     })
                 })
                 .collect::<Result<_>>()?;
-            
+
             let data = bs58::decode(&ix.data)
                 .into_vec()
                 .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-            
+
             Ok(Instruction {
                 program_id,
                 accounts,
@@ -158,7 +166,7 @@ fn convert_raw_message_with_loaded(
             })
         })
         .collect::<Result<_>>()?;
-    
+
     Ok(Message {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
@@ -166,22 +174,32 @@ fn convert_raw_message_with_loaded(
     })
 }
 
-fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pubkey], parsed_accounts: &[ParsedAccount]) -> Result<Instruction> {
+fn convert_parsed_instruction(
+    ix: &UiInstruction,
+    idx: usize,
+    account_keys: &[Pubkey],
+    parsed_accounts: &[ParsedAccount],
+) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
-            let program_id = account_keys.get(compiled.program_id_index as usize)
+            let program_id = account_keys
+                .get(compiled.program_id_index as usize)
                 .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?
                 .clone();
-            
-            let accounts: Vec<AccountMeta> = compiled.accounts
+
+            let accounts: Vec<AccountMeta> = compiled
+                .accounts
                 .iter()
                 .map(|&account_idx| {
-                    let pubkey = account_keys.get(account_idx as usize)
+                    let pubkey = account_keys
+                        .get(account_idx as usize)
                         .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
                         .clone();
-                    let parsed_acc = parsed_accounts.get(account_idx as usize)
-                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in parsed_accounts"))?;
-                    
+                    let parsed_acc =
+                        parsed_accounts.get(account_idx as usize).ok_or_else(|| {
+                            anyhow::anyhow!("Invalid account index in parsed_accounts")
+                        })?;
+
                     Ok(if parsed_acc.signer {
                         AccountMeta::new(pubkey, true)
                     } else if parsed_acc.writable {
@@ -191,11 +209,11 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
                     })
                 })
                 .collect::<Result<_>>()?;
-            
+
             let data = bs58::decode(&compiled.data)
                 .into_vec()
                 .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-            
+
             Ok(Instruction {
                 program_id,
                 accounts,
@@ -207,16 +225,23 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
             match parsed {
                 UiParsedInstruction::PartiallyDecoded(decoded) => {
                     let program_id = Pubkey::from_str(&decoded.program_id)?;
-                    
-                    let accounts: Vec<AccountMeta> = decoded.accounts
+
+                    let accounts: Vec<AccountMeta> = decoded
+                        .accounts
                         .iter()
                         .map(|acc_str| {
                             let pubkey = Pubkey::from_str(acc_str)?;
                             // Find the parsed account info for this pubkey
-                            let parsed_acc = parsed_accounts.iter()
+                            let parsed_acc = parsed_accounts
+                                .iter()
                                 .find(|pa| pa.pubkey == *acc_str)
-                                .ok_or_else(|| anyhow::anyhow!("Account {} not found in parsed_accounts", acc_str))?;
-                            
+                                .ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Account {} not found in parsed_accounts",
+                                        acc_str
+                                    )
+                                })?;
+
                             Ok(if parsed_acc.signer {
                                 AccountMeta::new(pubkey, true)
                             } else if parsed_acc.writable {
@@ -226,11 +251,11 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
                             })
                         })
                         .collect::<Result<_>>()?;
-                    
+
                     let data = bs58::decode(&decoded.data)
                         .into_vec()
                         .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-                    
+
                     Ok(Instruction {
                         program_id,
                         accounts,
@@ -246,39 +271,42 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
     }
 }
 
-fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta, account_keys: &[Pubkey]) -> Result<TransactionMeta> {
+fn convert_meta(
+    meta: &solana_transaction_status::UiTransactionStatusMeta,
+    account_keys: &[Pubkey],
+) -> Result<TransactionMeta> {
     let inner_instructions = match &meta.inner_instructions {
-        OptionSerializer::Some(inner) => {
-            inner.iter()
-                .map(|inner_ix| {
-                    let instructions = inner_ix.instructions
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(idx, ix)| {
-                            convert_ui_instruction_to_unified(ix, idx, account_keys).ok()
-                        })
-                        .collect();
-                    
-                    InnerInstructions {
-                        parent_index: inner_ix.index,
-                        instructions,
-                    }
-                })
-                .collect()
-        }
+        OptionSerializer::Some(inner) => inner
+            .iter()
+            .map(|inner_ix| {
+                let instructions = inner_ix
+                    .instructions
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, ix)| {
+                        convert_ui_instruction_to_unified(ix, idx, account_keys).ok()
+                    })
+                    .collect();
+
+                InnerInstructions {
+                    parent_index: inner_ix.index,
+                    instructions,
+                }
+            })
+            .collect(),
         _ => Vec::new(),
     };
-    
+
     let log_messages = match &meta.log_messages {
         OptionSerializer::Some(logs) => logs.clone(),
         _ => Vec::new(),
     };
-    
+
     let compute_units_consumed = match meta.compute_units_consumed {
         OptionSerializer::Some(units) => Some(units),
         _ => None,
     };
-    
+
     Ok(TransactionMeta {
         fee: meta.fee,
         compute_units_consumed,
@@ -290,28 +318,35 @@ fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta, accou
     })
 }
 
-fn convert_ui_instruction_to_unified(ix: &UiInstruction, idx: usize, account_keys: &[Pubkey]) -> Result<Instruction> {
+fn convert_ui_instruction_to_unified(
+    ix: &UiInstruction,
+    idx: usize,
+    account_keys: &[Pubkey],
+) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
-            let program_id = account_keys.get(compiled.program_id_index as usize)
+            let program_id = account_keys
+                .get(compiled.program_id_index as usize)
                 .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index in inner instruction"))?
                 .clone();
-            
-            let accounts: Vec<AccountMeta> = compiled.accounts
+
+            let accounts: Vec<AccountMeta> = compiled
+                .accounts
                 .iter()
                 .map(|&account_idx| {
-                    let pubkey = account_keys.get(account_idx as usize)
-                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in inner instruction"))?
+                    let pubkey = account_keys
+                        .get(account_idx as usize)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Invalid account index in inner instruction")
+                        })?
                         .clone();
                     // For inner instructions, we don't have full metadata, default to readonly
                     Ok(AccountMeta::new_readonly(pubkey, false))
                 })
                 .collect::<Result<_>>()?;
-            
-            let data = bs58::decode(&compiled.data)
-                .into_vec()
-                .unwrap_or_default();
-            
+
+            let data = bs58::decode(&compiled.data).into_vec().unwrap_or_default();
+
             Ok(Instruction {
                 program_id,
                 accounts,
@@ -323,21 +358,20 @@ fn convert_ui_instruction_to_unified(ix: &UiInstruction, idx: usize, account_key
             match parsed {
                 UiParsedInstruction::PartiallyDecoded(decoded) => {
                     let program_id = Pubkey::from_str(&decoded.program_id)?;
-                    
+
                     // For inner instructions, we don't have account metadata
                     // so we default to readonly
-                    let accounts: Vec<AccountMeta> = decoded.accounts
+                    let accounts: Vec<AccountMeta> = decoded
+                        .accounts
                         .iter()
                         .map(|acc_str| {
                             let pubkey = Pubkey::from_str(acc_str)?;
                             Ok(AccountMeta::new_readonly(pubkey, false))
                         })
                         .collect::<Result<_>>()?;
-                    
-                    let data = bs58::decode(&decoded.data)
-                        .into_vec()
-                        .unwrap_or_default();
-                    
+
+                    let data = bs58::decode(&decoded.data).into_vec().unwrap_or_default();
+
                     Ok(Instruction {
                         program_id,
                         accounts,

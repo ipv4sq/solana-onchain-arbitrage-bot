@@ -1,5 +1,5 @@
 use solana_sdk::pubkey::Pubkey;
-use super::instruction::Instruction;
+use crate::arb::chain::instruction::Instruction;
 
 #[derive(Debug, Clone)]
 pub struct Message {

@@ -4,11 +4,9 @@ use solana_sdk::instruction::AccountMeta;
 use std::str::FromStr;
 
 use crate::arb::subscriber::grpc_subscription::TransactionUpdate;
-use crate::arb::chain::data::ToUnified;
-use crate::arb::chain::data::Transaction;
-use crate::arb::chain::data::Message;
-use crate::arb::chain::data::instruction::{Instruction, InnerInstructions};
-use crate::arb::chain::data::TransactionMeta;
+use crate::arb::chain::instruction::{Instruction, InnerInstructions};
+use crate::arb::chain::mapper::traits::ToUnified;
+use crate::arb::chain::{Message, Transaction, TransactionMeta};
 
 impl ToUnified for TransactionUpdate {
     fn to_unified(&self) -> Result<Transaction> {

@@ -1,4 +1,3 @@
-use crate::arb::chain::data::{ToUnified, Transaction};
 use crate::constants::helpers::ToSignature;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -7,6 +6,8 @@ use solana_client::nonblocking::rpc_client;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcTransactionConfig;
 use std::sync::Arc;
+use crate::arb::chain::mapper::traits::ToUnified;
+use crate::arb::chain::transaction::Transaction;
 
 fn json_parsed_config() -> RpcTransactionConfig {
     RpcTransactionConfig {

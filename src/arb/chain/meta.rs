@@ -1,4 +1,4 @@
-use super::instruction::InnerInstructions;
+use crate::arb::chain::instruction::InnerInstructions;
 
 #[derive(Debug, Clone)]
 pub struct TransactionMeta {

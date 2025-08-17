@@ -1,6 +1,6 @@
 use crate::arb::program::solana_mev_bot::ix_input::SolanaMevBotIxInput;
 use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
-use crate::arb::chain::data::instruction::Instruction;
+use crate::arb::chain::instruction::Instruction;
 use anyhow::Result;
 
 pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {

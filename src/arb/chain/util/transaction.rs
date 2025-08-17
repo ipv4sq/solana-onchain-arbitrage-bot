@@ -1,5 +1,5 @@
-use crate::arb::chain::data::instruction::{InnerInstructions, Instruction};
-use crate::arb::chain::data::Transaction;
+use crate::arb::chain::instruction::{InnerInstructions, Instruction};
+use crate::arb::chain::Transaction;
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use solana_sdk::pubkey::Pubkey;
@@ -49,7 +49,7 @@ fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<Stri
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::chain::data::util::transaction::inner_to_filtered_map;
+    use crate::arb::chain::util::transaction::inner_to_filtered_map;
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::constant::pool_owner::PoolOwnerPrograms;
     use crate::arb::global::rpc::fetch_tx_sync;
