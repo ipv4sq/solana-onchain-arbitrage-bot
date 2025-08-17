@@ -1,6 +1,7 @@
 mod test {
     use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::subscriber::solana_mev_bot::entry::{entry, extract_mev_instruction};
+    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
+    use crate::arb::subscriber::solana_mev_bot::entry::entry;
     use crate::test::test_utils::get_test_rpc_client;
 
     #[tokio::test]
