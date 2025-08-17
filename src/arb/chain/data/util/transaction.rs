@@ -41,10 +41,8 @@ fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<Stri
     inner_instructions
         .instructions
         .iter()
-        .filter(|ix| {
-            (*RECOGNIZED_POOL_OWNER_PROGRAMS).any(|p| ix.program_id == p.to_pubkey())
-                && ix.accounts.len() >= 5
-        })
+        .filter(|ix| (*RECOGNIZED_POOL_OWNER_PROGRAMS).contains(&ix.program_id))
+        .filter(|ix| ix.accounts.len() >= 5)
         .map(|ix| (ix.program_id.to_string(), ix))
         .collect()
 }

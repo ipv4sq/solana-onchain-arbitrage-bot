@@ -1,5 +1,5 @@
-use crate::arb::chain::data::Transaction;
 use crate::arb::chain::data::instruction::Instruction;
+use crate::arb::chain::data::Transaction;
 use crate::arb::chain::types::SwapInstruction;
 use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::mint::MintPair;
@@ -10,15 +10,16 @@ use crate::arb::pool::meteora_damm_v2::pool_config::MeteoraDammV2Config;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
+use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 
 lazy_static::lazy_static! {
-    pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<String> = {
+    pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {
         let mut set = HashSet::new();
-        set.insert(PoolOwnerPrograms::METEORA_DLMM.to_string());
-        set.insert(PoolOwnerPrograms::METEORA_DAMM_V2.to_string());
+        set.insert(PoolOwnerPrograms::METEORA_DLMM.to_pubkey());
+        set.insert(PoolOwnerPrograms::METEORA_DAMM_V2.to_pubkey());
         set
     };
 }
@@ -44,10 +45,7 @@ impl AnyPoolConfig {
         }
     }
 
-    pub fn from_ix(
-        ix: &Instruction,
-        tx: &Transaction,
-    ) -> Result<SwapInstruction> {
+    pub fn from_ix(ix: &Instruction, tx: &Transaction) -> Result<SwapInstruction> {
         let program_id_str = ix.program_id.to_string();
         match program_id_str.as_str() {
             PoolOwnerPrograms::METEORA_DLMM => {
