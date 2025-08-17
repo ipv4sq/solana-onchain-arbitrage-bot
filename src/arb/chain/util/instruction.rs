@@ -1,9 +1,7 @@
-use solana_program::instruction::AccountMeta;
 use crate::arb::chain::instruction::{Instruction, ParsedTransferChecked};
-use crate::arb::chain::meta::TransactionMeta;
 use crate::constants::addresses::TOKEN_2022_KEY;
+use solana_program::instruction::AccountMeta;
 use spl_token::instruction::TokenInstruction;
-use solana_sdk::pubkey::Pubkey;
 
 impl Instruction {
     pub fn as_sol_token_transfer_checked(&self) -> Option<ParsedTransferChecked> {
@@ -29,10 +27,6 @@ impl Instruction {
         // The first byte should be the instruction discriminator (12 for TransferChecked)
         match TokenInstruction::unpack(&self.data) {
             Ok(TokenInstruction::TransferChecked { amount, decimals }) => {
-                // For inner instructions, the writable/signer flags might not be set correctly
-                // We'll be more lenient and just check the instruction format
-                
-                // Extract account pubkeys and return parsed data
                 Some(ParsedTransferChecked {
                     source: self.accounts[0].pubkey,
                     mint: self.accounts[1].pubkey,
@@ -45,34 +39,14 @@ impl Instruction {
             _ => None,
         }
     }
-}
 
-pub fn is_program_ix_with_min_accounts<'a>(
-    ix: &'a Instruction,
-    program_id: &str,
-    min_accounts: usize,
-) -> Option<&'a Instruction> {
-    use crate::constants::helpers::ToPubkey;
-    if ix.program_id == program_id.to_pubkey() {
-        if ix.accounts.len() >= min_accounts {
-            Some(ix)
-        } else {
-            None
-        }
-    } else {
-        None
+    pub fn account_at(&self, index: usize) -> anyhow::Result<AccountMeta> {
+        let account = self.accounts
+            .get(index)
+            .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
+        
+        // The AccountMeta in the instruction already has the correct writability
+        // information after our refactoring, so we can just return it directly
+        Ok(account.clone())
     }
-}
-
-pub fn create_account_meta(
-    ix: &Instruction,
-    index: usize,
-) -> anyhow::Result<AccountMeta> {
-    let account = ix.accounts
-        .get(index)
-        .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
-    
-    // The AccountMeta in the instruction already has the correct writability
-    // information after our refactoring, so we can just return it directly
-    Ok(account.clone())
 }

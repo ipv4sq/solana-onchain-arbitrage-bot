@@ -1,12 +1,11 @@
-use crate::arb::chain::util::instruction::create_account_meta;
 use crate::arb::chain::instruction::Instruction;
+use crate::arb::chain::Transaction;
 use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use crate::arb::chain::Transaction;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
@@ -46,20 +45,20 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         let meta = tx.meta.as_ref();
 
         Ok(MeteoraDammV2InputAccount {
-            pool_authority: create_account_meta(ix, 0)?,
-            pool: create_account_meta(ix, 1)?,
-            input_token_account: create_account_meta(ix, 2)?,
-            output_token_account: create_account_meta(ix, 3)?,
-            token_a_vault: create_account_meta(ix, 4)?,
-            token_b_vault: create_account_meta(ix, 5)?,
-            token_a_mint: create_account_meta(ix, 6)?,
-            token_b_mint: create_account_meta(ix, 7)?,
-            payer: create_account_meta(ix, 8)?,
-            token_a_program: create_account_meta(ix, 9)?,
-            token_b_program: create_account_meta(ix, 10)?,
-            referral_token_program: create_account_meta(ix, 11)?,
-            event_authority: create_account_meta(ix, 12)?,
-            meteora_program: create_account_meta(ix, 13)?,
+            pool_authority: ix.account_at(0)?,
+            pool: ix.account_at(1)?,
+            input_token_account: ix.account_at(2)?,
+            output_token_account: ix.account_at(3)?,
+            token_a_vault: ix.account_at(4)?,
+            token_b_vault: ix.account_at(5)?,
+            token_a_mint: ix.account_at(6)?,
+            token_b_mint: ix.account_at(7)?,
+            payer: ix.account_at(8)?,
+            token_a_program: ix.account_at(9)?,
+            token_b_program: ix.account_at(10)?,
+            referral_token_program: ix.account_at(11)?,
+            event_authority: ix.account_at(12)?,
+            meteora_program: ix.account_at(13)?,
         })
     }
 
@@ -190,17 +189,17 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 
 #[cfg(test)]
 mod tests {
+    use crate::arb::chain::Transaction;
     use crate::arb::constant::pool_owner::PoolOwnerPrograms;
+    use crate::arb::global::rpc::fetch_tx_sync;
     use crate::arb::pool::interface::InputAccountUtil;
     use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
+    use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::pool::meteora_damm_v2::pool_data::test::load_pool_data;
+    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
-    use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
-    use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
-    use crate::arb::chain::Transaction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =

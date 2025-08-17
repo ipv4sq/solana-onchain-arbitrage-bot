@@ -1,12 +1,11 @@
-use crate::arb::chain::util::instruction::create_account_meta;
 use crate::arb::chain::instruction::Instruction;
+use crate::arb::chain::Transaction;
 use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use anyhow::Result;
 use itertools::concat;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use crate::arb::chain::Transaction;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {
@@ -46,25 +45,25 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         // Extract bin arrays (all accounts after index 14)
         let mut bin_arrays = Vec::new();
         for i in 15..ix.accounts.len() {
-            bin_arrays.push(create_account_meta(ix, i)?);
+            bin_arrays.push(ix.account_at(i)?);
         }
 
         Ok(MeteoraDlmmInputAccounts {
-            lb_pair: create_account_meta(ix, 0)?,
-            bin_array_bitmap_extension: create_account_meta(ix, 1)?,
-            reverse_x: create_account_meta(ix, 2)?,
-            reverse_y: create_account_meta(ix, 3)?,
-            user_token_in: create_account_meta(ix, 4)?,
-            user_token_out: create_account_meta(ix, 5)?,
-            token_x_mint: create_account_meta(ix, 6)?,
-            token_y_mint: create_account_meta(ix, 7)?,
-            oracle: create_account_meta(ix, 8)?,
-            host_fee_in: create_account_meta(ix, 9)?,
-            user: create_account_meta(ix, 10)?,
-            token_x_program: create_account_meta(ix, 11)?,
-            token_y_program: create_account_meta(ix, 12)?,
-            event_authority: create_account_meta(ix, 13)?,
-            program: create_account_meta(ix, 14)?,
+            lb_pair: ix.account_at(0)?,
+            bin_array_bitmap_extension: ix.account_at(1)?,
+            reverse_x: ix.account_at(2)?,
+            reverse_y: ix.account_at(3)?,
+            user_token_in: ix.account_at(4)?,
+            user_token_out: ix.account_at(5)?,
+            token_x_mint: ix.account_at(6)?,
+            token_y_mint: ix.account_at(7)?,
+            oracle: ix.account_at(8)?,
+            host_fee_in: ix.account_at(9)?,
+            user: ix.account_at(10)?,
+            token_x_program: ix.account_at(11)?,
+            token_y_program: ix.account_at(12)?,
+            event_authority: ix.account_at(13)?,
+            program: ix.account_at(14)?,
             bin_arrays,
         })
     }
@@ -202,13 +201,13 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
-    use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
     use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
+    use crate::arb::global::rpc::fetch_tx_sync;
     use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+    use crate::arb::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
