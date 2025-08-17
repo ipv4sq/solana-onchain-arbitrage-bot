@@ -30,19 +30,13 @@ pub struct MeteoraDammV2InputAccount {
 impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     for MeteoraDammV2InputAccount
 {
-    fn restore_from(
-        ix: &Instruction,
-        tx: &Transaction,
-    ) -> Result<MeteoraDammV2InputAccount> {
+    fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<MeteoraDammV2InputAccount> {
         if ix.accounts.len() < 14 {
             return Err(anyhow::anyhow!(
                 "Invalid number of accounts for Meteora DAMM V2 swap: expected at least 14, got {}",
                 ix.accounts.len()
             ));
         }
-
-        let account_keys = &tx.message.account_keys;
-        let meta = tx.meta.as_ref();
 
         Ok(MeteoraDammV2InputAccount {
             pool_authority: ix.account_at(0)?,
@@ -130,23 +124,23 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 
     fn get_trade_direction(self) -> TradeDirection {
         use spl_associated_token_account::get_associated_token_address_with_program_id;
-        
+
         let payer = self.payer.pubkey;
         let token_a_program = self.token_a_program.pubkey;
         let token_b_program = self.token_b_program.pubkey;
-        
+
         let expected_ata_a = get_associated_token_address_with_program_id(
             &payer,
             &self.token_a_mint.pubkey,
             &token_a_program,
         );
-        
+
         let expected_ata_b = get_associated_token_address_with_program_id(
             &payer,
             &self.token_b_mint.pubkey,
             &token_b_program,
         );
-        
+
         if self.input_token_account.pubkey == expected_ata_a {
             TradeDirection {
                 from: self.token_a_mint.pubkey,
@@ -268,5 +262,4 @@ mod tests {
         let expected = expected_account();
         assert_eq!(expected, result);
     }
-
 }

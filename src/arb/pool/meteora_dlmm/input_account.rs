@@ -28,19 +28,13 @@ pub struct MeteoraDlmmInputAccounts {
 }
 
 impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for MeteoraDlmmInputAccounts {
-    fn restore_from(
-        ix: &Instruction,
-        tx: &Transaction,
-    ) -> Result<MeteoraDlmmInputAccounts> {
+    fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<MeteoraDlmmInputAccounts> {
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(
                 "Invalid number of accounts for Meteora DLMM swap: expected at least 15, got {}",
                 ix.accounts.len()
             ));
         }
-
-        let account_keys = &tx.message.account_keys;
-        let meta = tx.meta.as_ref();
 
         // Extract bin arrays (all accounts after index 14)
         let mut bin_arrays = Vec::new();
@@ -138,23 +132,23 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
     fn get_trade_direction(self) -> TradeDirection {
         use spl_associated_token_account::get_associated_token_address_with_program_id;
-        
+
         let user = self.user.pubkey;
         let token_x_program = self.token_x_program.pubkey;
         let token_y_program = self.token_y_program.pubkey;
-        
+
         let expected_ata_x = get_associated_token_address_with_program_id(
             &user,
             &self.token_x_mint.pubkey,
             &token_x_program,
         );
-        
+
         let expected_ata_y = get_associated_token_address_with_program_id(
             &user,
             &self.token_y_mint.pubkey,
             &token_y_program,
         );
-        
+
         if self.user_token_in.pubkey == expected_ata_x {
             TradeDirection {
                 from: self.token_x_mint.pubkey,
@@ -168,9 +162,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         } else {
             panic!(
                 "Invalid user_token_in: {} doesn't match expected ATA for token X {} or token Y {}",
-                self.user_token_in.pubkey,
-                expected_ata_x,
-                expected_ata_y
+                self.user_token_in.pubkey, expected_ata_x, expected_ata_y
             )
         }
     }
