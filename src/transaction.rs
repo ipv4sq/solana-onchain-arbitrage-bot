@@ -17,7 +17,7 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
-use crate::constants::mev_bot::{
+use crate::arb::constant::mev_bot::{
     FLASHLOAN_ACCOUNT_ID, SmbFeeCollector, EMV_BOT_PROGRAM_ID,
 };
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};

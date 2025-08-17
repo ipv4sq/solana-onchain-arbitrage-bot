@@ -7,7 +7,7 @@ use crate::arb::pool::register::AnyPoolConfig;
 use crate::arb::pool::util::ata_sol_token;
 use crate::constants::addresses::TokenProgram;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
-use crate::constants::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, EMV_BOT_PROGRAM_ID};
+use crate::arb::constant::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, EMV_BOT_PROGRAM_ID};
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;

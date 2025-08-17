@@ -3,7 +3,7 @@ use crate::arb::chain::Transaction;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
 use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
-use crate::constants::mev_bot::EMV_BOT_PROGRAM_ID;
+use crate::arb::constant::mev_bot::EMV_BOT_PROGRAM_ID;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
