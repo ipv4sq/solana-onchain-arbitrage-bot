@@ -1,6 +1,5 @@
 use crate::arb::chain::instruction::InnerInstructions;
 use solana_sdk::pubkey::Pubkey;
-use crate::arb::chain::message::MessageHeader;
 
 #[derive(Debug, Clone)]
 pub struct TransactionMeta {

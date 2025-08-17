@@ -44,23 +44,22 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 
         let account_keys = &tx.message.account_keys;
         let meta = tx.meta.as_ref();
-        let header = tx.message.header.as_ref();
 
         Ok(MeteoraDammV2InputAccount {
-            pool_authority: create_account_meta(ix, 0, account_keys, meta, header)?,
-            pool: create_account_meta(ix, 1, account_keys, meta, header)?,
-            input_token_account: create_account_meta(ix, 2, account_keys, meta, header)?,
-            output_token_account: create_account_meta(ix, 3, account_keys, meta, header)?,
-            token_a_vault: create_account_meta(ix, 4, account_keys, meta, header)?,
-            token_b_vault: create_account_meta(ix, 5, account_keys, meta, header)?,
-            token_a_mint: create_account_meta(ix, 6, account_keys, meta, header)?,
-            token_b_mint: create_account_meta(ix, 7, account_keys, meta, header)?,
-            payer: create_account_meta(ix, 8, account_keys, meta, header)?,
-            token_a_program: create_account_meta(ix, 9, account_keys, meta, header)?,
-            token_b_program: create_account_meta(ix, 10, account_keys, meta, header)?,
-            referral_token_program: create_account_meta(ix, 11, account_keys, meta, header)?,
-            event_authority: create_account_meta(ix, 12, account_keys, meta, header)?,
-            meteora_program: create_account_meta(ix, 13, account_keys, meta, header)?,
+            pool_authority: create_account_meta(ix, 0)?,
+            pool: create_account_meta(ix, 1)?,
+            input_token_account: create_account_meta(ix, 2)?,
+            output_token_account: create_account_meta(ix, 3)?,
+            token_a_vault: create_account_meta(ix, 4)?,
+            token_b_vault: create_account_meta(ix, 5)?,
+            token_a_mint: create_account_meta(ix, 6)?,
+            token_b_mint: create_account_meta(ix, 7)?,
+            payer: create_account_meta(ix, 8)?,
+            token_a_program: create_account_meta(ix, 9)?,
+            token_b_program: create_account_meta(ix, 10)?,
+            referral_token_program: create_account_meta(ix, 11)?,
+            event_authority: create_account_meta(ix, 12)?,
+            meteora_program: create_account_meta(ix, 13)?,
         })
     }
 

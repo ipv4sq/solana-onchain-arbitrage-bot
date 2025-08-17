@@ -11,7 +11,6 @@ use std::str::FromStr;
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::chain::{Message, Transaction, TransactionMeta};
-use crate::arb::chain::message::MessageHeader;
 
 impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
     fn to_unified(&self) -> Result<Transaction> {
@@ -47,7 +46,7 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             .transaction
             .meta
             .as_ref()
-            .map(|m| convert_meta(m, &message.account_keys, &message.header, loaded_addresses))
+            .map(|m| convert_meta(m, &message.account_keys))
             .transpose()?;
 
         Ok(Transaction {
@@ -60,24 +59,36 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
 }
 
 fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
-    let account_keys: Vec<Pubkey> = msg
+    // Build account_keys as Vec<AccountMeta> from parsed accounts
+    let account_keys: Vec<AccountMeta> = msg
         .account_keys
         .iter()
-        .map(|k| Pubkey::from_str(&k.pubkey).map_err(Into::into))
+        .map(|parsed_acc| {
+            let pubkey = Pubkey::from_str(&parsed_acc.pubkey)?;
+            
+            Ok(if parsed_acc.signer && parsed_acc.writable {
+                AccountMeta::new(pubkey, true)
+            } else if parsed_acc.signer {
+                AccountMeta::new_readonly(pubkey, true)
+            } else if parsed_acc.writable {
+                AccountMeta::new(pubkey, false)
+            } else {
+                AccountMeta::new_readonly(pubkey, false)
+            })
+        })
         .collect::<Result<_>>()?;
 
     let instructions: Vec<Instruction> = msg
         .instructions
         .iter()
         .enumerate()
-        .map(|(idx, ix)| convert_parsed_instruction(ix, idx, &account_keys, &msg.account_keys))
+        .map(|(idx, ix)| convert_parsed_instruction(ix, idx, &account_keys))
         .collect::<Result<_>>()?;
 
     Ok(Message {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
         instructions,
-        header: None,
     })
 }
 
@@ -89,70 +100,80 @@ fn convert_raw_message_with_loaded(
     msg: &UiRawMessage,
     loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>,
 ) -> Result<Message> {
-    let mut account_keys: Vec<Pubkey> = msg
+    // Parse static account keys first
+    let static_pubkeys: Vec<Pubkey> = msg
         .account_keys
         .iter()
         .map(|k| Pubkey::from_str(k).map_err(Into::into))
         .collect::<Result<_>>()?;
 
-    // Add loaded addresses if available
-    if let Some(loaded) = loaded_addresses {
-        // Add writable loaded addresses
-        for addr in &loaded.writable {
-            account_keys.push(Pubkey::from_str(addr)?);
-        }
-        // Add readonly loaded addresses
-        for addr in &loaded.readonly {
-            account_keys.push(Pubkey::from_str(addr)?);
-        }
-    }
+    // Parse loaded addresses if available
+    let loaded_writable: Vec<Pubkey> = loaded_addresses
+        .map(|la| la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .unwrap_or_default();
+    
+    let loaded_readonly: Vec<Pubkey> = loaded_addresses
+        .map(|la| la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .unwrap_or_default();
 
-    // Get header information for account metadata
+    // Get header information for determining permissions
     let num_required_signatures = msg.header.num_required_signatures as usize;
     let num_readonly_signed_accounts = msg.header.num_readonly_signed_accounts as usize;
     let num_readonly_unsigned_accounts = msg.header.num_readonly_unsigned_accounts as usize;
+    let static_account_len = static_pubkeys.len();
+
+    // Build account_keys as Vec<AccountMeta> with proper permissions
+    let mut account_keys: Vec<AccountMeta> = Vec::new();
+    
+    // Process static accounts with header-based permissions
+    for (idx, pubkey) in static_pubkeys.iter().enumerate() {
+        let is_signer = idx < num_required_signatures;
+        
+        let is_writable = if idx < num_required_signatures - num_readonly_signed_accounts {
+            true  // Writable signer
+        } else if idx < num_required_signatures {
+            false  // Readonly signer
+        } else if idx < static_account_len - num_readonly_unsigned_accounts {
+            true  // Writable non-signer
+        } else {
+            false  // Readonly non-signer
+        };
+        
+        if is_writable {
+            account_keys.push(AccountMeta::new(*pubkey, is_signer));
+        } else {
+            account_keys.push(AccountMeta::new_readonly(*pubkey, is_signer));
+        }
+    }
+    
+    // Add loaded writable addresses (never signers)
+    for pubkey in loaded_writable {
+        account_keys.push(AccountMeta::new(pubkey, false));
+    }
+    
+    // Add loaded readonly addresses (never signers)
+    for pubkey in loaded_readonly {
+        account_keys.push(AccountMeta::new_readonly(pubkey, false));
+    }
 
     let instructions: Vec<Instruction> = msg
         .instructions
         .iter()
         .enumerate()
         .map(|(idx, ix)| {
-            let program_id = account_keys
+            let program_account = account_keys
                 .get(ix.program_id_index as usize)
-                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?
-                .clone();
+                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?;
+            let program_id = program_account.pubkey;
 
             let accounts: Vec<AccountMeta> = ix
                 .accounts
                 .iter()
                 .map(|&account_idx| {
-                    let account_idx = account_idx as usize;
-                    let pubkey = account_keys
-                        .get(account_idx)
-                        .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
-                        .clone();
-
-                    // Determine if account is signer/writable based on position
-                    let is_signer = account_idx < num_required_signatures;
-                    let is_writable = if is_signer {
-                        account_idx < (num_required_signatures - num_readonly_signed_accounts)
-                    } else {
-                        let non_signer_idx = account_idx - num_required_signatures;
-                        let num_writable_unsigned = account_keys.len()
-                            - num_required_signatures
-                            - num_readonly_unsigned_accounts;
-                        non_signer_idx < num_writable_unsigned
-                    };
-
-                    Ok(if is_signer && is_writable {
-                        AccountMeta::new(pubkey, true)
-                    } else if is_signer {
-                        AccountMeta::new_readonly(pubkey, true)
-                    } else if is_writable {
-                        AccountMeta::new(pubkey, false)
-                    } else {
-                        AccountMeta::new_readonly(pubkey, false)
-                    })
+                    account_keys
+                        .get(account_idx as usize)
+                        .ok_or_else(|| anyhow::anyhow!("Invalid account index"))
+                        .map(|meta| meta.clone())
                 })
                 .collect::<Result<_>>()?;
 
@@ -169,53 +190,33 @@ fn convert_raw_message_with_loaded(
         })
         .collect::<Result<_>>()?;
 
-    let header = Some(MessageHeader {
-        num_required_signatures: msg.header.num_required_signatures,
-        num_readonly_signed_accounts: msg.header.num_readonly_signed_accounts,
-        num_readonly_unsigned_accounts: msg.header.num_readonly_unsigned_accounts,
-    });
-
     Ok(Message {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
         instructions,
-        header,
     })
 }
 
 fn convert_parsed_instruction(
     ix: &UiInstruction,
     idx: usize,
-    account_keys: &[Pubkey],
-    parsed_accounts: &[ParsedAccount],
+    account_keys: &[AccountMeta],
 ) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
-            let program_id = account_keys
+            let program_account = account_keys
                 .get(compiled.program_id_index as usize)
-                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?
-                .clone();
+                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index"))?;
+            let program_id = program_account.pubkey;
 
             let accounts: Vec<AccountMeta> = compiled
                 .accounts
                 .iter()
                 .map(|&account_idx| {
-                    let pubkey = account_keys
+                    account_keys
                         .get(account_idx as usize)
-                        .ok_or_else(|| anyhow::anyhow!("Invalid account index"))?
-                        .clone();
-                    let parsed_acc =
-                        parsed_accounts.get(account_idx as usize).ok_or_else(|| {
-                            anyhow::anyhow!("Invalid account index in parsed_accounts")
-                        })?;
-
-                    Ok(if parsed_acc.signer {
-                        AccountMeta::new(pubkey, true)
-                    } else if parsed_acc.writable {
-                        AccountMeta::new(pubkey, false)
-                    } else {
-                        AccountMeta::new_readonly(pubkey, false)
-                    })
+                        .ok_or_else(|| anyhow::anyhow!("Invalid account index"))
+                        .map(|meta| meta.clone())
                 })
                 .collect::<Result<_>>()?;
 
@@ -239,25 +240,18 @@ fn convert_parsed_instruction(
                         .accounts
                         .iter()
                         .map(|acc_str| {
-                            let pubkey = Pubkey::from_str(acc_str)?;
-                            // Find the parsed account info for this pubkey
-                            let parsed_acc = parsed_accounts
+                            let target_pubkey = Pubkey::from_str(acc_str)?;
+                            // Find the account meta for this pubkey
+                            account_keys
                                 .iter()
-                                .find(|pa| pa.pubkey == *acc_str)
+                                .find(|meta| meta.pubkey == target_pubkey)
                                 .ok_or_else(|| {
                                     anyhow::anyhow!(
-                                        "Account {} not found in parsed_accounts",
+                                        "Account {} not found in account_keys",
                                         acc_str
                                     )
-                                })?;
-
-                            Ok(if parsed_acc.signer {
-                                AccountMeta::new(pubkey, true)
-                            } else if parsed_acc.writable {
-                                AccountMeta::new(pubkey, false)
-                            } else {
-                                AccountMeta::new_readonly(pubkey, false)
-                            })
+                                })
+                                .map(|meta| meta.clone())
                         })
                         .collect::<Result<_>>()?;
 
@@ -282,70 +276,18 @@ fn convert_parsed_instruction(
 
 fn convert_meta(
     meta: &solana_transaction_status::UiTransactionStatusMeta,
-    account_keys: &[Pubkey],
-    header: &Option<MessageHeader>,
-    loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>,
+    account_keys: &[AccountMeta],
 ) -> Result<TransactionMeta> {
-    // Get loaded addresses from the meta
-    let loaded_writable_addresses: Vec<Pubkey> = loaded_addresses
-        .map(|la| la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
-        .unwrap_or_default();
+    // Extract loaded addresses from the meta for backward compatibility
+    let loaded_writable_addresses: Vec<Pubkey> = match &meta.loaded_addresses {
+        OptionSerializer::Some(la) => la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect(),
+        _ => Vec::new(),
+    };
     
-    let loaded_readonly_addresses: Vec<Pubkey> = loaded_addresses
-        .map(|la| la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
-        .unwrap_or_default();
-    
-    // Calculate boundaries in the account_keys array
-    // The structure is: [static_accounts..., loaded_writable..., loaded_readonly...]
-    let num_loaded_writable = loaded_writable_addresses.len();
-    let num_loaded_readonly = loaded_readonly_addresses.len();
-    let static_account_len = account_keys.len() - num_loaded_writable - num_loaded_readonly;
-    
-    // Build a complete list of AccountMeta for all accounts
-    let mut account_metas: Vec<AccountMeta> = Vec::new();
-    
-    for (idx, pubkey) in account_keys.iter().enumerate() {
-        let (is_writable, is_signer) = if idx >= static_account_len + num_loaded_writable {
-            // This is a loaded readonly address
-            (false, false)
-        } else if idx >= static_account_len {
-            // This is a loaded writable address
-            (true, false)
-        } else {
-            // This is a static account - use header to determine writability
-            let is_signer = header
-                .as_ref()
-                .map(|h| idx < h.num_required_signatures as usize)
-                .unwrap_or(false);
-            
-            let is_writable = header
-                .as_ref()
-                .map(|h| {
-                    let num_signed = h.num_required_signatures as usize;
-                    let num_signed_ro = h.num_readonly_signed_accounts as usize;
-                    let num_unsigned_ro = h.num_readonly_unsigned_accounts as usize;
-                    
-                    if idx < num_signed - num_signed_ro {
-                        true
-                    } else if idx < num_signed {
-                        false
-                    } else if idx < static_account_len - num_unsigned_ro {
-                        true
-                    } else {
-                        false
-                    }
-                })
-                .unwrap_or(false);
-            
-            (is_writable, is_signer)
-        };
-        
-        if is_writable {
-            account_metas.push(AccountMeta::new(*pubkey, is_signer));
-        } else {
-            account_metas.push(AccountMeta::new_readonly(*pubkey, is_signer));
-        }
-    }
+    let loaded_readonly_addresses: Vec<Pubkey> = match &meta.loaded_addresses {
+        OptionSerializer::Some(la) => la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect(),
+        _ => Vec::new(),
+    };
     
     let inner_instructions = match &meta.inner_instructions {
         OptionSerializer::Some(inner) => inner
@@ -356,7 +298,7 @@ fn convert_meta(
                     .iter()
                     .enumerate()
                     .filter_map(|(idx, ix)| {
-                        convert_ui_instruction_to_unified(ix, idx, account_keys, &account_metas).ok()
+                        convert_ui_instruction_to_unified(ix, idx, account_keys).ok()
                     })
                     .collect();
 
@@ -391,15 +333,14 @@ fn convert_meta(
 fn convert_ui_instruction_to_unified(
     ix: &UiInstruction,
     idx: usize,
-    account_keys: &[Pubkey],
-    account_metas: &[AccountMeta],
+    account_keys: &[AccountMeta],
 ) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
-            let program_id = account_keys
+            let program_account = account_keys
                 .get(compiled.program_id_index as usize)
-                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index in inner instruction"))?
-                .clone();
+                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index in inner instruction"))?;
+            let program_id = program_account.pubkey;
 
             let data = bs58::decode(&compiled.data).into_vec().unwrap_or_default();
             
@@ -407,7 +348,7 @@ fn convert_ui_instruction_to_unified(
                 .accounts
                 .iter()
                 .map(|&account_idx| {
-                    account_metas
+                    account_keys
                         .get(account_idx as usize)
                         .ok_or_else(|| anyhow::anyhow!("Invalid account index in inner instruction"))
                         .map(|meta| meta.clone())
@@ -426,14 +367,22 @@ fn convert_ui_instruction_to_unified(
                 UiParsedInstruction::PartiallyDecoded(decoded) => {
                     let program_id = Pubkey::from_str(&decoded.program_id)?;
 
-                    // For inner instructions, we don't have account metadata
-                    // so we default to readonly
+                    // For inner instructions, find matching account from account_keys
                     let accounts: Vec<AccountMeta> = decoded
                         .accounts
                         .iter()
                         .map(|acc_str| {
-                            let pubkey = Pubkey::from_str(acc_str)?;
-                            Ok(AccountMeta::new_readonly(pubkey, false))
+                            let target_pubkey = Pubkey::from_str(acc_str)?;
+                            // Try to find the account in account_keys
+                            account_keys
+                                .iter()
+                                .find(|meta| meta.pubkey == target_pubkey)
+                                .ok_or_else(|| {
+                                    // If not found, default to readonly for inner instructions
+                                    Ok::<AccountMeta, anyhow::Error>(AccountMeta::new_readonly(target_pubkey, false))
+                                })
+                                .and_then(|meta| Ok(meta.clone()))
+                                .or_else(|_| Ok(AccountMeta::new_readonly(target_pubkey, false)))
                         })
                         .collect::<Result<_>>()?;
 

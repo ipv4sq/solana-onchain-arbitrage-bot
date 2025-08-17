@@ -6,7 +6,6 @@ use crate::arb::subscriber::yellowstone::GrpcTransactionUpdate;
 use crate::arb::chain::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::chain::{Message, Transaction, TransactionMeta};
-use crate::arb::chain::message::MessageHeader;
 
 impl ToUnified for GrpcTransactionUpdate {
     fn to_unified(&self) -> Result<Transaction> {
@@ -132,22 +131,15 @@ impl ToUnified for GrpcTransactionUpdate {
         
         let recent_blockhash = bs58::encode(&message.recent_blockhash).into_string();
         
-        let header = message.header.as_ref().map(|h| MessageHeader {
-            num_required_signatures: h.num_required_signatures as u8,
-            num_readonly_signed_accounts: h.num_readonly_signed_accounts as u8,
-            num_readonly_unsigned_accounts: h.num_readonly_unsigned_accounts as u8,
-        });
-        
         let unified_message = Message {
-            account_keys,
+            account_keys: account_metas.clone(),
             recent_blockhash,
             instructions,
-            header,
         };
         
         let meta = self.meta
             .as_ref()
-            .map(|m| convert_grpc_meta(m, &unified_message.account_keys, &unified_message.header))
+            .map(|m| convert_grpc_meta(m, &unified_message.account_keys))
             .transpose()?;
         
         Ok(Transaction {
@@ -161,66 +153,23 @@ impl ToUnified for GrpcTransactionUpdate {
 
 fn convert_grpc_meta(
     meta: &yellowstone_grpc_proto::prelude::TransactionStatusMeta,
-    account_keys: &[Pubkey],
-    header: &Option<MessageHeader>,
+    account_keys: &[AccountMeta],
 ) -> Result<TransactionMeta> {
     // Calculate boundaries - account_keys is already built as: [static, loaded_writable, loaded_readonly]
     let num_loaded_writable = meta.loaded_writable_addresses.len();
     let num_loaded_readonly = meta.loaded_readonly_addresses.len();
     let static_account_len = account_keys.len() - num_loaded_writable - num_loaded_readonly;
     
-    // Build account metadata list with the same structure
-    let mut account_metas: Vec<AccountMeta> = Vec::new();
-    
-    for (idx, pubkey) in account_keys.iter().enumerate() {
-        let (is_writable, is_signer) = if idx >= static_account_len + num_loaded_writable {
-            // This is a loaded readonly address
-            (false, false)
-        } else if idx >= static_account_len {
-            // This is a loaded writable address
-            (true, false)
-        } else {
-            // This is a static account - use header to determine properties
-            let is_signer = header
-                .as_ref()
-                .map(|h| idx < h.num_required_signatures as usize)
-                .unwrap_or(false);
-            
-            let is_writable = header
-                .as_ref()
-                .map(|h| {
-                    let num_signed = h.num_required_signatures as usize;
-                    let num_signed_ro = h.num_readonly_signed_accounts as usize;
-                    let num_unsigned_ro = h.num_readonly_unsigned_accounts as usize;
-                    
-                    if idx < num_signed - num_signed_ro {
-                        true
-                    } else if idx < num_signed {
-                        false
-                    } else if idx < static_account_len - num_unsigned_ro {
-                        true
-                    } else {
-                        false
-                    }
-                })
-                .unwrap_or(false);
-            
-            (is_writable, is_signer)
-        };
-        
-        if is_writable {
-            account_metas.push(AccountMeta::new(*pubkey, is_signer));
-        } else {
-            account_metas.push(AccountMeta::new_readonly(*pubkey, is_signer));
-        }
-    }
-    
     // Extract the loaded addresses as Pubkey vectors for the TransactionMeta
     let loaded_writable_addresses: Vec<Pubkey> = account_keys[static_account_len..static_account_len + num_loaded_writable]
-        .to_vec();
+        .iter()
+        .map(|meta| meta.pubkey)
+        .collect();
     
     let loaded_readonly_addresses: Vec<Pubkey> = account_keys[static_account_len + num_loaded_writable..]
-        .to_vec();
+        .iter()
+        .map(|meta| meta.pubkey)
+        .collect();
     
     let inner_instructions: Vec<InnerInstructions> = meta.inner_instructions
         .iter()
@@ -229,13 +178,13 @@ fn convert_grpc_meta(
                 .iter()
                 .enumerate()
                 .filter_map(|(idx, ix)| {
-                    let program_id = account_metas.get(ix.program_id_index as usize)?
+                    let program_id = account_keys.get(ix.program_id_index as usize)?
                         .pubkey;
                     
                     let accounts: Vec<AccountMeta> = ix.accounts
                         .iter()
                         .filter_map(|&account_idx| {
-                            account_metas.get(account_idx as usize)
+                            account_keys.get(account_idx as usize)
                                 .map(|meta| meta.clone())
                         })
                         .collect();
