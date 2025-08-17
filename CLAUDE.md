@@ -101,12 +101,12 @@ I am an experienced engineer with typescript, java, kotlin but not familiar with
 This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
 
 ### General
-- DO NOT USE /// for comments, it looks annoying, normal // will be good
+- **ABSOLUTELY NO `///` DOC COMMENTS** - They clutter the code. Never use them.
+- **NO COMMENTS** - Write self-documenting code. Only use `//` when absolutely critical for understanding.
 - Think carefully and only action the specific task I have given you with the most concise and elegant solution that
   changes as little code as possible.
-- Avoid comments, only add comments when absolutely necessary, your code is kind of messy because you add too many comments.
 - When writing tests, avoid extra printing, it's difficult to follow and read
-- Avoid necessary indents, be caseful of using if Some() or match expression. 
+- Avoid unnecessary indents, be careful of using if Some() or match expression. 
 
 ### Pubkey Creation
 
