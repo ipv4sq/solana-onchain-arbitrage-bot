@@ -6,6 +6,8 @@ use solana_program::pubkey::Pubkey;
 use crate::arb::chain::Transaction;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
+use crate::constants::addresses::TokenMint;
+use std::collections::HashMap;
 
 pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
     let data = SolanaMevBotIxInputData::from_bytes(&ix.data)?;

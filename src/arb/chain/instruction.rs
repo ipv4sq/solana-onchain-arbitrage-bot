@@ -14,3 +14,13 @@ pub struct InnerInstructions {
     pub parent_index: u8,
     pub instructions: Vec<Instruction>,
 }
+
+#[derive(Debug, Clone)]
+pub struct ParsedTransferChecked {
+    pub source: Pubkey,
+    pub mint: Pubkey,
+    pub destination: Pubkey,
+    pub authority: Pubkey,
+    pub amount: u64,
+    pub decimals: u8,
+}
