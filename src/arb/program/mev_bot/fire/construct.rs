@@ -1,4 +1,5 @@
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
+use crate::arb::global::rpc::rpc_client;
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -6,11 +7,13 @@ use crate::arb::pool::register::AnyPoolConfig;
 use crate::arb::pool::util::ata_sol_token;
 use crate::constants::addresses::TokenProgram;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
-use crate::constants::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, SMB_ONCHAIN_PROGRAM_ID};
+use crate::constants::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, EMV_BOT_PROGRAM_ID};
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
+use solana_program::hash::Hash;
 use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::message::v0::Message;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
@@ -20,24 +23,36 @@ use solana_sdk::transaction::VersionedTransaction;
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
 
+pub fn send_fx() {
+    todo!()
+}
+
 pub async fn build_tx(
     wallet: &Keypair,
     compute_unit_limit: u32,
     unit_price: u64,
     pools: Vec<AnyPoolConfig>,
-    blockhash: String,
+    blockhash: Hash,
     alts: &[AddressLookupTableAccount],
+    minimum_profit: u64,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
-    let swap_ix = create_invoke_mev_instruction(wallet, compute_unit_limit, pools);
+    let swap_ix = create_invoke_mev_instruction(wallet, compute_unit_limit, pools, minimum_profit);
     instructions.push(swap_ix?);
-    todo!()
+
+    let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
+    let tx = VersionedTransaction::try_new(
+        solana_sdk::message::VersionedMessage::V0(message),
+        &[wallet],
+    )?;
+    Ok(tx)
 }
 
 fn create_invoke_mev_instruction(
     wallet: &Keypair,
     compute_unit_limit: u32,
     pools: Vec<AnyPoolConfig>,
+    minimum_profit: u64,
 ) -> Result<Instruction> {
     let use_flashloan = true;
     let fee_account = fee_collector(use_flashloan);
@@ -55,7 +70,7 @@ fn create_invoke_mev_instruction(
         accounts.extend([
             FLASHLOAN_ACCOUNT_ID.to_readonly(),
             derive_vault_token_account(
-                &SMB_ONCHAIN_PROGRAM_ID.to_pubkey(),
+                &EMV_BOT_PROGRAM_ID.to_pubkey(),
                 &Mints::WSOL.to_pubkey(), // default to wsol mint base for flashloan
             )
             .0
@@ -85,7 +100,24 @@ fn create_invoke_mev_instruction(
         };
         accounts.extend(pool_specific_accounts);
     }
-    todo!()
+
+    // Create instruction data
+    let mut data = vec![28u8];
+
+    // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.
+    let no_failure_mode = true;
+
+    data.extend_from_slice(&minimum_profit.to_le_bytes());
+    data.extend_from_slice(&compute_unit_limit.to_le_bytes());
+    data.extend_from_slice(if no_failure_mode { &[1] } else { &[0] });
+    data.extend_from_slice(&0u16.to_le_bytes()); // reserved
+    data.extend_from_slice(if use_flashloan { &[1] } else { &[0] });
+
+    Ok(Instruction {
+        program_id: EMV_BOT_PROGRAM_ID.to_pubkey(),
+        accounts,
+        data,
+    })
 }
 
 /// I am not sure whether this would work
@@ -143,7 +175,7 @@ mod tests {
 
         let pools = vec![pool_config];
 
-        let blockhash = Hash::default().to_string();
+        let blockhash = Hash::default();
 
         let alt_keys = vec![
             "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
@@ -161,6 +193,7 @@ mod tests {
             pools,
             blockhash,
             &alts,
+            10_000,
         )
         .await;
 

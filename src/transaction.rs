@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::constants::mev_bot::{
-    FLASHLOAN_ACCOUNT_ID, SmbFeeCollector, SMB_ONCHAIN_PROGRAM_ID,
+    FLASHLOAN_ACCOUNT_ID, SmbFeeCollector, EMV_BOT_PROGRAM_ID,
 };
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
@@ -181,7 +181,7 @@ fn create_swap_instruction(
 ) -> anyhow::Result<Instruction> {
     debug!("Creating swap instruction for all DEX types");
 
-    let executor_program_id = SMB_ONCHAIN_PROGRAM_ID.to_pubkey();
+    let executor_program_id = EMV_BOT_PROGRAM_ID.to_pubkey();
 
     let fee_collector = if use_flashloan {
         SmbFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
@@ -258,7 +258,7 @@ fn create_swap_instruction(
             false,
         ));
         let token_pda = derive_vault_token_account(
-            &SMB_ONCHAIN_PROGRAM_ID.to_pubkey(),
+            &EMV_BOT_PROGRAM_ID.to_pubkey(),
             &flashloan_base_mint,
         );
         accounts.push(AccountMeta::new(token_pda.0, false));

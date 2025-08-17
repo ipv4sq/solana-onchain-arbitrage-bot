@@ -1,7 +1,7 @@
 use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::subscriber::yellowstone::{SolanaGrpcClient, TransactionFilter, GrpcTransactionUpdate};
 use crate::constants::helpers::ToPubkey;
-use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
+use crate::constants::mev_bot::EMV_BOT_PROGRAM_ID;
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use tracing::info;
@@ -50,6 +50,6 @@ impl SolanaMevBotOnchainListener {
 }
 
 pub async fn start_mev_bot_subscriber() -> Result<()> {
-    let subscriber = SolanaMevBotOnchainListener::from_env(SMB_ONCHAIN_PROGRAM_ID.to_pubkey())?;
+    let subscriber = SolanaMevBotOnchainListener::from_env(EMV_BOT_PROGRAM_ID.to_pubkey())?;
     subscriber.start(true).await // auto_retry = true
 }
