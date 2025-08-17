@@ -1,13 +1,15 @@
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
+use crate::arb::chain::Transaction;
 use crate::arb::program::solana_mev_bot::ix_input::SolanaMevBotIxInput;
 use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
-use anyhow::Result;
-use solana_program::pubkey::Pubkey;
-use crate::arb::chain::Transaction;
+use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
-use crate::constants::addresses::TokenMint;
+use anyhow::Result;
+use solana_program::pubkey::Pubkey;
+use spl_associated_token_account::get_associated_token_address_with_program_id;
 use std::collections::HashMap;
+use tracing::error;
 
 pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
     let data = SolanaMevBotIxInputData::from_bytes(&ix.data)?;
@@ -20,16 +22,112 @@ pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
     })
 }
 
-pub struct ProfitabilityStatement {
+#[derive(Debug, Clone)]
+pub struct BalanceStatement {
     pub mint: Pubkey,
-    pub amount: u64,
+    pub amount: i64, // Using i64 to track net flow (positive = inflow, negative = outflow)
 }
 
 pub fn is_mev_box_ix_profitable(
     ix: &Instruction,
     inners: &InnerInstructions,
-) -> Result<ProfitabilityStatement> {
-    todo!()
+) -> Result<HashMap<Pubkey, Vec<BalanceStatement>>> {
+    // Build ATA balances using functional chaining
+    let ata_balances: HashMap<Pubkey, BalanceStatement> = inners
+        .instructions
+        .iter()
+        .filter_map(|ix| ix.as_sol_token_transfer_checked())
+        .fold(HashMap::new(), |mut acc, transfer| {
+            // Update source account (outflow)
+            acc.entry(transfer.source)
+                .and_modify(|e| e.amount -= transfer.amount as i64)
+                .or_insert(BalanceStatement {
+                    mint: transfer.mint,
+                    amount: -(transfer.amount as i64),
+                });
+
+            acc.entry(transfer.destination)
+                .and_modify(|e| e.amount += transfer.amount as i64)
+                .or_insert(BalanceStatement {
+                    mint: transfer.mint,
+                    amount: transfer.amount as i64,
+                });
+
+            acc
+        });
+
+    let potential_owners: Vec<Pubkey> = ix
+        .accounts
+        .iter()
+        .map(|acc| (acc.pubkey, acc.is_signer))
+        .fold(Vec::new(), |mut owners, (pubkey, is_signer)| {
+            if is_signer && !owners.contains(&pubkey) {
+                owners.insert(0, pubkey);
+            } else if !owners.contains(&pubkey) {
+                owners.push(pubkey);
+            }
+            owners
+        });
+
+    // Map ATAs to owner addresses using functional chaining
+    let owner_balances: HashMap<Pubkey, HashMap<Pubkey, i64>> = ata_balances
+        .iter()
+        .filter_map(|(ata, balance)| {
+            find_ata_owner(ata, &balance.mint, &potential_owners)
+                .map(|owner| (owner, balance.mint, balance.amount))
+                .or_else(|| {
+                    error!(
+                        "Failed to find owner for ATA: {} (mint: {}), skipping this balance",
+                        ata, balance.mint
+                    );
+                    None
+                })
+        })
+        .fold(HashMap::new(), |mut acc, (owner, mint, amount)| {
+            acc.entry(owner)
+                .or_insert_with(HashMap::new)
+                .entry(mint)
+                .and_modify(|amt| *amt += amount)
+                .or_insert(amount);
+            
+            acc
+        });
+
+    // Convert to final format using functional chaining
+    Ok(owner_balances
+        .into_iter()
+        .filter_map(|(owner, mints)| {
+            let balances: Vec<BalanceStatement> = mints
+                .into_iter()
+                .filter(|(_, amount)| *amount != 0)
+                .map(|(mint, amount)| BalanceStatement { mint, amount })
+                .collect();
+            
+            (!balances.is_empty()).then_some((owner, balances))
+        })
+        .collect())
+}
+
+// Helper function to find the owner of an ATA by trying to derive it
+fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> Option<Pubkey> {
+    // Try both token programs
+    let token_programs = [spl_token::ID, *TOKEN_2022_KEY];
+
+    // Check each potential owner with each token program
+    for owner in potential_owners {
+        for token_program in &token_programs {
+            let derived_ata =
+                get_associated_token_address_with_program_id(owner, mint, token_program);
+
+            if &derived_ata == ata {
+                return Some(*owner);
+            }
+        }
+    }
+
+    // If no match found in potential owners, we could try some well-known addresses
+    // or return None to indicate we couldn't determine the owner
+    None
 }
 
 #[cfg(test)]
@@ -40,17 +138,18 @@ mod tests {
 
     #[tokio::test]
     /*
-      Copied from solscan, for claude code to create test.
-      1. swap 7.107544925 wsol -> 1,684,417.981584314 meme coin
-      2. swap 1,684,417.981584314 wsol -> 7.343898162 wsol
-      result  +0.236353237 sol after this arbitrage
-       */
+    Copied from solscan, for claude code to create test.
+    1. swap 7.107544925 wsol -> 1,684,417.981584314 meme coin
+    2. swap 1,684,417.981584314 wsol -> 7.343898162 wsol
+    result  +0.236353237 sol after this arbitrage
+    beneficial owner is 9FEjMA5uSKMWkLpaXJQY7V4nLm2xvvMxkeyeGEi7SLEg
+     */
     async fn test_is_mev_box_ix_profitable() {
         let tx_hash = "3mDkuLRaZRuGDcHon9JFGikkb7YQnc8Ph4NBjUG1vrbWLpCDvgMbHMDFycvtvwQv6BU2aF6wQbmQjdVNzHRGTQKs";
         let tx = fetch_tx(tx_hash).await.unwrap();
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
         let result = is_mev_box_ix_profitable(&ix, &inner).unwrap();
-  
+
         todo!()
     }
 }

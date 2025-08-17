@@ -106,7 +106,33 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 - Think carefully and only action the specific task I have given you with the most concise and elegant solution that
   changes as little code as possible.
 - When writing tests, avoid extra printing, it's difficult to follow and read
-- Avoid unnecessary indents, be careful of using if Some() or match expression. 
+- Avoid unnecessary indents, be careful of using if Some() or match expression.
+
+### Functional Programming Style
+
+- **Prefer functional chaining over imperative loops** - Use iterator methods and method chaining for data transformations
+- **Examples of preferred patterns**:
+  - Use `filter_map` instead of `for` loops with `if let`
+  - Use `fold` for accumulating values instead of mutable variables
+  - Use `then_some` for conditional inclusion instead of if/else with push
+  - Chain methods like `.entry().or_insert_with().and_modify()` for map operations
+- **Benefits**: More expressive, eliminates mutable state, reduces boilerplate, creates composable transformations
+- **Example transformation**:
+  ```rust
+  // Instead of:
+  let mut result = HashMap::new();
+  for item in items {
+      if let Some(value) = process(item) {
+          result.insert(item.key, value);
+      }
+  }
+  
+  // Prefer:
+  let result: HashMap<_, _> = items
+      .into_iter()
+      .filter_map(|item| process(item).map(|value| (item.key, value)))
+      .collect();
+  ``` 
 
 ### Pubkey Creation
 
