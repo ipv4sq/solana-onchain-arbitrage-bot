@@ -24,7 +24,7 @@ impl MevConsumerPool {
             name: "SolanaMevBotTransactionDetector".to_string(),
         };
 
-        use crate::arb::subscriber::solana_mev_bot::entry::entry as process_mev_tx;
+        use crate::arb::program::solana_mev_bot::onchain_monitor::entry::entry as process_mev_tx;
         let processor = PubSubProcessor::new(config, |tx| {
             Box::pin(async move {
                 process_mev_tx(&tx).await?;

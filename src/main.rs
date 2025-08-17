@@ -15,6 +15,7 @@ pub mod util;
 use clap::{App, Arg};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+use arb::program;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,12 +28,12 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Solana MEV Bot Listener");
 
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
-    let _ = &arb::subscriber::solana_mev_bot::consumer::MEV_TX_CONSUMER;
+    let _ = &program::solana_mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;
     info!("MEV transaction consumer initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = tokio::spawn(async move {
-        if let Err(e) = arb::subscriber::solana_mev_bot::producer::start_mev_bot_subscriber().await {
+        if let Err(e) = program::solana_mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await {
             tracing::error!("MEV bot subscriber error: {}", e);
         }
     });
