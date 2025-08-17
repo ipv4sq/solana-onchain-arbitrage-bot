@@ -3,7 +3,7 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::instruction::AccountMeta;
 use std::str::FromStr;
 
-use crate::arb::subscriber::grpc_subscription::TransactionUpdate;
+use crate::arb::subscriber::yellowstone::TransactionUpdate;
 use crate::arb::chain::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::chain::{Message, Transaction, TransactionMeta};

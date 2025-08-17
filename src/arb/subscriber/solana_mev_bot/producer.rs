@@ -1,5 +1,5 @@
 use crate::arb::chain::mapper::traits::ToUnified;
-use crate::arb::subscriber::grpc_subscription::{
+use crate::arb::subscriber::yellowstone::{
     SolanaGrpcClient, TransactionFilter, TransactionUpdate,
 };
 use crate::arb::subscriber::solana_mev_bot::consumer::{
@@ -50,8 +50,7 @@ impl MevBotSubscriber {
     }
 
     async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
-        let tx = tx_update.to_unified()?;
-        try_publish_mev_transaction(tx)?;
+        let _ = tx_update.to_unified().and_then(try_publish_mev_transaction);
         Ok(())
     }
 }
