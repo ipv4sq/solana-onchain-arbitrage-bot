@@ -1,6 +1,6 @@
 use crate::arb::chain::util::instruction::create_account_meta;
 use crate::arb::chain::instruction::Instruction;
-use crate::arb::pool::interface::InputAccountUtil;
+use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
@@ -8,7 +8,7 @@ use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use crate::arb::chain::Transaction;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDammV2InputAccount {
     pub pool_authority: AccountMeta,
     pub pool: AccountMeta,
@@ -124,6 +124,45 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             event_authority,
             meteora_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
         })
+    }
+
+    fn get_trade_direction(self) -> TradeDirection {
+        use spl_associated_token_account::get_associated_token_address_with_program_id;
+        
+        let payer = self.payer.pubkey;
+        let token_a_program = self.token_a_program.pubkey;
+        let token_b_program = self.token_b_program.pubkey;
+        
+        let expected_ata_a = get_associated_token_address_with_program_id(
+            &payer,
+            &self.token_a_mint.pubkey,
+            &token_a_program,
+        );
+        
+        let expected_ata_b = get_associated_token_address_with_program_id(
+            &payer,
+            &self.token_b_mint.pubkey,
+            &token_b_program,
+        );
+        
+        if self.input_token_account.pubkey == expected_ata_a {
+            TradeDirection {
+                from: self.token_a_mint.pubkey,
+                to: self.token_b_mint.pubkey,
+            }
+        } else if self.input_token_account.pubkey == expected_ata_b {
+            TradeDirection {
+                from: self.token_b_mint.pubkey,
+                to: self.token_a_mint.pubkey,
+            }
+        } else {
+            panic!(
+                "Invalid input token account: {} doesn't match expected ATA for token A {} or token B {}",
+                self.input_token_account.pubkey,
+                expected_ata_a,
+                expected_ata_b
+            )
+        }
     }
 
     fn to_list(&self) -> Vec<&AccountMeta> {
