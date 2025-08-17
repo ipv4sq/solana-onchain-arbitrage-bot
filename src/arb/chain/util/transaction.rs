@@ -35,6 +35,10 @@ impl Transaction {
             .filter_map(|x| AnyPoolConfig::from_ix(x, self).ok())
             .collect()
     }
+
+    pub fn balance_changes() {
+
+    }
 }
 
 pub fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<String, &Instruction> {
