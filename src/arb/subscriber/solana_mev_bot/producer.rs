@@ -1,7 +1,10 @@
+use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::subscriber::grpc_subscription::{
     SolanaGrpcClient, TransactionFilter, TransactionUpdate,
 };
-use crate::arb::subscriber::solana_mev_bot::consumer_threads::{try_publish_mev_transaction, MevTransaction};
+use crate::arb::subscriber::solana_mev_bot::consumer::{
+    try_publish_mev_transaction, MEV_TX_CONSUMER,
+};
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
@@ -47,7 +50,8 @@ impl MevBotSubscriber {
     }
 
     async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
-        // try_publish_mev_transaction(tx_update.transaction.unwrap());
+        let tx = tx_update.to_unified()?;
+        try_publish_mev_transaction(tx)?;
         Ok(())
     }
 }
