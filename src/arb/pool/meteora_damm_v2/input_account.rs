@@ -2,6 +2,7 @@ use crate::arb::chain::instruction::Instruction;
 use crate::arb::chain::Transaction;
 use crate::arb::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
+use crate::arb::pool::util::ata;
 use crate::constants::helpers::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
@@ -56,10 +57,10 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         })
     }
 
-    fn build_accounts(
+    fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
-        pool_data: MeteoraDammV2PoolData,
+        pool_data: &MeteoraDammV2PoolData,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         input_amount: Option<u64>,
@@ -67,8 +68,6 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     ) -> Result<MeteoraDammV2InputAccount> {
         use crate::arb::constant::pool_owner::PoolOwnerPrograms;
         use crate::constants::addresses::TokenProgram;
-        use spl_associated_token_account::get_associated_token_address_with_program_id;
-
         // Pool authority is a fixed PDA for DAMM V2
         let pool_authority = "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC".to_readonly();
 
@@ -93,16 +92,8 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         let token_b_program = TokenProgram::SPL_TOKEN.to_program();
 
         // Get ATAs for input and output
-        let input_token_account = get_associated_token_address_with_program_id(
-            payer,
-            input_mint,
-            &token_a_program.pubkey,
-        );
-        let output_token_account = get_associated_token_address_with_program_id(
-            payer,
-            output_mint,
-            &token_b_program.pubkey,
-        );
+        let input_token_account = ata(payer, input_mint, &token_a_program.pubkey);
+        let output_token_account = ata(payer, output_mint, &token_b_program.pubkey);
 
         Ok(MeteoraDammV2InputAccount {
             pool_authority,
@@ -123,23 +114,13 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
     }
 
     fn get_trade_direction(self) -> TradeDirection {
-        use spl_associated_token_account::get_associated_token_address_with_program_id;
-
         let payer = self.payer.pubkey;
         let token_a_program = self.token_a_program.pubkey;
         let token_b_program = self.token_b_program.pubkey;
 
-        let expected_ata_a = get_associated_token_address_with_program_id(
-            &payer,
-            &self.token_a_mint.pubkey,
-            &token_a_program,
-        );
+        let expected_ata_a = ata(&payer, &self.token_a_mint.pubkey, &token_a_program);
 
-        let expected_ata_b = get_associated_token_address_with_program_id(
-            &payer,
-            &self.token_b_mint.pubkey,
-            &token_b_program,
-        );
+        let expected_ata_b = ata(&payer, &self.token_b_mint.pubkey, &token_b_program);
 
         if self.input_token_account.pubkey == expected_ata_a {
             TradeDirection {
@@ -248,10 +229,10 @@ mod tests {
         let input_mint = "So11111111111111111111111111111111111111112".to_pubkey();
         let output_mint = "G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_pubkey();
 
-        let result = MeteoraDammV2InputAccount::build_accounts(
+        let result = MeteoraDammV2InputAccount::build_accounts_with_direction_and_size(
             &"4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5".to_pubkey(),
             &pool,
-            pool_data,
+            &pool_data,
             &input_mint,
             &output_mint,
             Some(3226352439),

@@ -62,10 +62,10 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         })
     }
 
-    fn build_accounts(
+    fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
-        pool_data: MeteoraDlmmPoolData,
+        pool_data: &MeteoraDlmmPoolData,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         input_amount: Option<u64>,
@@ -240,10 +240,10 @@ mod tests {
     }
     #[test]
     fn test_build_accounts() {
-        let result = MeteoraDlmmInputAccounts::build_accounts(
+        let result = MeteoraDlmmInputAccounts::build_accounts_with_direction_and_size(
             &PAYER.to_pubkey(),
             &"FrQ9w1xEiypynrBt2qWPWLcFQ1Ht1LLfyrcWLKfzcXcs".to_pubkey(),
-            pool_data().unwrap(),
+            &pool_data().unwrap(),
             &"G1DXVVmqJs8Ei79QbK41dpgk2WtXSGqLtx9of7o8BAGS".to_pubkey(),
             &"So11111111111111111111111111111111111111112".to_pubkey(),
             Some(543235989680078),

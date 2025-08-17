@@ -59,11 +59,12 @@ pub struct TradeDirection {
 
 pub trait InputAccountUtil<Account, Data>: Sized {
     fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<Account>;
-
-    fn build_accounts(
+    
+    
+    fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
-        pool_data: Data,
+        pool_data: &Data,
         input_mint: &Pubkey,
         output_mint: &Pubkey,
         input_amount: Option<u64>,

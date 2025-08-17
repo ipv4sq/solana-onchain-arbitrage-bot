@@ -1,0 +1,168 @@
+use crate::arb::constant::mint::{Mints, WSOL_KEY};
+use crate::arb::pool::interface::InputAccountUtil;
+use crate::arb::pool::register::AnyPoolConfig;
+use crate::arb::pool::util::ata_sol_token;
+use crate::constants::addresses::TokenProgram;
+use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+use crate::constants::mev_bot::{SmbFeeCollector, FLASHLOAN_ACCOUNT_ID, SMB_ONCHAIN_PROGRAM_ID};
+use crate::util::random_select;
+use anyhow::Result;
+use solana_program::address_lookup_table::AddressLookupTableAccount;
+use solana_program::instruction::Instruction;
+use solana_program::pubkey::Pubkey;
+use solana_program::system_program;
+use solana_sdk::compute_budget::ComputeBudgetInstruction;
+use solana_sdk::signature::{Keypair, Signer};
+use solana_sdk::transaction::VersionedTransaction;
+
+const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
+const DEFAULT_UNIT_PRICE: u64 = 500_000;
+
+pub async fn build_tx(
+    wallet: &Keypair,
+    compute_unit_limit: u32,
+    unit_price: u64,
+    pools: Vec<AnyPoolConfig>,
+    blockhash: String,
+    alts: &[AddressLookupTableAccount],
+) -> Result<VersionedTransaction> {
+    let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
+    let swap_ix = create_invoke_mev_instruction(wallet, compute_unit_limit, pools);
+    instructions.push(swap_ix?);
+    todo!()
+}
+
+fn create_invoke_mev_instruction(
+    wallet: &Keypair,
+    compute_unit_limit: u32,
+    pools: Vec<AnyPoolConfig>,
+) -> Result<Instruction> {
+    let use_flashloan = true;
+    let fee_account = fee_collector(use_flashloan);
+    let mut accounts = vec![
+        wallet.pubkey().to_signer(),
+        Mints::WSOL.to_readonly(),
+        fee_account.to_writable(),
+        ata_sol_token(&wallet.pubkey(), &WSOL_KEY).to_writable(),
+        TokenProgram::SPL_TOKEN.to_readonly(),
+        system_program::ID.to_readonly(),
+        spl_associated_token_account::ID.to_writable(),
+    ];
+
+    if use_flashloan {
+        accounts.extend([
+            FLASHLOAN_ACCOUNT_ID.to_readonly(),
+            derive_vault_token_account(
+                &SMB_ONCHAIN_PROGRAM_ID.to_pubkey(),
+                &Mints::WSOL.to_pubkey(),
+            )
+            .0
+            .to_writable(),
+        ]);
+    }
+    // let the_other_mint_account = ata(&wallet.pubkey(), )
+    for pool in pools {
+        match pool {
+            AnyPoolConfig::MeteoraDlmm(c) => {
+                // MeteoraDlmmInputAccounts::build_accounts(
+                //     &wallet.pubkey(),
+                //     &c.pool,
+                //     &c.data,
+                //
+                // );
+                todo!()
+            }
+            AnyPoolConfig::MeteoraDammV2(_) => {}
+            AnyPoolConfig::Unsupported => {}
+        }
+    }
+    // default to wsol mint base for flashloan
+    todo!()
+}
+
+/// I am not sure whether this would work
+pub fn derive_vault_token_account(program_id: &Pubkey, mint: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[b"vault_token_account", mint.as_ref()], program_id)
+}
+
+fn fee_collector(use_flashloan: bool) -> Pubkey {
+    if use_flashloan {
+        SmbFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
+    } else {
+        let fee_accounts = [
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
+            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
+        ];
+        *random_select(&fee_accounts).expect("fee_accounts should not be empty")
+    }
+}
+
+fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u32) {
+    let seed = rand::random::<u32>() % 1000;
+    let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(compute_limit + seed);
+    // 1 lamport = 1_000_000
+    let unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
+
+    (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::arb::chain::util::alt::fetch_address_lookup_tables;
+    use crate::arb::constant::dex_type::DexType;
+    use crate::constants::helpers::ToPubkey;
+    use solana_client::nonblocking::rpc_client::RpcClient;
+    use solana_sdk::hash::Hash;
+    use solana_sdk::signature::read_keypair_file;
+
+    #[tokio::test]
+    async fn test_build_tx() {
+        let wallet_json_path = "/Users/l/Downloads/test_jz.json";
+        let wallet = read_keypair_file(wallet_json_path).expect("Failed to read wallet keypair");
+
+        let rpc_url = "https://api.mainnet-beta.solana.com".to_string();
+        let rpc_client = RpcClient::new(rpc_url);
+
+        let gas_price = 1_000_000;
+        let compute_unit_limit = 1_400_000;
+
+        let meteora_dlmm_pool = "FoSDw2L5DmTuQTFe55gWPDXf88euaxAEKFre74CnvQbX".to_pubkey();
+        let pool_config = AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
+            .await
+            .expect("Failed to load pool config");
+
+        let pools = vec![pool_config];
+
+        let blockhash = Hash::default().to_string();
+
+        let alt_keys = vec![
+            "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
+            "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
+        ];
+
+        let alts = fetch_address_lookup_tables(&rpc_client, &alt_keys)
+            .await
+            .expect("Failed to fetch ALTs");
+
+        let tx = build_tx(
+            &wallet,
+            gas_price,
+            compute_unit_limit,
+            pools,
+            blockhash,
+            &alts,
+        )
+        .await;
+
+        assert!(tx.is_ok(), "Failed to build transaction: {:?}", tx.err());
+
+        let versioned_tx = tx.unwrap();
+        assert_eq!(
+            versioned_tx.signatures.len(),
+            1,
+            "Should have exactly one signature"
+        );
+    }
+}
