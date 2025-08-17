@@ -23,6 +23,9 @@ async fn main() -> anyhow::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)
         .expect("Failed to set global default subscriber");
+
+
+
     todo!()
 }
 

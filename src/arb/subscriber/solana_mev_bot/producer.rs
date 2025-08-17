@@ -1,15 +1,10 @@
 use crate::arb::chain::mapper::traits::ToUnified;
-use crate::arb::subscriber::yellowstone::{
-    SolanaGrpcClient, TransactionFilter, TransactionUpdate,
-};
-use crate::arb::subscriber::solana_mev_bot::consumer::{
-    try_publish_mev_transaction, MEV_TX_CONSUMER,
-};
+use crate::arb::subscriber::yellowstone::{SolanaGrpcClient, TransactionFilter, TransactionUpdate};
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
-use tracing::{error, info};
+use tracing::info;
 
 pub struct MevBotSubscriber {
     client: SolanaGrpcClient,
@@ -22,11 +17,6 @@ impl MevBotSubscriber {
             client: SolanaGrpcClient::from_env()?,
             program_id,
         })
-    }
-
-    pub fn with_default_program() -> Result<Self> {
-        let program_id = SMB_ONCHAIN_PROGRAM_ID.to_pubkey();
-        Self::from_env(program_id)
     }
 
     pub async fn start(self, auto_retry: bool) -> Result<()> {
@@ -50,12 +40,15 @@ impl MevBotSubscriber {
     }
 
     async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
-        let _ = tx_update.to_unified().and_then(try_publish_mev_transaction);
+        use crate::arb::subscriber::solana_mev_bot::consumer::try_publish_mev_transaction as try_publish;
+        if let Err(e) = tx_update.to_unified().and_then(try_publish) {
+            tracing::error!("Failed to publish SMB transaction: {} to the consumer", e);
+        }
         Ok(())
     }
 }
 
 pub async fn start_mev_bot_subscriber() -> Result<()> {
-    let subscriber = MevBotSubscriber::with_default_program()?;
+    let subscriber = MevBotSubscriber::from_env(SMB_ONCHAIN_PROGRAM_ID.to_pubkey())?;
     subscriber.start(true).await // auto_retry = true
 }
