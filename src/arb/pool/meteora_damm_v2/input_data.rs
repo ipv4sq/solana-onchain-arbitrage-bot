@@ -33,6 +33,14 @@ impl MeteoraDammV2InputData {
         })
     }
 }
+
+pub fn is_meteora_damm_v2_swap(data: &[u8]) -> bool {
+    if data.len() < 8 {
+        return false;
+    }
+    let discriminator = &data[0..8];
+    discriminator == [0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]
+}
 #[cfg(test)]
 mod tests {
     use crate::arb::pool::meteora_damm_v2::input_data::MeteoraDammV2InputData;

@@ -27,10 +27,8 @@ impl SolanaGrpcClient {
         // Load .env file if it exists
         dotenv::dotenv().ok();
 
-        let endpoint = std::env::var("GRPC_URL")
-            .context("GRPC_URL not found in environment")?;
-        let token = std::env::var("GRPC_TOKEN")
-            .context("GRPC_TOKEN not found in environment")?;
+        let endpoint = std::env::var("GRPC_URL").context("GRPC_URL not found in environment")?;
+        let token = std::env::var("GRPC_TOKEN").context("GRPC_TOKEN not found in environment")?;
 
         Ok(Self::new(endpoint, token))
     }
@@ -102,19 +100,12 @@ impl SolanaGrpcClient {
         Ok(())
     }
 
-    async fn subscribe_once<F, Fut>(
-        &mut self,
-        filter: TransactionFilter,
-        callback: F,
-    ) -> Result<()>
+    async fn subscribe_once<F, Fut>(&mut self, filter: TransactionFilter, callback: F) -> Result<()>
     where
         F: Fn(TransactionUpdate) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Result<()>> + Send,
     {
-        let client = self
-            .client
-            .as_mut()
-            .context("Client not connected")?;
+        let client = self.client.as_mut().context("Client not connected")?;
 
         let filter_name = filter.name.clone();
         let mut transactions = HashMap::new();
@@ -297,92 +288,5 @@ impl TransactionUpdate {
             transaction,
             meta,
         }
-    }
-
-    pub fn to_encoded_transaction(&self) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
-        use solana_transaction_status::{
-            option_serializer::OptionSerializer, EncodedTransaction,
-            EncodedTransactionWithStatusMeta, UiCompiledInstruction, UiMessage, UiRawMessage,
-            UiTransaction, UiTransactionStatusMeta,
-        };
-
-        let tx = self.transaction.as_ref().context("Transaction is None")?;
-
-        let message = tx.message.as_ref().context("Transaction message is None")?;
-
-        let signatures = vec![self.signature.clone()];
-
-        let account_keys = message
-            .account_keys
-            .iter()
-            .map(|key| bs58::encode(key).into_string())
-            .collect::<Vec<_>>();
-
-        let instructions = message
-            .instructions
-            .iter()
-            .map(|ix| UiCompiledInstruction {
-                program_id_index: ix.program_id_index as u8,
-                accounts: ix.accounts.clone(),
-                data: bs58::encode(&ix.data).into_string(),
-                stack_height: None,
-            })
-            .collect::<Vec<_>>();
-
-        let recent_blockhash = bs58::encode(&message.recent_blockhash).into_string();
-
-        let header = message
-            .header
-            .as_ref()
-            .map(|h| solana_sdk::message::MessageHeader {
-                num_required_signatures: h.num_required_signatures as u8,
-                num_readonly_signed_accounts: h.num_readonly_signed_accounts as u8,
-                num_readonly_unsigned_accounts: h.num_readonly_unsigned_accounts as u8,
-            })
-            .unwrap_or_default();
-
-        let ui_message = UiMessage::Raw(UiRawMessage {
-            header,
-            account_keys,
-            recent_blockhash,
-            instructions,
-            address_table_lookups: None,
-        });
-
-        let meta = self.meta.as_ref().map(|m| UiTransactionStatusMeta {
-            err: None,
-            status: if m.err.is_none() {
-                Ok(())
-            } else {
-                Err(solana_sdk::transaction::TransactionError::InstructionError(
-                    0,
-                    solana_sdk::instruction::InstructionError::GenericError,
-                ))
-            },
-            fee: m.fee,
-            pre_balances: m.pre_balances.clone(),
-            post_balances: m.post_balances.clone(),
-            inner_instructions: OptionSerializer::None,
-            log_messages: OptionSerializer::Some(m.log_messages.clone()),
-            pre_token_balances: OptionSerializer::None,
-            post_token_balances: OptionSerializer::None,
-            rewards: OptionSerializer::None,
-            loaded_addresses: OptionSerializer::None,
-            return_data: OptionSerializer::None,
-            compute_units_consumed: OptionSerializer::from(m.compute_units_consumed),
-        });
-
-        Ok(EncodedConfirmedTransactionWithStatusMeta {
-            slot: self.slot,
-            transaction: EncodedTransactionWithStatusMeta {
-                transaction: EncodedTransaction::Json(UiTransaction {
-                    signatures,
-                    message: ui_message,
-                }),
-                meta,
-                version: None,
-            },
-            block_time: None,
-        })
     }
 }

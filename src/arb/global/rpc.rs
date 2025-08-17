@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 fn json_parsed_config() -> RpcTransactionConfig {
     RpcTransactionConfig {
-        encoding: Some(solana_transaction_status::UiTransactionEncoding::JsonParsed),
+        encoding: Some(solana_transaction_status::UiTransactionEncoding::Json),
         commitment: None,
         max_supported_transaction_version: Some(0),
     }

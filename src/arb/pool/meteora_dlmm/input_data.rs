@@ -29,6 +29,14 @@ impl MeteoraDlmmIxData {
     }
 }
 
+pub fn is_meteora_dlmm_swap(data: &[u8]) -> bool {
+    if data.len() < 8 {
+        return false;
+    }
+    let discriminator = &data[0..8];
+    discriminator == [0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]
+}
+
 
 #[cfg(test)]
 mod tests {

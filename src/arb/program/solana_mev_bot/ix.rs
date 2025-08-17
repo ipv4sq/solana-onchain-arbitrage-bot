@@ -1,18 +1,14 @@
 use crate::arb::program::solana_mev_bot::ix_input::SolanaMevBotIxInput;
 use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
-use crate::constants::helpers::ToPubkey;
+use crate::arb::chain::data::instruction::Instruction;
 use anyhow::Result;
-use solana_transaction_status::UiPartiallyDecodedInstruction;
 
-pub fn convert_to_smb_ix(ix: &UiPartiallyDecodedInstruction) -> Result<SolanaMevBotIxInput> {
-    let data_bytes = bs58::decode(&ix.data)
-        .into_vec()
-        .map_err(|e| anyhow::anyhow!("Failed to decode instruction data: {}", e))?;
-    let data = SolanaMevBotIxInputData::from_bytes(&data_bytes)?;
-    let accounts = ix.accounts.iter().map(|acc| acc.to_pubkey()).collect();
+pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
+    let data = SolanaMevBotIxInputData::from_bytes(&ix.data)?;
+    let accounts = ix.accounts.iter().map(|acc| acc.pubkey).collect();
 
     Ok(SolanaMevBotIxInput {
-        program_id: ix.program_id.to_pubkey(),
+        program_id: ix.program_id,
         accounts,
         data,
     })

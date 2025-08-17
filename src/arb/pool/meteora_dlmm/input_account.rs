@@ -163,6 +163,7 @@ mod tests {
     use crate::arb::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
     use crate::arb::global::rpc::fetch_tx_sync;
     use crate::arb::program::solana_mev_bot::subscriber::extract_mev_instruction;
+    use crate::arb::chain::data::ToUnified;
     use crate::arb::constant::pool_owner::METEORA_DLMM_PROGRAM;
     use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -222,14 +223,13 @@ mod tests {
 
     #[test]
     fn test_restore_from() {
-        let tx = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
-        let tx = fetch_tx_sync(&get_test_rpc_client(), tx).unwrap();
+        let tx_sig = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
+        let tx = fetch_tx_sync(&get_test_rpc_client(), tx_sig).unwrap();
         let (_, inner) = extract_mev_instruction(&tx).unwrap();
         let dlmm_swap = inner
             .instructions
             .iter()
-            .filter_map(is_meteora_dlmm_swap)
-            .next()
+            .find(|ix| is_meteora_dlmm_swap(&ix.data))
             .unwrap();
 
         let result = MeteoraDlmmInputAccounts::restore_from(dlmm_swap, &tx).unwrap();

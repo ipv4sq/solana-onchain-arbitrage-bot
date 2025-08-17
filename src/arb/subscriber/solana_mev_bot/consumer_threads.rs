@@ -1,5 +1,5 @@
 use crate::arb::chain::data::Transaction;
-use crate::arb::program::solana_mev_bot::subscriber::{entry as process_mev_tx, entry};
+use crate::arb::program::solana_mev_bot::subscriber::entry as process_mev_tx;
 use crate::arb::subscriber::pubsub::{PubSubConfig, PubSubProcessor};
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -66,39 +66,35 @@ pub fn try_publish_mev_transaction(tx: Transaction) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::message::MessageHeader;
-    use solana_transaction_status::{
-        EncodedTransaction, EncodedTransactionWithStatusMeta, UiMessage, UiRawMessage,
-        UiTransaction,
-    };
+    use crate::arb::chain::data::{Message, TransactionMeta};
+    use solana_sdk::pubkey::Pubkey;
+
+    fn create_mock_transaction(slot: u64) -> Transaction {
+        Transaction {
+            signature: format!("mock_signature_{}", slot),
+            slot,
+            message: Message {
+                account_keys: vec![Pubkey::default()],
+                recent_blockhash: "mock_blockhash".to_string(),
+                instructions: vec![],
+            },
+            meta: Some(TransactionMeta {
+                fee: 5000,
+                compute_units_consumed: Some(100000),
+                log_messages: vec![],
+                inner_instructions: vec![],
+                pre_balances: vec![],
+                post_balances: vec![],
+                err: None,
+            }),
+        }
+    }
 
     #[tokio::test]
     async fn test_mev_transaction_processor() {
         for i in 0..10 {
-            let mock_tx = EncodedConfirmedTransactionWithStatusMeta {
-                slot: 12345 + i as u64,
-                transaction: EncodedTransactionWithStatusMeta {
-                    transaction: EncodedTransaction::Json(UiTransaction {
-                        signatures: vec![],
-                        message: UiMessage::Raw(UiRawMessage {
-                            header: MessageHeader {
-                                num_required_signatures: 1,
-                                num_readonly_signed_accounts: 0,
-                                num_readonly_unsigned_accounts: 0,
-                            },
-                            account_keys: vec![],
-                            recent_blockhash: String::new(),
-                            instructions: vec![],
-                            address_table_lookups: None,
-                        }),
-                    }),
-                    meta: None,
-                    version: None,
-                },
-                block_time: None,
-            };
-
-            publish_mev_transaction(mock_tx).await.unwrap();
+            let tx = create_mock_transaction(12345 + i as u64);
+            publish_mev_transaction(tx).await.unwrap();
         }
 
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -106,30 +102,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mev_try_publish() {
-        let mock_tx = EncodedConfirmedTransactionWithStatusMeta {
-            slot: 99999,
-            transaction: EncodedTransactionWithStatusMeta {
-                transaction: EncodedTransaction::Json(UiTransaction {
-                    signatures: vec![],
-                    message: UiMessage::Raw(UiRawMessage {
-                        header: MessageHeader {
-                            num_required_signatures: 1,
-                            num_readonly_signed_accounts: 0,
-                            num_readonly_unsigned_accounts: 0,
-                        },
-                        account_keys: vec![],
-                        recent_blockhash: String::new(),
-                        instructions: vec![],
-                        address_table_lookups: None,
-                    }),
-                }),
-                meta: None,
-                version: None,
-            },
-            block_time: None,
-        };
-
-        try_publish_mev_transaction(mock_tx).unwrap();
+        let tx = create_mock_transaction(99999);
+        try_publish_mev_transaction(tx).unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }

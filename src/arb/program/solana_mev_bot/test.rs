@@ -30,18 +30,11 @@ mod tests {
         assert!(!swap_ixs.is_empty());
 
         for (program_id, ix) in swap_ixs.iter() {
-            println!("Found swap instruction for program: {}", program_id);
-            println!("Instruction has {} accounts", ix.accounts.len());
-
             if program_id == PoolOwnerPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
                 let swap_ix =
                     AnyPoolConfig::from_ix(ix, &tx).expect("Failed to parse swap instruction");
                 assert_eq!(swap_ix.dex_type, DexType::MeteoraDlmm);
                 assert!(swap_ix.accounts.len() >= 15);
-                println!(
-                    "Successfully parsed Meteora DLMM swap with {} accounts",
-                    swap_ix.accounts.len()
-                );
             }
         }
     }

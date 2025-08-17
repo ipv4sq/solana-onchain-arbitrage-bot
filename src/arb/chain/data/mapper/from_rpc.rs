@@ -31,16 +31,23 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             .ok_or_else(|| anyhow::anyhow!("Transaction has no signatures"))?
             .clone();
         
+        // Get loaded addresses from meta if available
+        let loaded_addresses = self.transaction.meta.as_ref()
+            .and_then(|m| match &m.loaded_addresses {
+                OptionSerializer::Some(addrs) => Some(addrs),
+                _ => None
+            });
+        
         let message = match &self.transaction.transaction {
             EncodedTransaction::Json(tx) => match &tx.message {
                 UiMessage::Parsed(msg) => convert_parsed_message(msg)?,
-                UiMessage::Raw(msg) => convert_raw_message(msg)?,
+                UiMessage::Raw(msg) => convert_raw_message_with_loaded(msg, loaded_addresses)?,
             },
             _ => bail!("Only JSON encoded transactions are supported"),
         };
         
         let meta = self.transaction.meta.as_ref()
-            .map(|m| convert_meta(m))
+            .map(|m| convert_meta(m, &message.account_keys))
             .transpose()?;
         
         Ok(Transaction {
@@ -72,10 +79,29 @@ fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
 }
 
 fn convert_raw_message(msg: &UiRawMessage) -> Result<Message> {
-    let account_keys: Vec<Pubkey> = msg.account_keys
+    convert_raw_message_with_loaded(msg, None)
+}
+
+fn convert_raw_message_with_loaded(
+    msg: &UiRawMessage, 
+    loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>
+) -> Result<Message> {
+    let mut account_keys: Vec<Pubkey> = msg.account_keys
         .iter()
         .map(|k| Pubkey::from_str(k).map_err(Into::into))
         .collect::<Result<_>>()?;
+    
+    // Add loaded addresses if available
+    if let Some(loaded) = loaded_addresses {
+        // Add writable loaded addresses
+        for addr in &loaded.writable {
+            account_keys.push(Pubkey::from_str(addr)?);
+        }
+        // Add readonly loaded addresses
+        for addr in &loaded.readonly {
+            account_keys.push(Pubkey::from_str(addr)?);
+        }
+    }
     
     // Get header information for account metadata
     let num_required_signatures = msg.header.num_required_signatures as usize;
@@ -220,7 +246,7 @@ fn convert_parsed_instruction(ix: &UiInstruction, idx: usize, account_keys: &[Pu
     }
 }
 
-fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta) -> Result<TransactionMeta> {
+fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta, account_keys: &[Pubkey]) -> Result<TransactionMeta> {
     let inner_instructions = match &meta.inner_instructions {
         OptionSerializer::Some(inner) => {
             inner.iter()
@@ -229,7 +255,7 @@ fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta) -> Re
                         .iter()
                         .enumerate()
                         .filter_map(|(idx, ix)| {
-                            convert_ui_instruction_to_unified(ix, idx).ok()
+                            convert_ui_instruction_to_unified(ix, idx, account_keys).ok()
                         })
                         .collect();
                     
@@ -264,15 +290,23 @@ fn convert_meta(meta: &solana_transaction_status::UiTransactionStatusMeta) -> Re
     })
 }
 
-fn convert_ui_instruction_to_unified(ix: &UiInstruction, idx: usize) -> Result<Instruction> {
+fn convert_ui_instruction_to_unified(ix: &UiInstruction, idx: usize, account_keys: &[Pubkey]) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
-            let program_id = Pubkey::from_str("11111111111111111111111111111111")?;
+            let program_id = account_keys.get(compiled.program_id_index as usize)
+                .ok_or_else(|| anyhow::anyhow!("Invalid program_id_index in inner instruction"))?
+                .clone();
             
             let accounts: Vec<AccountMeta> = compiled.accounts
                 .iter()
-                .map(|_| AccountMeta::new_readonly(Pubkey::default(), false))
-                .collect();
+                .map(|&account_idx| {
+                    let pubkey = account_keys.get(account_idx as usize)
+                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in inner instruction"))?
+                        .clone();
+                    // For inner instructions, we don't have full metadata, default to readonly
+                    Ok(AccountMeta::new_readonly(pubkey, false))
+                })
+                .collect::<Result<_>>()?;
             
             let data = bs58::decode(&compiled.data)
                 .into_vec()

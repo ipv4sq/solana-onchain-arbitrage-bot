@@ -155,16 +155,17 @@ mod tests {
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
-    use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
     use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::global::rpc::fetch_tx_sync;
     use crate::arb::program::solana_mev_bot::subscriber::extract_mev_instruction;
+    use crate::arb::chain::data::ToUnified;
+    use crate::arb::chain::data::Transaction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =
         "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
 
-    fn get_tx() -> EncodedConfirmedTransactionWithStatusMeta {
+    fn get_tx() -> Transaction {
         let client = get_test_rpc_client();
         fetch_tx_sync(&client, TX).unwrap()
     }
@@ -198,8 +199,7 @@ mod tests {
         let damm_v2_ix = inner_ixs
             .instructions
             .iter()
-            .filter_map(is_meteora_damm_v2_swap)
-            .next()
+            .find(|ix| is_meteora_damm_v2_swap(&ix.data))
             .unwrap();
 
         let result = MeteoraDammV2InputAccount::restore_from(damm_v2_ix, &tx).unwrap();
