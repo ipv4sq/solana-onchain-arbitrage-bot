@@ -1,5 +1,5 @@
 use crate::arb::chain::mapper::traits::ToUnified;
-use crate::arb::subscriber::yellowstone::{SolanaGrpcClient, TransactionFilter, TransactionUpdate};
+use crate::arb::subscriber::yellowstone::{SolanaGrpcClient, TransactionFilter, GrpcTransactionUpdate};
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
 use anyhow::Result;
@@ -39,7 +39,7 @@ impl SolanaMevBotOnchainListener {
             .await
     }
 
-    async fn handle_transaction(tx_update: TransactionUpdate) -> Result<()> {
+    async fn handle_transaction(tx_update: GrpcTransactionUpdate) -> Result<()> {
         use crate::arb::subscriber::solana_mev_bot::consumer::try_publish_mev_transaction as try_publish;
         info!("Received transaction: {:?}", tx_update.signature);
         if let Err(e) = tx_update.to_unified().and_then(try_publish) {

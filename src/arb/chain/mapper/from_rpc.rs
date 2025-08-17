@@ -7,11 +7,11 @@ use solana_transaction_status::{
     UiParsedInstruction, UiParsedMessage, UiRawMessage,
 };
 use std::str::FromStr;
-use crate::constants::addresses::TOKEN_2022_KEY;
 
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::mapper::traits::ToUnified;
 use crate::arb::chain::{Message, Transaction, TransactionMeta};
+use crate::arb::chain::message::MessageHeader;
 
 impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
     fn to_unified(&self) -> Result<Transaction> {
@@ -47,7 +47,7 @@ impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
             .transaction
             .meta
             .as_ref()
-            .map(|m| convert_meta(m, &message.account_keys))
+            .map(|m| convert_meta(m, &message.account_keys, &message.header, loaded_addresses))
             .transpose()?;
 
         Ok(Transaction {
@@ -77,6 +77,7 @@ fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
         instructions,
+        header: None,
     })
 }
 
@@ -168,10 +169,17 @@ fn convert_raw_message_with_loaded(
         })
         .collect::<Result<_>>()?;
 
+    let header = Some(MessageHeader {
+        num_required_signatures: msg.header.num_required_signatures,
+        num_readonly_signed_accounts: msg.header.num_readonly_signed_accounts,
+        num_readonly_unsigned_accounts: msg.header.num_readonly_unsigned_accounts,
+    });
+
     Ok(Message {
         account_keys,
         recent_blockhash: msg.recent_blockhash.clone(),
         instructions,
+        header,
     })
 }
 
@@ -272,80 +280,73 @@ fn convert_parsed_instruction(
     }
 }
 
-// Infer SPL Token instruction account metadata based on instruction type
-fn infer_spl_token_account_meta(
-    account_indices: &[u8],
-    data: &[u8],
-    account_keys: &[Pubkey],
-) -> Result<Vec<AccountMeta>> {
-    // Get instruction discriminator (first byte)
-    let discriminator = data.first().copied().unwrap_or(0);
-    
-    let accounts: Vec<AccountMeta> = account_indices
-        .iter()
-        .enumerate()
-        .map(|(idx, &account_idx)| {
-            let pubkey = account_keys
-                .get(account_idx as usize)
-                .ok_or_else(|| anyhow::anyhow!("Invalid account index in SPL Token instruction"))?
-                .clone();
-            
-            // Determine metadata based on instruction type and account position
-            let meta = match discriminator {
-                3 => {
-                    // Transfer instruction (3 accounts)
-                    match idx {
-                        0 => AccountMeta::new(pubkey, false),       // source (writable)
-                        1 => AccountMeta::new(pubkey, false),       // destination (writable)
-                        2 => AccountMeta::new_readonly(pubkey, false), // authority
-                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
-                    }
-                }
-                12 => {
-                    // TransferChecked instruction (4+ accounts)
-                    match idx {
-                        0 => AccountMeta::new(pubkey, false),       // source (writable)
-                        1 => AccountMeta::new_readonly(pubkey, false), // mint (readonly)
-                        2 => AccountMeta::new(pubkey, false),       // destination (writable)
-                        3 => AccountMeta::new_readonly(pubkey, false), // authority
-                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
-                    }
-                }
-                7 => {
-                    // MintTo instruction (3 accounts)
-                    match idx {
-                        0 => AccountMeta::new(pubkey, false),       // mint (writable)
-                        1 => AccountMeta::new(pubkey, false),       // destination (writable)
-                        2 => AccountMeta::new_readonly(pubkey, false), // mint authority
-                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
-                    }
-                }
-                8 => {
-                    // Burn instruction (3 accounts)
-                    match idx {
-                        0 => AccountMeta::new(pubkey, false),       // source (writable)
-                        1 => AccountMeta::new(pubkey, false),       // mint (writable)
-                        2 => AccountMeta::new_readonly(pubkey, false), // authority
-                        _ => AccountMeta::new_readonly(pubkey, false), // additional signers
-                    }
-                }
-                _ => {
-                    // Unknown instruction type, use conservative defaults
-                    AccountMeta::new_readonly(pubkey, false)
-                }
-            };
-            
-            Ok(meta)
-        })
-        .collect::<Result<_>>()?;
-    
-    Ok(accounts)
-}
-
 fn convert_meta(
     meta: &solana_transaction_status::UiTransactionStatusMeta,
     account_keys: &[Pubkey],
+    header: &Option<MessageHeader>,
+    loaded_addresses: Option<&solana_transaction_status::UiLoadedAddresses>,
 ) -> Result<TransactionMeta> {
+    // Get loaded addresses from the meta
+    let loaded_writable_addresses: Vec<Pubkey> = loaded_addresses
+        .map(|la| la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .unwrap_or_default();
+    
+    let loaded_readonly_addresses: Vec<Pubkey> = loaded_addresses
+        .map(|la| la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .unwrap_or_default();
+    
+    // Calculate boundaries in the account_keys array
+    // The structure is: [static_accounts..., loaded_writable..., loaded_readonly...]
+    let num_loaded_writable = loaded_writable_addresses.len();
+    let num_loaded_readonly = loaded_readonly_addresses.len();
+    let static_account_len = account_keys.len() - num_loaded_writable - num_loaded_readonly;
+    
+    // Build a complete list of AccountMeta for all accounts
+    let mut account_metas: Vec<AccountMeta> = Vec::new();
+    
+    for (idx, pubkey) in account_keys.iter().enumerate() {
+        let (is_writable, is_signer) = if idx >= static_account_len + num_loaded_writable {
+            // This is a loaded readonly address
+            (false, false)
+        } else if idx >= static_account_len {
+            // This is a loaded writable address
+            (true, false)
+        } else {
+            // This is a static account - use header to determine writability
+            let is_signer = header
+                .as_ref()
+                .map(|h| idx < h.num_required_signatures as usize)
+                .unwrap_or(false);
+            
+            let is_writable = header
+                .as_ref()
+                .map(|h| {
+                    let num_signed = h.num_required_signatures as usize;
+                    let num_signed_ro = h.num_readonly_signed_accounts as usize;
+                    let num_unsigned_ro = h.num_readonly_unsigned_accounts as usize;
+                    
+                    if idx < num_signed - num_signed_ro {
+                        true
+                    } else if idx < num_signed {
+                        false
+                    } else if idx < static_account_len - num_unsigned_ro {
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .unwrap_or(false);
+            
+            (is_writable, is_signer)
+        };
+        
+        if is_writable {
+            account_metas.push(AccountMeta::new(*pubkey, is_signer));
+        } else {
+            account_metas.push(AccountMeta::new_readonly(*pubkey, is_signer));
+        }
+    }
+    
     let inner_instructions = match &meta.inner_instructions {
         OptionSerializer::Some(inner) => inner
             .iter()
@@ -355,7 +356,7 @@ fn convert_meta(
                     .iter()
                     .enumerate()
                     .filter_map(|(idx, ix)| {
-                        convert_ui_instruction_to_unified(ix, idx, account_keys).ok()
+                        convert_ui_instruction_to_unified(ix, idx, account_keys, &account_metas).ok()
                     })
                     .collect();
 
@@ -368,24 +369,22 @@ fn convert_meta(
         _ => Vec::new(),
     };
 
-    let log_messages = match &meta.log_messages {
-        OptionSerializer::Some(logs) => logs.clone(),
-        _ => Vec::new(),
-    };
-
-    let compute_units_consumed = match meta.compute_units_consumed {
-        OptionSerializer::Some(units) => Some(units),
-        _ => None,
-    };
-
     Ok(TransactionMeta {
         fee: meta.fee,
-        compute_units_consumed,
-        log_messages,
+        compute_units_consumed: match meta.compute_units_consumed {
+            OptionSerializer::Some(units) => Some(units),
+            _ => None,
+        },
+        log_messages: match &meta.log_messages {
+            OptionSerializer::Some(logs) => logs.clone(),
+            _ => Vec::new(),
+        },
         inner_instructions,
         pre_balances: meta.pre_balances.clone(),
         post_balances: meta.post_balances.clone(),
         err: meta.err.as_ref().map(|e| format!("{:?}", e)),
+        loaded_writable_addresses,
+        loaded_readonly_addresses,
     })
 }
 
@@ -393,6 +392,7 @@ fn convert_ui_instruction_to_unified(
     ix: &UiInstruction,
     idx: usize,
     account_keys: &[Pubkey],
+    account_metas: &[AccountMeta],
 ) -> Result<Instruction> {
     match ix {
         UiInstruction::Compiled(compiled) => {
@@ -403,26 +403,16 @@ fn convert_ui_instruction_to_unified(
 
             let data = bs58::decode(&compiled.data).into_vec().unwrap_or_default();
             
-            // Infer account metadata based on instruction type
-            let accounts: Vec<AccountMeta> = if program_id == spl_token::ID || program_id == *TOKEN_2022_KEY {
-                // Handle SPL Token instructions
-                infer_spl_token_account_meta(&compiled.accounts, &data, account_keys)?
-            } else {
-                // For other programs, default to readonly (conservative approach)
-                compiled
-                    .accounts
-                    .iter()
-                    .map(|&account_idx| {
-                        let pubkey = account_keys
-                            .get(account_idx as usize)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!("Invalid account index in inner instruction")
-                            })?
-                            .clone();
-                        Ok(AccountMeta::new_readonly(pubkey, false))
-                    })
-                    .collect::<Result<_>>()?
-            };
+            let accounts: Vec<AccountMeta> = compiled
+                .accounts
+                .iter()
+                .map(|&account_idx| {
+                    account_metas
+                        .get(account_idx as usize)
+                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in inner instruction"))
+                        .map(|meta| meta.clone())
+                })
+                .collect::<Result<_>>()?;
 
             Ok(Instruction {
                 program_id,

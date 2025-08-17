@@ -1,4 +1,6 @@
 use crate::arb::chain::instruction::InnerInstructions;
+use solana_sdk::pubkey::Pubkey;
+use crate::arb::chain::message::MessageHeader;
 
 #[derive(Debug, Clone)]
 pub struct TransactionMeta {
@@ -9,4 +11,8 @@ pub struct TransactionMeta {
     pub pre_balances: Vec<u64>,
     pub post_balances: Vec<u64>,
     pub err: Option<String>,
+    pub loaded_writable_addresses: Vec<Pubkey>,
+    pub loaded_readonly_addresses: Vec<Pubkey>,
 }
+
+

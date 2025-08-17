@@ -40,7 +40,7 @@ impl SolanaGrpcClient {
         auto_retry: bool,
     ) -> Result<()>
     where
-        F: Fn(TransactionUpdate) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(GrpcTransactionUpdate) -> Fut + Send + Sync + Clone + 'static,
         Fut: std::future::Future<Output = Result<()>> + Send,
     {
         if auto_retry {
@@ -102,7 +102,7 @@ impl SolanaGrpcClient {
 
     async fn subscribe_once<F, Fut>(&mut self, filter: TransactionFilter, callback: F) -> Result<()>
     where
-        F: Fn(TransactionUpdate) -> Fut + Send + Sync + 'static,
+        F: Fn(GrpcTransactionUpdate) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Result<()>> + Send,
     {
         let client = self.client.as_mut().context("Client not connected")?;
@@ -140,7 +140,7 @@ impl SolanaGrpcClient {
                     if let Some(update) = update.update_oneof {
                         match update {
                             subscribe_update::UpdateOneof::Transaction(tx) => {
-                                let transaction_update = TransactionUpdate::from_grpc(tx);
+                                let transaction_update = GrpcTransactionUpdate::from_grpc(tx);
                                 if let Err(e) = callback(transaction_update).await {
                                     error!("Callback error: {}", e);
                                 }
@@ -168,7 +168,7 @@ impl SolanaGrpcClient {
         callback: F,
     ) -> Result<()>
     where
-        F: Fn(TransactionUpdate) -> Fut + Send + Sync + Clone + 'static,
+        F: Fn(GrpcTransactionUpdate) -> Fut + Send + Sync + Clone + 'static,
         Fut: std::future::Future<Output = Result<()>> + Send,
     {
         loop {
@@ -263,7 +263,7 @@ impl TransactionFilter {
     }
 }
 
-pub struct TransactionUpdate {
+pub struct GrpcTransactionUpdate {
     pub signature: String,
     pub slot: u64,
     pub is_vote: bool,
@@ -271,7 +271,7 @@ pub struct TransactionUpdate {
     pub meta: Option<TransactionStatusMeta>,
 }
 
-impl TransactionUpdate {
+impl GrpcTransactionUpdate {
     fn from_grpc(update: SubscribeUpdateTransaction) -> Self {
         let tx = update.transaction.as_ref();
         let signature = tx

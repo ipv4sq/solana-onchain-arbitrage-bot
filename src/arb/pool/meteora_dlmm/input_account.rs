@@ -31,7 +31,7 @@ pub struct MeteoraDlmmInputAccounts {
 impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for MeteoraDlmmInputAccounts {
     fn restore_from(
         ix: &Instruction,
-        _tx: &Transaction,
+        tx: &Transaction,
     ) -> Result<MeteoraDlmmInputAccounts> {
         if ix.accounts.len() < 15 {
             return Err(anyhow::anyhow!(
@@ -40,28 +40,32 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             ));
         }
 
+        let account_keys = &tx.message.account_keys;
+        let meta = tx.meta.as_ref();
+        let header = tx.message.header.as_ref();
+
         // Extract bin arrays (all accounts after index 14)
         let mut bin_arrays = Vec::new();
         for i in 15..ix.accounts.len() {
-            bin_arrays.push(create_account_meta(ix, i)?);
+            bin_arrays.push(create_account_meta(ix, i, account_keys, meta, header)?);
         }
 
         Ok(MeteoraDlmmInputAccounts {
-            lb_pair: create_account_meta(ix, 0)?,
-            bin_array_bitmap_extension: create_account_meta(ix, 1)?,
-            reverse_x: create_account_meta(ix, 2)?,
-            reverse_y: create_account_meta(ix, 3)?,
-            user_token_in: create_account_meta(ix, 4)?,
-            user_token_out: create_account_meta(ix, 5)?,
-            token_x_mint: create_account_meta(ix, 6)?,
-            token_y_mint: create_account_meta(ix, 7)?,
-            oracle: create_account_meta(ix, 8)?,
-            host_fee_in: create_account_meta(ix, 9)?,
-            user: create_account_meta(ix, 10)?,
-            token_x_program: create_account_meta(ix, 11)?,
-            token_y_program: create_account_meta(ix, 12)?,
-            event_authority: create_account_meta(ix, 13)?,
-            program: create_account_meta(ix, 14)?,
+            lb_pair: create_account_meta(ix, 0, account_keys, meta, header)?,
+            bin_array_bitmap_extension: create_account_meta(ix, 1, account_keys, meta, header)?,
+            reverse_x: create_account_meta(ix, 2, account_keys, meta, header)?,
+            reverse_y: create_account_meta(ix, 3, account_keys, meta, header)?,
+            user_token_in: create_account_meta(ix, 4, account_keys, meta, header)?,
+            user_token_out: create_account_meta(ix, 5, account_keys, meta, header)?,
+            token_x_mint: create_account_meta(ix, 6, account_keys, meta, header)?,
+            token_y_mint: create_account_meta(ix, 7, account_keys, meta, header)?,
+            oracle: create_account_meta(ix, 8, account_keys, meta, header)?,
+            host_fee_in: create_account_meta(ix, 9, account_keys, meta, header)?,
+            user: create_account_meta(ix, 10, account_keys, meta, header)?,
+            token_x_program: create_account_meta(ix, 11, account_keys, meta, header)?,
+            token_y_program: create_account_meta(ix, 12, account_keys, meta, header)?,
+            event_authority: create_account_meta(ix, 13, account_keys, meta, header)?,
+            program: create_account_meta(ix, 14, account_keys, meta, header)?,
             bin_arrays,
         })
     }

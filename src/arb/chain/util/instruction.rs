@@ -1,8 +1,10 @@
 use solana_program::instruction::AccountMeta;
 use crate::arb::chain::instruction::{Instruction, ParsedTransferChecked};
+use crate::arb::chain::meta::TransactionMeta;
 use crate::constants::addresses::TOKEN_2022_KEY;
 use spl_token::instruction::TokenInstruction;
-
+use solana_sdk::pubkey::Pubkey;
+use crate::arb::chain::message::MessageHeader;
 
 impl Instruction {
     pub fn as_sol_token_transfer_checked(&self) -> Option<ParsedTransferChecked> {
@@ -63,9 +65,18 @@ pub fn is_program_ix_with_min_accounts<'a>(
     }
 }
 
-pub fn create_account_meta(ix: &Instruction, index: usize) -> anyhow::Result<AccountMeta> {
-    ix.accounts
+pub fn create_account_meta(
+    ix: &Instruction,
+    index: usize,
+    _account_keys: &[Pubkey],
+    _meta: Option<&TransactionMeta>,
+    _header: Option<&MessageHeader>,
+) -> anyhow::Result<AccountMeta> {
+    let account = ix.accounts
         .get(index)
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))
+        .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
+    
+    // The AccountMeta in the instruction already has the correct writability
+    // information after our refactoring, so we can just return it directly
+    Ok(account.clone())
 }
