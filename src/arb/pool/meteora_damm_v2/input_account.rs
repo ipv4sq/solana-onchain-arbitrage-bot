@@ -157,7 +157,7 @@ mod tests {
     use crate::test::test_utils::get_test_rpc_client;
     use crate::arb::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::subscriber::extract_mev_instruction;
+    use crate::arb::subscriber::solana_mev_bot::entry::extract_mev_instruction;
     use crate::arb::chain::Transaction;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
