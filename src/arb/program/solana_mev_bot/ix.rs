@@ -37,18 +37,18 @@ mod tests {
     use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
 
     #[tokio::test]
-
+    /*
+      Copied from solscan, for claude code to create test.
+      1. swap 7.107544925 wsol -> 1,684,417.981584314 meme coin
+      2. swap 1,684,417.981584314 wsol -> 7.343898162 wsol
+      result  +0.236353237 sol after this arbitrage
+       */
     async fn test_is_mev_box_ix_profitable() {
         let tx_hash = "3mDkuLRaZRuGDcHon9JFGikkb7YQnc8Ph4NBjUG1vrbWLpCDvgMbHMDFycvtvwQv6BU2aF6wQbmQjdVNzHRGTQKs";
         let tx = fetch_tx(tx_hash).await.unwrap();
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
         let result = is_mev_box_ix_profitable(&ix, &inner).unwrap();
-        /*
-        Copied from solscan, for claude code to create test.
-        1. swap 7.107544925 wsol -> 1,684,417.981584314 meme coin
-        2. swap 1,684,417.981584314 wsol -> 7.343898162 wsol
-        result  +0.236353237 sol after this arbitrage
-         */
+  
         todo!()
     }
 }
