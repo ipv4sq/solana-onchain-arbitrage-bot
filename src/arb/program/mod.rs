@@ -1,1 +1,1 @@
-pub mod solana_mev_bot;
+pub mod mev_bot;

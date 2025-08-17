@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::mapper::traits::ToUnified;
+use crate::arb::chain::meta::{TokenBalance, UiTokenAmount};
 use crate::arb::chain::{Message, Transaction, TransactionMeta};
 
 impl ToUnified for EncodedConfirmedTransactionWithStatusMeta {
@@ -311,6 +312,22 @@ fn convert_meta(
         _ => Vec::new(),
     };
 
+    let pre_token_balances = match &meta.pre_token_balances {
+        OptionSerializer::Some(balances) => balances
+            .iter()
+            .filter_map(|balance| convert_token_balance(balance).ok())
+            .collect(),
+        _ => Vec::new(),
+    };
+
+    let post_token_balances = match &meta.post_token_balances {
+        OptionSerializer::Some(balances) => balances
+            .iter()
+            .filter_map(|balance| convert_token_balance(balance).ok())
+            .collect(),
+        _ => Vec::new(),
+    };
+
     Ok(TransactionMeta {
         fee: meta.fee,
         compute_units_consumed: match meta.compute_units_consumed {
@@ -324,9 +341,34 @@ fn convert_meta(
         inner_instructions,
         pre_balances: meta.pre_balances.clone(),
         post_balances: meta.post_balances.clone(),
+        pre_token_balances,
+        post_token_balances,
         err: meta.err.as_ref().map(|e| format!("{:?}", e)),
         loaded_writable_addresses,
         loaded_readonly_addresses,
+    })
+}
+
+fn convert_token_balance(
+    balance: &solana_transaction_status::UiTransactionTokenBalance,
+) -> Result<TokenBalance> {
+    Ok(TokenBalance {
+        account_index: balance.account_index,
+        mint: balance.mint.clone(),
+        owner: match &balance.owner {
+            OptionSerializer::Some(owner) => Some(owner.clone()),
+            _ => None,
+        },
+        program_id: match &balance.program_id {
+            OptionSerializer::Some(program_id) => Some(program_id.clone()),
+            _ => None,
+        },
+        ui_token_amount: UiTokenAmount {
+            amount: balance.ui_token_amount.amount.clone(),
+            decimals: balance.ui_token_amount.decimals,
+            ui_amount: balance.ui_token_amount.ui_amount,
+            ui_amount_string: balance.ui_token_amount.ui_amount_string.clone(),
+        },
     })
 }
 

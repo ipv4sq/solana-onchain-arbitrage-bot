@@ -3,13 +3,13 @@ use crate::arb::constant::dex_type::DexType;
 use crate::arb::constant::pool_owner::PoolOwnerPrograms;
 use crate::arb::global::rpc::fetch_tx_sync;
 use crate::arb::pool::register::AnyPoolConfig;
-use crate::arb::program::solana_mev_bot::ix::{convert_to_smb_ix, extract_mev_instruction};
+use crate::arb::program::mev_bot::ix::{convert_to_smb_ix, extract_mev_instruction};
 use crate::test::test_utils::get_test_rpc_client;
 
 mod test {
     use crate::arb::global::rpc::fetch_tx_sync;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
-    use crate::arb::program::solana_mev_bot::onchain_monitor::entry::entry;
+    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
+    use crate::arb::program::mev_bot::onchain_monitor::entry::entry;
     use crate::test::test_utils::get_test_rpc_client;
 
     #[tokio::test]
@@ -32,7 +32,8 @@ mod test {
 #[test]
 fn test_modular_functions() {
     let client = get_test_rpc_client();
-    let sig = "2GNmMyHst1qd9B6FLAwBqrD6VdpxzLVxTZBuNSGYHt3Y5KtX93W6WWZGbsTfKKkbZcGi1M4KZRPQcev2VNpxLyck";
+    let sig =
+        "2GNmMyHst1qd9B6FLAwBqrD6VdpxzLVxTZBuNSGYHt3Y5KtX93W6WWZGbsTfKKkbZcGi1M4KZRPQcev2VNpxLyck";
     let tx = fetch_tx_sync(&client, sig).expect("Failed to fetch transaction");
     let (raw_instruction, inner_ixs) =
         extract_mev_instruction(&tx).expect("Failed to extract MEV instruction");

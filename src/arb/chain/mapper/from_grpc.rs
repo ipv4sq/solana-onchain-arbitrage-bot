@@ -5,6 +5,7 @@ use solana_sdk::instruction::AccountMeta;
 use crate::arb::subscriber::yellowstone::GrpcTransactionUpdate;
 use crate::arb::chain::instruction::{Instruction, InnerInstructions};
 use crate::arb::chain::mapper::traits::ToUnified;
+use crate::arb::chain::meta::{TokenBalance, UiTokenAmount};
 use crate::arb::chain::{Message, Transaction, TransactionMeta};
 
 impl ToUnified for GrpcTransactionUpdate {
@@ -205,6 +206,16 @@ fn convert_grpc_meta(
         })
         .collect();
     
+    let pre_token_balances = meta.pre_token_balances
+        .iter()
+        .filter_map(|balance| convert_grpc_token_balance(balance).ok())
+        .collect();
+    
+    let post_token_balances = meta.post_token_balances
+        .iter()
+        .filter_map(|balance| convert_grpc_token_balance(balance).ok())
+        .collect();
+
     Ok(TransactionMeta {
         fee: meta.fee,
         compute_units_consumed: meta.compute_units_consumed,
@@ -212,8 +223,42 @@ fn convert_grpc_meta(
         inner_instructions,
         pre_balances: meta.pre_balances.clone(),
         post_balances: meta.post_balances.clone(),
+        pre_token_balances,
+        post_token_balances,
         err: meta.err.as_ref().map(|e| format!("{:?}", e)),
         loaded_writable_addresses,
         loaded_readonly_addresses,
+    })
+}
+
+fn convert_grpc_token_balance(
+    balance: &yellowstone_grpc_proto::prelude::TokenBalance,
+) -> Result<TokenBalance> {
+    Ok(TokenBalance {
+        account_index: balance.account_index as u8,
+        mint: bs58::encode(&balance.mint).into_string(),
+        owner: if balance.owner.is_empty() {
+            None
+        } else {
+            Some(bs58::encode(&balance.owner).into_string())
+        },
+        program_id: if balance.program_id.is_empty() {
+            None
+        } else {
+            Some(bs58::encode(&balance.program_id).into_string())
+        },
+        ui_token_amount: UiTokenAmount {
+            amount: balance.ui_token_amount.as_ref()
+                .map(|amt| amt.amount.clone())
+                .unwrap_or_default(),
+            decimals: balance.ui_token_amount.as_ref()
+                .map(|amt| amt.decimals as u8)
+                .unwrap_or(0),
+            ui_amount: balance.ui_token_amount.as_ref()
+                .and_then(|amt| amt.ui_amount_string.parse::<f64>().ok()),
+            ui_amount_string: balance.ui_token_amount.as_ref()
+                .map(|amt| amt.ui_amount_string.clone())
+                .unwrap_or_default(),
+        },
     })
 }

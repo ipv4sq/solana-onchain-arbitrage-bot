@@ -199,7 +199,7 @@ mod tests {
     use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
     use crate::arb::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
+    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::constants::addresses::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;

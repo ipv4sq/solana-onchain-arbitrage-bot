@@ -3,7 +3,7 @@ use crate::arb::chain::types::LitePool;
 use crate::arb::chain::Transaction;
 use crate::arb::global::db::get_database;
 use crate::arb::global::mem_pool::mem_pool;
-use crate::arb::program::solana_mev_bot::ix;
+use crate::arb::program::mev_bot::ix;
 use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use tracing::info;

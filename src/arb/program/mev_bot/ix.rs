@@ -1,7 +1,6 @@
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::Transaction;
-use crate::arb::program::solana_mev_bot::ix_input::SolanaMevBotIxInput;
-use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
+use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
 use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
 use crate::constants::mev_bot::SMB_ONCHAIN_PROGRAM_ID;
@@ -89,7 +88,7 @@ pub fn is_mev_box_ix_profitable(
                 .entry(mint)
                 .and_modify(|amt| *amt += amount)
                 .or_insert(amount);
-            
+
             acc
         });
 
@@ -102,7 +101,7 @@ pub fn is_mev_box_ix_profitable(
                 .filter(|(_, amount)| *amount != 0)
                 .map(|(mint, amount)| BalanceStatement { mint, amount })
                 .collect();
-            
+
             (!balances.is_empty()).then_some((owner, balances))
         })
         .collect())
@@ -132,50 +131,64 @@ fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> O
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::arb::global::rpc::fetch_tx;
-    use crate::arb::program::solana_mev_bot::ix::extract_mev_instruction;
+    use crate::arb::program::mev_bot::ix::{extract_mev_instruction, is_mev_box_ix_profitable};
+    use crate::constants::addresses::TokenMint;
+    use crate::constants::helpers::ToPubkey;
 
     #[tokio::test]
     async fn test_account_metadata_mapping() {
         let tx_hash = "3mDkuLRaZRuGDcHon9JFGikkb7YQnc8Ph4NBjUG1vrbWLpCDvgMbHMDFycvtvwQv6BU2aF6wQbmQjdVNzHRGTQKs";
         let tx = fetch_tx(tx_hash).await.unwrap();
         let (ix, inner) = extract_mev_instruction(&tx).unwrap();
-        
+
         // Find a transfer_checked instruction in the inner instructions
-        let transfer_checked_ix = inner.instructions
+        let transfer_checked_ix = inner
+            .instructions
             .iter()
             .find(|ix| {
-                ix.program_id == spl_token::ID 
-                && ix.accounts.len() == 4 
-                && !ix.data.is_empty() 
-                && ix.data[0] == 12  // transfer_checked discriminator
+                ix.program_id == spl_token::ID
+                    && ix.accounts.len() == 4
+                    && !ix.data.is_empty()
+                    && ix.data[0] == 12 // transfer_checked discriminator
             })
             .expect("Should find at least one transfer_checked instruction");
-        
+
         println!("Transfer checked instruction account metadata:");
         for (i, acc) in transfer_checked_ix.accounts.iter().enumerate() {
-            println!("  Account {}: pubkey={}, is_signer={}, is_writable={}", 
-                     i, acc.pubkey, acc.is_signer, acc.is_writable);
+            println!(
+                "  Account {}: pubkey={}, is_signer={}, is_writable={}",
+                i, acc.pubkey, acc.is_signer, acc.is_writable
+            );
         }
-        
+
         // The expected metadata for transfer_checked should be:
         // 0: source (writable, not signer)
         // 1: mint (not writable, not signer)
         // 2: destination (writable, not signer)
         // 3: authority (not writable, signer OR not signer for PDA)
-        
+
         // Let's check if the metadata makes sense
-        assert!(transfer_checked_ix.accounts.len() == 4, "transfer_checked should have 4 accounts");
-        
+        assert_eq!(
+            transfer_checked_ix.accounts.len(),
+            4,
+            "transfer_checked should have 4 accounts"
+        );
+
         // For debugging - let's not assert on writable/signer yet, just observe
         println!("\nExpected vs Actual:");
-        println!("Account 0 (source): should be writable=true, is_writable={}", 
-                 transfer_checked_ix.accounts[0].is_writable);
-        println!("Account 1 (mint): should be writable=false, is_writable={}", 
-                 transfer_checked_ix.accounts[1].is_writable);
-        println!("Account 2 (dest): should be writable=true, is_writable={}", 
-                 transfer_checked_ix.accounts[2].is_writable);
+        println!(
+            "Account 0 (source): should be writable=true, is_writable={}",
+            transfer_checked_ix.accounts[0].is_writable
+        );
+        println!(
+            "Account 1 (mint): should be writable=false, is_writable={}",
+            transfer_checked_ix.accounts[1].is_writable
+        );
+        println!(
+            "Account 2 (dest): should be writable=true, is_writable={}",
+            transfer_checked_ix.accounts[2].is_writable
+        );
     }
 
     #[tokio::test]
@@ -195,10 +208,10 @@ mod tests {
         // Expected beneficial owner
         let expected_owner = "9FEjMA5uSKMWkLpaXJQY7V4nLm2xvvMxkeyeGEi7SLEg".to_pubkey();
         let wsol_mint = TokenMint::SOL.to_pubkey();
-        
+
         // Expected profit in lamports (0.236353237 SOL = 236353237 lamports)
         let expected_profit_lamports = 236353237i64;
-        
+
         // Check that the expected owner exists in results
         assert!(
             result.contains_key(&expected_owner),
@@ -206,16 +219,16 @@ mod tests {
             expected_owner,
             result.keys().collect::<Vec<_>>()
         );
-        
+
         // Get the balance statements for the owner
         let owner_balances = result.get(&expected_owner).unwrap();
-        
+
         // Find WSOL balance
         let wsol_balance = owner_balances
             .iter()
             .find(|b| b.mint == wsol_mint)
             .expect("WSOL balance not found for owner");
-        
+
         // Verify the profit amount (allowing small rounding differences)
         let profit_difference = (wsol_balance.amount - expected_profit_lamports).abs();
         assert!(
@@ -225,7 +238,7 @@ mod tests {
             wsol_balance.amount,
             profit_difference
         );
-        
+
         // Verify profit is positive
         assert!(
             wsol_balance.amount > 0,

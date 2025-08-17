@@ -28,12 +28,12 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Solana MEV Bot Listener");
 
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
-    let _ = &program::solana_mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;
+    let _ = &program::mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;
     info!("MEV transaction consumer initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = tokio::spawn(async move {
-        if let Err(e) = program::solana_mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await {
+        if let Err(e) = program::mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await {
             tracing::error!("MEV bot subscriber error: {}", e);
         }
     });

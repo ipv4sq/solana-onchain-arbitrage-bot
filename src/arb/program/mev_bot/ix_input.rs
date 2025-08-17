@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use solana_program::pubkey::Pubkey;
 
 #[derive(Debug)]
 pub struct SolanaMevBotIxInputData {
@@ -50,7 +51,7 @@ impl SolanaMevBotIxInputData {
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::program::solana_mev_bot::ix_input_data::SolanaMevBotIxInputData;
+    use crate::arb::program::mev_bot::ix_input::SolanaMevBotIxInputData;
     #[test]
     fn test_smb_ix_parameter_parsing() {
         // Test data from the actual transaction
@@ -89,4 +90,11 @@ mod tests {
         assert_eq!(params.compute_unit_limit, 0);
         assert_eq!(params.raw_data, short_data);
     }
+}
+
+#[derive(Debug)]
+pub struct SolanaMevBotIxInput {
+    pub program_id: Pubkey,
+    pub accounts: Vec<Pubkey>,
+    pub data: SolanaMevBotIxInputData,
 }
