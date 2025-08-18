@@ -12,8 +12,13 @@ use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
+use tracing::info;
 
 pub async fn send_tx_with_retry(tx: &VersionedTransaction, max_retries: u64) -> Result<Signature> {
+    let tx_bytes = bincode::serialize(tx)?;
+    let tx_size = tx_bytes.len();
+    info!("Transaction size after compilation: {} bytes", tx_size);
+    
     rpc_client()
         .send_transaction_with_config(
             tx,
@@ -32,6 +37,10 @@ pub async fn simulate_tx_with_retry(
     tx: &VersionedTransaction,
     _max_retries: u64,
 ) -> Result<SimulationResult> {
+    let tx_bytes = bincode::serialize(tx)?;
+    let tx_size = tx_bytes.len();
+    info!("Transaction size after compilation: {} bytes", tx_size);
+    
     let response = rpc_client().simulate_transaction(tx).await?;
     Ok(SimulationResult::from(&response.value))
 }

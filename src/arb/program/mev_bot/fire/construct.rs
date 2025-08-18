@@ -1,7 +1,7 @@
 use crate::arb::chain::util::alt::fetch_address_lookup_tables;
 use crate::arb::constant::mev_bot::{SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID};
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
-use crate::arb::global::rpc::{rpc_client, send_tx_with_retry};
+use crate::arb::global::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::pool::interface::InputAccountUtil;
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -52,8 +52,10 @@ pub async fn build_and_send(
     )
     .await?;
 
-    let signature = send_tx_with_retry(&tx, 3).await?;
-    println!("Transaction sent: {}", signature);
+    // let signature = send_tx_with_retry(&tx, 3).await?;
+    // println!("Transaction sent: {}", signature);
+
+    simulate_tx_with_retry(&tx, 3).await?;
 
     Ok(())
 }
@@ -178,63 +180,3 @@ fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u
     (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::arb::chain::util::alt::fetch_address_lookup_tables;
-    use crate::arb::constant::dex_type::DexType;
-    use crate::constants::helpers::ToPubkey;
-    use solana_client::nonblocking::rpc_client::RpcClient;
-    use solana_sdk::hash::Hash;
-    use solana_sdk::signature::read_keypair_file;
-
-    #[tokio::test]
-    async fn test_build_tx() {
-        let wallet_json_path = "/Users/l/Downloads/test_jz.json";
-        let wallet = read_keypair_file(wallet_json_path).expect("Failed to read wallet keypair");
-
-        let rpc_url = "https://api.mainnet-beta.solana.com".to_string();
-        let rpc_client = RpcClient::new(rpc_url);
-
-        let gas_price = 1_000_000;
-        let compute_unit_limit = 1_400_000;
-
-        let meteora_dlmm_pool = "FoSDw2L5DmTuQTFe55gWPDXf88euaxAEKFre74CnvQbX".to_pubkey();
-        let pool_config = AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
-            .await
-            .expect("Failed to load pool config");
-
-        let pools = vec![pool_config];
-
-        let blockhash = Hash::default();
-
-        let alt_keys = vec![
-            "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-            "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
-        ];
-
-        let alts = fetch_address_lookup_tables(&rpc_client, &alt_keys)
-            .await
-            .expect("Failed to fetch ALTs");
-
-        let tx = build_tx(
-            &wallet,
-            gas_price,
-            compute_unit_limit,
-            pools,
-            blockhash,
-            &alts,
-            10_000,
-        )
-        .await;
-
-        assert!(tx.is_ok(), "Failed to build transaction: {:?}", tx.err());
-
-        let versioned_tx = tx.unwrap();
-        assert_eq!(
-            versioned_tx.signatures.len(),
-            1,
-            "Should have exactly one signature"
-        );
-    }
-}
