@@ -81,7 +81,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             pool_data.active_id,
             pool,
             true,
-            5,
+            3,
         );
 
         let token_x_program = TokenProgram::SPL_TOKEN.to_program();

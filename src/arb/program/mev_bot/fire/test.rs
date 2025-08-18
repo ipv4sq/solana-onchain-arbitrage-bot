@@ -68,4 +68,25 @@ mod tests {
         });
         info!("finished printing our all the accounts");
     }
+
+    #[tokio::test]
+    async fn fuck() {
+        let meteora_dlmm_pool = "3odMjqSfsfj9uGHg7Ax4UWmiayCzQXZn6gNpmuxpttSk".to_pubkey();
+        let meteora_damm_v2_pool = "G2TGspLi4G1LfH8ExkiMNS5mCZsgKvKtSBP6rNwMavd9".to_pubkey();
+        let ix = create_invoke_mev_instruction(
+            &"DvLTm5iR43m7u2Rh5rwNmwrKDtD9X8iHpaoLhaUnEKEq".to_pubkey(),
+            &get_wallet(),
+            1,
+            vec![
+                AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
+                    .await
+                    .expect("Failed to load pool config"),
+                AnyPoolConfig::from_address(&meteora_damm_v2_pool, DexType::MeteoraDammV2)
+                    .await
+                    .expect("Failed to load pool config"),
+            ],
+            1000,
+        )
+        .unwrap();
+    }
 }

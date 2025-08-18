@@ -72,7 +72,13 @@ pub async fn build_tx(
     minimum_profit: u64,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
-    let swap_ix = create_invoke_mev_instruction(wallet, compute_unit_limit, pools, minimum_profit);
+    let swap_ix = create_invoke_mev_instruction(
+        &wallet.pubkey(),
+        wallet,
+        compute_unit_limit,
+        pools,
+        minimum_profit,
+    );
     instructions.push(swap_ix?);
 
     let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
@@ -83,7 +89,8 @@ pub async fn build_tx(
     Ok(tx)
 }
 
-fn create_invoke_mev_instruction(
+pub fn create_invoke_mev_instruction(
+    signer: &Pubkey,
     wallet: &Keypair,
     compute_unit_limit: u32,
     pools: Vec<AnyPoolConfig>,
@@ -92,10 +99,10 @@ fn create_invoke_mev_instruction(
     let use_flashloan = true;
     let fee_account = fee_collector(use_flashloan);
     let mut accounts = vec![
-        wallet.pubkey().to_signer(),
+        signer.to_signer(),
         Mints::WSOL.to_readonly(),
         fee_account.to_writable(),
-        ata_sol_token(&wallet.pubkey(), &WSOL_KEY).to_writable(),
+        ata_sol_token(&signer, &WSOL_KEY).to_writable(),
         TokenProgram::SPL_TOKEN.to_readonly(),
         system_program::ID.to_readonly(),
         spl_associated_token_account::ID.to_readonly(),
@@ -112,22 +119,18 @@ fn create_invoke_mev_instruction(
             .to_writable(),
         ]);
     }
-    // let the_other_mint_account = ata(&wallet.pubkey(), )
+    // let the_other_mint_account = ata(&signer(), )
     for pool in pools {
         let pool_specific_accounts: Vec<AccountMeta> = match pool {
             AnyPoolConfig::MeteoraDlmm(c) => {
                 MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
-                    &wallet.pubkey(),
-                    &c.pool,
-                    &c.data,
+                    signer, &c.pool, &c.data,
                 )?
                 .to_list_cloned()
             }
             AnyPoolConfig::MeteoraDammV2(c) => {
                 MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
-                    &wallet.pubkey(),
-                    &c.pool,
-                    &c.data,
+                    signer, &c.pool, &c.data,
                 )?
                 .to_list_cloned()
             }
