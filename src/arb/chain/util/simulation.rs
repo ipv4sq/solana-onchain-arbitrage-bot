@@ -4,6 +4,7 @@ use solana_client::rpc_response::RpcSimulateTransactionResult;
 use crate::arb::chain::meta::TransactionMeta;
 use crate::arb::chain::instruction::InnerInstructions;
 
+#[derive(Debug)]
 pub struct SimulationResult {
     pub meta: Option<TransactionMeta>,
     pub err: Option<String>,

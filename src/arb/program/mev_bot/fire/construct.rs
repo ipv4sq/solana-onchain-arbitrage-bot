@@ -1,4 +1,5 @@
 use crate::arb::chain::util::alt::fetch_address_lookup_tables;
+use crate::arb::chain::util::simulation::SimulationResult;
 use crate::arb::constant::mev_bot::{SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID};
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
 use crate::arb::global::rpc::{rpc_client, simulate_tx_with_retry};
@@ -30,16 +31,18 @@ pub async fn build_and_send(
     unit_price: u64,
     pools: Vec<AnyPoolConfig>,
     minimum_profit: u64,
-) -> Result<()> {
-    let rpc = rpc_client();
-    let blockhash = rpc.get_latest_blockhash().await?;
+) -> Result<SimulationResult> {
+    let blockhash = rpc_client().get_latest_blockhash().await?;
 
     let alt_keys = vec![
+        // this seems to be legit
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-        "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
+        "7Y77q5Ym5VNsAjY1amGfYGjXUSLjFcgmF6WxeeemiR8T".to_pubkey(),
+        "EyFCXwfjTjYAZz7pz1fwiQfRq8YPUKotSNyCeihHMWgZ".to_pubkey(),
+        // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
     ];
 
-    let alts = fetch_address_lookup_tables(&rpc, &alt_keys).await?;
+    let alts = fetch_address_lookup_tables(&alt_keys).await?;
 
     let tx = build_tx(
         wallet,
@@ -55,9 +58,7 @@ pub async fn build_and_send(
     // let signature = send_tx_with_retry(&tx, 3).await?;
     // println!("Transaction sent: {}", signature);
 
-    simulate_tx_with_retry(&tx, 3).await?;
-
-    Ok(())
+    Ok(simulate_tx_with_retry(&tx, 3).await?)
 }
 
 pub async fn build_tx(
@@ -179,4 +180,3 @@ fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u
 
     (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
 }
-
