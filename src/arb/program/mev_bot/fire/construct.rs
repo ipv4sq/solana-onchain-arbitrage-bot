@@ -98,7 +98,7 @@ fn create_invoke_mev_instruction(
         ata_sol_token(&wallet.pubkey(), &WSOL_KEY).to_writable(),
         TokenProgram::SPL_TOKEN.to_readonly(),
         system_program::ID.to_readonly(),
-        spl_associated_token_account::ID.to_writable(),
+        spl_associated_token_account::ID.to_readonly(),
     ];
 
     if use_flashloan {
