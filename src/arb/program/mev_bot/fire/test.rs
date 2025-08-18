@@ -2,11 +2,14 @@
 mod tests {
     use crate::arb::constant::dex_type::DexType;
     use crate::arb::constant::mint::Mints;
-    use crate::arb::global::rpc::ensure_mint_account_exists;
+    use crate::arb::global::rpc::{ensure_mint_account_exists, fetch_tx};
     use crate::arb::pool::register::AnyPoolConfig;
     use crate::arb::program::mev_bot::fire::construct::*;
+    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::constants::helpers::ToPubkey;
+    use solana_onchain_arbitrage_bot::arb::program::mev_bot::ix::convert_to_smb_ix;
     use solana_sdk::signature::{read_keypair_file, Keypair};
+    use tracing::info;
 
     fn get_wallet() -> Keypair {
         let wallet_json_path = "/Users/l/Downloads/test_jz.json";
@@ -20,7 +23,8 @@ mod tests {
         let _ = ensure_mint_account_exists(
             &"9yBQVHj2FJnf7XfQWUPQoj3iyMwAXQMxBWD37cwFBAGS".to_pubkey(),
             &get_wallet(),
-        ).await;
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -47,5 +51,21 @@ mod tests {
         )
         .await;
         println!("{:?}", result);
+    }
+
+    #[tokio::test]
+    async fn example_tx() {
+        let tx = "5xt23Gje9fJJH3EA2etsgfGkkdAKHMaWexeGo6BrzbXRZWVvrxr6erazi4wPSYFq7eyZSvE7kJXF86rTYDDJV4F3";
+        let transaction = fetch_tx(&tx).await.unwrap();
+        let (ix, _) =
+            extract_mev_instruction(&transaction).expect("Failed to extract MEV instruction");
+        info!("printing our all the accounts");
+        ix.accounts.iter().for_each(|account| {
+            println!(
+                "account: {}, signer: {}, writable: {}",
+                account.pubkey, account.is_signer, account.is_writable
+            )
+        });
+        info!("finished printing our all the accounts");
     }
 }

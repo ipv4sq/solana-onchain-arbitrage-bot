@@ -1,9 +1,9 @@
 use crate::arb::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::chain::Transaction;
+use crate::arb::constant::mev_bot::EMV_BOT_PROGRAM_ID;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
 use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
-use crate::arb::constant::mev_bot::EMV_BOT_PROGRAM_ID;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
@@ -12,13 +12,16 @@ use tracing::error;
 
 pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
     let data = SolanaMevBotIxInputData::from_bytes(&ix.data)?;
-    let accounts = ix.accounts.iter().map(|acc| acc.pubkey).collect();
 
     Ok(SolanaMevBotIxInput {
         program_id: ix.program_id,
-        accounts,
+        accounts: ix.accounts.clone(),
         data,
     })
+}
+
+pub fn extract_mev_instruction(tx: &Transaction) -> Option<(&Instruction, &InnerInstructions)> {
+    tx.extract_ix_and_inners(|program_id| *program_id == EMV_BOT_PROGRAM_ID.to_pubkey())
 }
 
 #[derive(Debug, Clone)]
@@ -246,8 +249,4 @@ mod tests {
             wsol_balance.amount
         );
     }
-}
-
-pub fn extract_mev_instruction(tx: &Transaction) -> Option<(&Instruction, &InnerInstructions)> {
-    tx.extract_ix_and_inners(|program_id| *program_id == EMV_BOT_PROGRAM_ID.to_pubkey())
 }

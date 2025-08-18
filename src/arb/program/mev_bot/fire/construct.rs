@@ -21,6 +21,7 @@ use solana_program::system_program;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
+use tracing::info;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -146,6 +147,15 @@ fn create_invoke_mev_instruction(
     data.extend_from_slice(if no_failure_mode { &[1] } else { &[0] });
     data.extend_from_slice(&0u16.to_le_bytes()); // reserved
     data.extend_from_slice(if use_flashloan { &[1] } else { &[0] });
+
+    info!("printing our all the accounts");
+    accounts.iter().for_each(|account| {
+        println!(
+            "account: {}, signer: {}, writable: {}",
+            account.pubkey, account.is_signer, account.is_writable
+        )
+    });
+    info!("finished printing our all the accounts");
 
     Ok(Instruction {
         program_id: EMV_BOT_PROGRAM_ID.to_pubkey(),

@@ -1,5 +1,7 @@
 use anyhow::anyhow;
+use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
+use spl_token::state::Account;
 
 #[derive(Debug)]
 pub struct SolanaMevBotIxInputData {
@@ -95,6 +97,6 @@ mod tests {
 #[derive(Debug)]
 pub struct SolanaMevBotIxInput {
     pub program_id: Pubkey,
-    pub accounts: Vec<Pubkey>,
+    pub accounts: Vec<AccountMeta>,
     pub data: SolanaMevBotIxInputData,
 }
