@@ -3,12 +3,12 @@ use crate::arb::chain::util::simulation::SimulationResult;
 use crate::arb::constant::mev_bot::{SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID};
 use crate::arb::constant::mint::{Mints, WSOL_KEY};
 use crate::arb::global::rpc::{rpc_client, simulate_tx_with_retry};
-use crate::arb::pool::interface::InputAccountUtil;
+use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
 use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::pool::register::AnyPoolConfig;
-use crate::arb::pool::util::ata_sol_token;
-use crate::constants::addresses::TokenProgram;
+use crate::arb::pool::util::{ata, ata_sol_token};
+use crate::constants::addresses::{TokenProgram, SPL_TOKEN_KEY};
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
@@ -28,6 +28,7 @@ const DEFAULT_UNIT_PRICE: u64 = 500_000;
 
 pub async fn build_and_send(
     wallet: &Keypair,
+    minor_mint: &Pubkey,
     compute_unit_limit: u32,
     unit_price: u64,
     pools: Vec<AnyPoolConfig>,
@@ -47,6 +48,7 @@ pub async fn build_and_send(
 
     let tx = build_tx(
         wallet,
+        minor_mint,
         compute_unit_limit,
         unit_price,
         pools,
@@ -64,6 +66,7 @@ pub async fn build_and_send(
 
 pub async fn build_tx(
     wallet: &Keypair,
+    minor_mint: &Pubkey,
     compute_unit_limit: u32,
     unit_price: u64,
     pools: Vec<AnyPoolConfig>,
@@ -72,14 +75,15 @@ pub async fn build_tx(
     minimum_profit: u64,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
+    let x = pools.first().unwrap();
     let swap_ix = create_invoke_mev_instruction(
         &wallet.pubkey(),
-        wallet,
+        minor_mint,
         compute_unit_limit,
         pools,
         minimum_profit,
-    );
-    instructions.push(swap_ix?);
+    )?;
+    instructions.push(swap_ix);
 
     let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
     let tx = VersionedTransaction::try_new(
@@ -91,7 +95,7 @@ pub async fn build_tx(
 
 pub fn create_invoke_mev_instruction(
     signer: &Pubkey,
-    wallet: &Keypair,
+    minor_mint: &Pubkey,
     compute_unit_limit: u32,
     pools: Vec<AnyPoolConfig>,
     minimum_profit: u64,
@@ -103,7 +107,7 @@ pub fn create_invoke_mev_instruction(
         Mints::WSOL.to_readonly(),
         fee_account.to_writable(),
         ata_sol_token(&signer, &WSOL_KEY).to_writable(),
-        TokenProgram::SPL_TOKEN.to_readonly(),
+        TokenProgram::SPL_TOKEN.to_program(),
         system_program::ID.to_readonly(),
         spl_associated_token_account::ID.to_readonly(),
     ];
@@ -119,24 +123,47 @@ pub fn create_invoke_mev_instruction(
             .to_writable(),
         ]);
     }
+    accounts.extend([
+        minor_mint.to_readonly(),
+        //TODO  below both will be updated to the real token program
+        TokenProgram::SPL_TOKEN.to_program(),
+        ata(signer, minor_mint, &TokenProgram::SPL_TOKEN.to_pubkey()).to_writable(),
+    ]);
+
     // let the_other_mint_account = ata(&signer(), )
     for pool in pools {
-        let pool_specific_accounts: Vec<AccountMeta> = match pool {
+        match pool {
             AnyPoolConfig::MeteoraDlmm(c) => {
-                MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
+                let built = MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
                     signer, &c.pool, &c.data,
-                )?
-                .to_list_cloned()
+                )?;
+                accounts.extend(vec![
+                    built.program,
+                    c.data.desired_mint()?.to_readonly(),
+                    built.event_authority,
+                    built.lb_pair,
+                    built.reverse_x,
+                    built.reverse_y,
+                    built.oracle,
+                ]);
+                accounts.extend(built.bin_arrays);
             }
             AnyPoolConfig::MeteoraDammV2(c) => {
-                MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
+                let built = MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
                     signer, &c.pool, &c.data,
-                )?
-                .to_list_cloned()
+                )?;
+                accounts.extend(vec![
+                    built.meteora_program,
+                    c.data.desired_mint()?.to_readonly(),
+                    built.event_authority,
+                    built.pool_authority,
+                    c.pool.to_writable(),
+                    built.token_a_vault,
+                    built.token_b_vault,
+                ]);
             }
             AnyPoolConfig::Unsupported => return Err(anyhow!("Unsupported pool type")),
         };
-        accounts.extend(pool_specific_accounts);
     }
 
     // Create instruction data

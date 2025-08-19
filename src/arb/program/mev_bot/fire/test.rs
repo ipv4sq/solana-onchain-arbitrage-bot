@@ -7,8 +7,9 @@ mod tests {
     use crate::arb::program::mev_bot::fire::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::constants::helpers::ToPubkey;
-    use solana_onchain_arbitrage_bot::arb::program::mev_bot::ix::convert_to_smb_ix;
+    use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
+    use std::cmp::min;
     use tracing::info;
 
     fn get_wallet() -> Keypair {
@@ -17,18 +18,18 @@ mod tests {
         return wallet;
     }
 
-    #[tokio::test]
-    async fn create_wsol_ata() {
-        // let result = ensure_mint_account_exists(&Mints::WSOL.to_pubkey(), &get_wallet()).await;
-        let _ = ensure_mint_account_exists(
-            &"9yBQVHj2FJnf7XfQWUPQoj3iyMwAXQMxBWD37cwFBAGS".to_pubkey(),
-            &get_wallet(),
-        )
-        .await;
+    fn minor_mint() -> Pubkey {
+        "9yBQVHj2FJnf7XfQWUPQoj3iyMwAXQMxBWD37cwFBAGS".to_pubkey()
     }
 
     #[tokio::test]
-    async fn test_build_tx() {
+    async fn create_wsol_ata() {
+        // let result = ensure_mint_account_exists(&Mints::WSOL.to_pubkey(), &get_wallet()).await;
+        let _ = ensure_mint_account_exists(&minor_mint(), &get_wallet()).await;
+    }
+
+    #[tokio::test]
+    async fn test_send_tx() {
         let wallet_json_path = "/Users/l/Downloads/test_jz.json";
         let wallet = read_keypair_file(wallet_json_path).expect("Failed to read wallet keypair");
         let unit_price = 10_000;
@@ -37,6 +38,7 @@ mod tests {
         let meteora_damm_v2_pool = "G2TGspLi4G1LfH8ExkiMNS5mCZsgKvKtSBP6rNwMavd9".to_pubkey();
         let result = build_and_send(
             &wallet,
+            &minor_mint(),
             compute_unit_limit,
             unit_price,
             vec![
@@ -70,12 +72,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fuck() {
+    async fn reproduce() {
         let meteora_dlmm_pool = "3odMjqSfsfj9uGHg7Ax4UWmiayCzQXZn6gNpmuxpttSk".to_pubkey();
         let meteora_damm_v2_pool = "G2TGspLi4G1LfH8ExkiMNS5mCZsgKvKtSBP6rNwMavd9".to_pubkey();
         let ix = create_invoke_mev_instruction(
             &"DvLTm5iR43m7u2Rh5rwNmwrKDtD9X8iHpaoLhaUnEKEq".to_pubkey(),
-            &get_wallet(),
+            &minor_mint(),
             1,
             vec![
                 AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
