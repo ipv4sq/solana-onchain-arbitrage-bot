@@ -6,7 +6,9 @@ mod tests {
     use crate::arb::pool::register::AnyPoolConfig;
     use crate::arb::program::mev_bot::fire::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
+    use crate::arb::strategy::unmarshal::read_from_database;
     use crate::constants::helpers::ToPubkey;
+    use itertools::Itertools;
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
     use std::cmp::min;
@@ -90,5 +92,41 @@ mod tests {
             1000,
         )
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_polling() {
+        let pools_data = read_from_database().await.unwrap();
+        let wallet = get_wallet();
+        let unit_price = 10_000;
+        let compute_unit_limit = 400_000;
+        let minimum_profit = 1_000_000; // 0.001 SOL minimum profit
+
+        // Find pools for a specific minor mint or use the first one
+        let target_minor_mint = minor_mint();
+        let pools_of_mint = pools_data.first().unwrap();
+
+        // Convert PoolInfo to AnyPoolConfig
+        let pool_configs = futures::future::join_all(pools_of_mint.pools.into_iter().map(
+            |pool_info| async move {
+                AnyPoolConfig::from_address(&pool_info.pool_id, pool_info.dex_type).await
+            },
+        ))
+        .await
+        .into_iter()
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>();
+
+        let result = build_and_send(
+            &wallet,
+            &pools_of_mint.minor_mint,
+            compute_unit_limit,
+            unit_price,
+            pool_configs,
+            minimum_profit,
+        )
+        .await;
+
+        println!("Result: {:?}", result);
     }
 }

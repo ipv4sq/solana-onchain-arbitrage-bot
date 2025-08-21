@@ -170,7 +170,7 @@ pub fn create_invoke_mev_instruction(
     let mut data = vec![28u8];
 
     // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.
-    let no_failure_mode = true;
+    let no_failure_mode = false;
 
     data.extend_from_slice(&minimum_profit.to_le_bytes());
     data.extend_from_slice(&compute_unit_limit.to_le_bytes());

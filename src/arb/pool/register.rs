@@ -24,6 +24,7 @@ lazy_static::lazy_static! {
     };
 }
 
+#[derive(Clone)]
 pub enum AnyPoolConfig {
     MeteoraDlmm(MeteoraDlmmPoolConfig),
     MeteoraDammV2(MeteoraDammV2Config),
