@@ -64,6 +64,11 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Solana MEV Bot Listener");
     info!("Logs are being written to: {}", log_file_path);
 
+    // Initialize blockhash holder with fresh blockhash
+    info!("Initializing blockhash holder...");
+    arb::global::blockhash::initialize().await?;
+    info!("Blockhash holder initialized");
+
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
     let _ = &program::mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;
     info!("MEV transaction consumer initialized");
