@@ -102,9 +102,10 @@ mod tests {
         let compute_unit_limit = 400_000;
         let minimum_profit = 1_000_000; // 0.001 SOL minimum profit
 
-        // Find pools for a specific minor mint or use the first one
-        let target_minor_mint = minor_mint();
-        let pools_of_mint = pools_data.first().unwrap();
+        let pools_of_mint = pools_data
+            .into_iter()
+            .find_or_first(|p| p.pools.len() > 1)
+            .expect("No pools found for the target mint");
 
         // Convert PoolInfo to AnyPoolConfig
         let pool_configs = futures::future::join_all(pools_of_mint.pools.into_iter().map(

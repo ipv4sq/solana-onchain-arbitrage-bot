@@ -49,3 +49,30 @@ pub async fn read_from_database() -> Result<Vec<PoolsOfMint>> {
     Ok(result)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_read_from_database() {
+        let result = read_from_database().await.expect("Failed to read from database");
+        
+        assert!(!result.is_empty(), "Should have at least one mint with pools");
+        
+        for pools_of_mint in &result {
+            assert!(
+                !pools_of_mint.pools.is_empty(),
+                "Mint {} should have at least one pool",
+                pools_of_mint.minor_mint
+            );
+        }
+        
+        let mints_with_multiple_pools = result
+            .iter()
+            .filter(|p| p.pools.len() > 1)
+            .count();
+        
+        println!("Loaded {} mints, {} with multiple pools", result.len(), mints_with_multiple_pools);
+    }
+}
+

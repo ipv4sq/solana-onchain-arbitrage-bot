@@ -40,16 +40,16 @@ impl DexType {
     // Convert from database string representation
     pub fn from_db_string(s: &str) -> Self {
         match s {
-            "raydium_v4" => DexType::RaydiumV4,
-            "raydium_cp" => DexType::RaydiumCp,
-            "raydium_clmm" => DexType::RaydiumClmm,
-            "pump" => DexType::Pump,
-            "meteora_dlmm" => DexType::MeteoraDlmm,
-            "meteora_damm" => DexType::MeteoraDamm,
-            "meteora_damm_v2" => DexType::MeteoraDammV2,
-            "orca_whirlpool" => DexType::OrcaWhirlpool,
-            "solfi" => DexType::Solfi,
-            "vertigo" => DexType::Vertigo,
+            "RaydiumV4" => DexType::RaydiumV4,
+            "RaydiumCp" => DexType::RaydiumCp,
+            "RaydiumClmm" => DexType::RaydiumClmm,
+            "Pump" => DexType::Pump,
+            "MeteoraDlmm" => DexType::MeteoraDlmm,
+            "MeteoraDamm" => DexType::MeteoraDamm,
+            "MeteoraDammV2" => DexType::MeteoraDammV2,
+            "OrcaWhirlpool" => DexType::OrcaWhirlpool,
+            "Solfi" => DexType::Solfi,
+            "Vertigo" => DexType::Vertigo,
             _ => DexType::Unknown,
         }
     }
