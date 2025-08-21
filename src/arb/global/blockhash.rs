@@ -5,16 +5,19 @@ use solana_sdk::hash::Hash;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use tokio::runtime::Builder;
+use tokio::sync::OnceCell;
+use tokio::time::interval;
 
 struct BlockhashHolder {
-    blockhash: Arc<RwLock<Hash>>,
+    blockhash: RwLock<Hash>,
     rpc_client: Arc<RpcClient>,
 }
 
 impl BlockhashHolder {
     fn new(rpc_client: Arc<RpcClient>) -> Self {
         Self {
-            blockhash: Arc::new(RwLock::new(Hash::default())),
+            blockhash: RwLock::new(Hash::default()),
             rpc_client,
         }
     }
@@ -23,9 +26,8 @@ impl BlockhashHolder {
         *self.blockhash.read()
     }
 
-    fn start_updater(&self) {
-        let blockhash = Arc::clone(&self.blockhash);
-        let rpc_client = Arc::clone(&self.rpc_client);
+    fn start_updater(self: &Arc<Self>) {
+        let holder = self.clone();
 
         // Spawn a dedicated OS thread for blockhash updates
         thread::Builder::new()
@@ -34,7 +36,7 @@ impl BlockhashHolder {
                 tracing::info!("Blockhash updater thread started");
 
                 // Create a dedicated single-threaded runtime for this thread
-                let runtime = tokio::runtime::Builder::new_current_thread()
+                let runtime = Builder::new_current_thread()
                     .enable_all()
                     .thread_name("blockhash-runtime")
                     .build()
@@ -42,14 +44,14 @@ impl BlockhashHolder {
 
                 // Run the update loop forever on this dedicated thread
                 runtime.block_on(async move {
-                    let mut interval = tokio::time::interval(Duration::from_millis(200));
+                    let mut interval = interval(Duration::from_millis(200));
 
                     loop {
                         interval.tick().await;
 
-                        match rpc_client.get_latest_blockhash().await {
+                        match holder.rpc_client.get_latest_blockhash().await {
                             Ok(new_blockhash) => {
-                                *blockhash.write() = new_blockhash;
+                                *holder.blockhash.write() = new_blockhash;
                                 tracing::trace!("Blockhash updated: {}", new_blockhash);
                             }
                             Err(e) => {
@@ -63,8 +65,7 @@ impl BlockhashHolder {
     }
 }
 
-static GLOBAL_BLOCKHASH: tokio::sync::OnceCell<Arc<BlockhashHolder>> =
-    tokio::sync::OnceCell::const_new();
+static GLOBAL_BLOCKHASH: OnceCell<Arc<BlockhashHolder>> = OnceCell::const_new();
 
 async fn ensure_initialized() -> Result<()> {
     GLOBAL_BLOCKHASH
