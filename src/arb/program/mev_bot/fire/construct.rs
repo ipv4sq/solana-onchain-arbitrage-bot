@@ -31,7 +31,7 @@ pub async fn build_and_send(
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
     unit_price: u64,
-    pools: Vec<AnyPoolConfig>,
+    pools: &[AnyPoolConfig],
     minimum_profit: u64,
 ) -> Result<SimulationResult> {
     let blockhash = rpc_client().get_latest_blockhash().await?;
@@ -69,7 +69,7 @@ pub async fn build_tx(
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
     unit_price: u64,
-    pools: Vec<AnyPoolConfig>,
+    pools: &[AnyPoolConfig],
     blockhash: Hash,
     alts: &[AddressLookupTableAccount],
     minimum_profit: u64,
@@ -97,7 +97,7 @@ pub fn create_invoke_mev_instruction(
     signer: &Pubkey,
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
-    pools: Vec<AnyPoolConfig>,
+    pools: &[AnyPoolConfig],
     minimum_profit: u64,
 ) -> Result<Instruction> {
     let use_flashloan = true;

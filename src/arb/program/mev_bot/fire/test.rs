@@ -12,6 +12,7 @@ mod tests {
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
     use std::cmp::min;
+    use std::io::{self, Write};
     use tracing::info;
 
     fn get_wallet() -> Keypair {
@@ -38,19 +39,20 @@ mod tests {
         let compute_unit_limit = 400_000;
         let meteora_dlmm_pool = "3odMjqSfsfj9uGHg7Ax4UWmiayCzQXZn6gNpmuxpttSk".to_pubkey();
         let meteora_damm_v2_pool = "G2TGspLi4G1LfH8ExkiMNS5mCZsgKvKtSBP6rNwMavd9".to_pubkey();
+        let pools = vec![
+            AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
+                .await
+                .expect("Failed to load pool config"),
+            AnyPoolConfig::from_address(&meteora_damm_v2_pool, DexType::MeteoraDammV2)
+                .await
+                .expect("Failed to load pool config"),
+        ];
         let result = build_and_send(
             &wallet,
             &minor_mint(),
             compute_unit_limit,
             unit_price,
-            vec![
-                AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
-                    .await
-                    .expect("Failed to load pool config"),
-                AnyPoolConfig::from_address(&meteora_damm_v2_pool, DexType::MeteoraDammV2)
-                    .await
-                    .expect("Failed to load pool config"),
-            ],
+            &pools,
             1000,
         )
         .await;
@@ -77,18 +79,19 @@ mod tests {
     async fn reproduce() {
         let meteora_dlmm_pool = "3odMjqSfsfj9uGHg7Ax4UWmiayCzQXZn6gNpmuxpttSk".to_pubkey();
         let meteora_damm_v2_pool = "G2TGspLi4G1LfH8ExkiMNS5mCZsgKvKtSBP6rNwMavd9".to_pubkey();
+        let pools = vec![
+            AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
+                .await
+                .expect("Failed to load pool config"),
+            AnyPoolConfig::from_address(&meteora_damm_v2_pool, DexType::MeteoraDammV2)
+                .await
+                .expect("Failed to load pool config"),
+        ];
         let ix = create_invoke_mev_instruction(
             &"DvLTm5iR43m7u2Rh5rwNmwrKDtD9X8iHpaoLhaUnEKEq".to_pubkey(),
             &minor_mint(),
             1,
-            vec![
-                AnyPoolConfig::from_address(&meteora_dlmm_pool, DexType::MeteoraDlmm)
-                    .await
-                    .expect("Failed to load pool config"),
-                AnyPoolConfig::from_address(&meteora_damm_v2_pool, DexType::MeteoraDammV2)
-                    .await
-                    .expect("Failed to load pool config"),
-            ],
+            &pools,
             1000,
         )
         .unwrap();
@@ -104,7 +107,7 @@ mod tests {
 
         let pools_of_mint = pools_data
             .into_iter()
-            .find_or_first(|p| p.pools.len() > 1)
+            .find_or_first(|p| p.pools.len() > 2)
             .expect("No pools found for the target mint");
 
         // Convert PoolInfo to AnyPoolConfig
@@ -118,16 +121,27 @@ mod tests {
         .filter_map(Result::ok)
         .collect::<Vec<_>>();
 
-        let result = build_and_send(
-            &wallet,
-            &pools_of_mint.minor_mint,
-            compute_unit_limit,
-            unit_price,
-            pool_configs,
-            minimum_profit,
-        )
-        .await;
+        // Simulate 10 times with 3 seconds interval
+        for i in 1..=10 {
+            info!("Simulation #{}", i);
+            io::stdout().flush().unwrap();
+            
+            let result = build_and_send(
+                &wallet,
+                &pools_of_mint.minor_mint,
+                compute_unit_limit,
+                unit_price,
+                &pool_configs,
+                minimum_profit,
+            )
+            .await;
 
-        println!("Result: {:?}", result);
+            println!("Result #{}: {:?}", i, result);
+            io::stdout().flush().unwrap();
+            
+            if i < 10 {
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            }
+        }
     }
 }
