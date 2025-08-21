@@ -53,7 +53,7 @@ pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {
         let data = client.get_account_data(pool).await?;
         let pool_data = Data::load_data(&data)?;
         let pair = MintPair(pool_data.base_mint(), pool_data.quote_mint());
-        let config = Self::from_pool_data(pool, pool_data, pair.the_other_mint()?);
+        let config = Self::from_pool_data(pool, pool_data, pair.desired_mint()?);
         config
     }
 }

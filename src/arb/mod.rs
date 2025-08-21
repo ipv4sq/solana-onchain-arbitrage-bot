@@ -5,4 +5,5 @@ pub mod subscriber;
 pub mod global;
 pub mod program;
 pub mod util;
+mod strategy;
 

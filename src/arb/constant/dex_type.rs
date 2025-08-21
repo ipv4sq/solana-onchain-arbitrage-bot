@@ -36,4 +36,38 @@ impl DexType {
             _ => DexType::Unknown,
         }
     }
+    
+    // Convert from database string representation
+    pub fn from_db_string(s: &str) -> Self {
+        match s {
+            "raydium_v4" => DexType::RaydiumV4,
+            "raydium_cp" => DexType::RaydiumCp,
+            "raydium_clmm" => DexType::RaydiumClmm,
+            "pump" => DexType::Pump,
+            "meteora_dlmm" => DexType::MeteoraDlmm,
+            "meteora_damm" => DexType::MeteoraDamm,
+            "meteora_damm_v2" => DexType::MeteoraDammV2,
+            "orca_whirlpool" => DexType::OrcaWhirlpool,
+            "solfi" => DexType::Solfi,
+            "vertigo" => DexType::Vertigo,
+            _ => DexType::Unknown,
+        }
+    }
+    
+    // Convert to database string representation
+    pub fn to_db_string(&self) -> &'static str {
+        match self {
+            DexType::RaydiumV4 => "raydium_v4",
+            DexType::RaydiumCp => "raydium_cp",
+            DexType::RaydiumClmm => "raydium_clmm",
+            DexType::Pump => "pump",
+            DexType::MeteoraDlmm => "meteora_dlmm",
+            DexType::MeteoraDamm => "meteora_damm",
+            DexType::MeteoraDammV2 => "meteora_damm_v2",
+            DexType::OrcaWhirlpool => "orca_whirlpool",
+            DexType::Solfi => "solfi",
+            DexType::Vertigo => "vertigo",
+            DexType::Unknown => "unknown",
+        }
+    }
 }

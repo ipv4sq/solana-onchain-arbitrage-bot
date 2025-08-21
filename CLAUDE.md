@@ -4,9 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Solana onchain arbitrage bot that demonstrates how to parse pools from multiple DEX protocols and execute
-arbitrage trades using an onchain program. It's a reference implementation for advanced users, not a production-ready
-bot.
+This is a Solana onchain arbitrage bot that monitors and executes arbitrage opportunities across multiple DEX protocols using an onchain program. It includes advanced features like real-time pool monitoring, database persistence, and multiple subscription methods.
 
 **Onchain Program ID**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
@@ -24,19 +22,32 @@ cargo check
 
 # Setup configuration (first time only)
 cp config.toml.example config.toml
+
+# Setup database (if using database features)
+cp .env.example .env
+# Configure DATABASE_URL in .env
+
+# Install sqlx-cli for migrations
+cargo install sqlx-cli --no-default-features --features postgres
+
+# Run database migrations
+./scripts/migrate.sh
+# Or manually:
+# sqlx database create
+# sqlx migrate run
 ```
 
 ## Logging
 
 The bot logs to both console and file simultaneously:
 
-- **Log Directory**: `/logs/` (created automatically on first run)
+- **Log Directory**: `logs/` (created automatically on first run)
 - **Log File Format**: `bot_YYYYMMDD_HHMMSS.log` (e.g., `bot_20250817_164316.log`)
 - **View Latest Logs**: Use `./tail_logs.sh` to tail the most recent log file
 - **Manual Tail**: `tail -f logs/bot_*.log`
 - **Log Level**: Controlled by `RUST_LOG` environment variable (default: `info`)
 
-The `/logs` directory is in `.gitignore` so log files won't be committed to the repository.
+The `logs/` directory is in `.gitignore` so log files won't be committed to the repository.
 
 ## Architecture
 
@@ -48,22 +59,45 @@ The `/logs` directory is in `.gitignore` so log files won't be committed to the 
     - Refreshes blockhash every 10 seconds
     - Spawns concurrent tasks per token mint
 
-2. **DEX Modules** (`src/dex/`): Each DEX has its own module with specific swap instruction implementations:
+2. **Arbitrage Module** (`src/arb/`): Advanced arbitrage implementation with:
+    - **Chain Analysis** (`arb/chain/`): Transaction parsing and analysis
+    - **Pool Management** (`arb/pool/`): DEX-specific pool implementations
+    - **Global State** (`arb/global/`): Database connections and shared state
+    - **Subscribers** (`arb/subscriber/`): PubSub and Yellowstone gRPC support
+    - **Constants** (`arb/constant/`): DEX types, pool owners, and program IDs
+    - **Utilities** (`arb/util/`): Helper functions and common operations
+
+3. **DEX Modules** (`src/dex/`): Each DEX has its own module with specific swap instruction implementations:
     - Raydium (V4, CPMM, CLMM)
     - Meteora (DLMM, Dynamic AMM, DAMM V2)
     - Orca Whirlpool
     - Pump, SolFi, Vertigo
 
-3. **Transaction System** (`src/transaction.rs`):
+4. **Transaction System** (`src/transaction.rs`):
     - Builds arbitrage instructions with compute budget optimization
     - Uses Address Lookup Tables (ALTs) for transaction compression
     - Supports multi-RPC broadcasting ("spam" mode)
     - Integrates Kamino flashloans when enabled
 
-4. **Pool Management** (`src/pools.rs`, `src/refresh.rs`):
+5. **Pool Management** (`src/pools.rs`, `src/refresh.rs`):
     - Unified data structures for different pool types
     - Real-time account data refresh
     - Tracks vault accounts, authorities, and fees
+    - Pool checker for validation
+
+6. **Web Server** (`src/server.rs`): HTTP API endpoints for monitoring
+
+7. **Database Integration**: Optional PostgreSQL support for:
+    - Pool mint tracking
+    - Historical data storage
+    - Analytics and reporting
+
+### Subscription Methods
+
+The bot supports multiple ways to monitor the blockchain:
+
+1. **PubSub** (`arb/subscriber/pubsub.rs`): WebSocket-based real-time updates
+2. **Yellowstone gRPC** (`arb/subscriber/yellowstone.rs`): High-performance streaming
 
 ### Key Design Patterns
 
@@ -71,6 +105,7 @@ The `/logs` directory is in `.gitignore` so log files won't be committed to the 
 - **Async processing**: Heavy use of Tokio for concurrency
 - **Modular DEX support**: Each DEX isolated in its own module
 - **Error resilience**: Continues operation on individual failures
+- **Database optional**: Can run with or without PostgreSQL
 
 ### Transaction Flow
 
@@ -95,18 +130,102 @@ The `/logs` directory is in `.gitignore` so log files won't be committed to the 
 The `config.toml` must include:
 
 - Bot settings (compute limits, delays)
-- Routing config with mint lists and pool addresses per DEX
+- Routing config with mint lists and pool addresses per DEX:
+  - `pump_pool_list`
+  - `raydium_pool_list`
+  - `raydium_cp_pool_list`
+  - `raydium_clmm_pool_list`
+  - `meteora_damm_pool_list`
+  - `meteora_dlmm_pool_list`
+  - `meteora_damm_v2_pool_list`
+  - `whirlpool_pool_list`
+  - `vertigo_pool_list`
+  - `lookup_table_accounts`
 - RPC endpoints
 - Wallet private key
 - Optional: Spam mode settings, Kamino flashloan
 
 ### Development Notes
 
-- No formal test suite exists (demo implementation)
+- Includes test utilities in `src/test/`
 - Pool addresses must be manually configured
 - Lookup table accounts required for transaction compression
 - Each DEX module contains specific instruction building logic
 - Transaction size optimization critical for success
+- Database schema migrations may be required for updates
+- Supports both mainnet and devnet configurations
+
+## Database Management
+
+### Initial Setup
+
+```bash
+# Install sqlx-cli (one-time setup)
+cargo install sqlx-cli --no-default-features --features postgres
+
+# Configure database connection
+cp .env.example .env
+# Edit .env and set DATABASE_URL=postgresql://username:password@localhost/database_name
+
+# Create database (if not exists)
+sqlx database create
+
+# Run existing migrations
+sqlx migrate run
+```
+
+### Migration Commands
+
+```bash
+# Create a new migration
+sqlx migrate add <migration_name>
+# This creates a new file in migrations/ directory
+
+# Run pending migrations
+sqlx migrate run
+
+# Revert the last migration
+sqlx migrate revert
+
+# Check migration status
+sqlx migrate info
+
+# List all applied migrations
+sqlx migrate list
+```
+
+### Database Backup and Restore
+
+```bash
+# Backup data only (without schema)
+source .env && pg_dump -a "$DATABASE_URL" > ~/Downloads/backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup full database (schema + data)
+source .env && pg_dump "$DATABASE_URL" > ~/Downloads/full_backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restore from backup
+source .env && psql "$DATABASE_URL" < ~/Downloads/backup_file.sql
+```
+
+### Current Database Schema
+
+The database currently has the following table:
+
+- **pool_mints**: Stores DEX pool information
+  - `id`: Primary key
+  - `pool_id`: Unique pool identifier
+  - `desired_mint`: Token mint address
+  - `the_other_mint`: Paired token mint address  
+  - `dex_type`: DEX protocol type (e.g., MeteoraDlmm, RaydiumV4)
+  - `created_at`: Timestamp of record creation
+  - `updated_at`: Timestamp of last update
+
+### Database Usage in Code
+
+The bot uses the database through `src/arb/global/db.rs` which provides:
+- Connection pooling via sqlx
+- Async database operations
+- Pool mint tracking and queries
 
 ## Coding Principles
 I am an experienced engineer with typescript, java, kotlin but not familiar with rust, I need you advise on best practice and help me code.
