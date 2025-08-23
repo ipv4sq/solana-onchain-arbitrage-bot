@@ -277,3 +277,5 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 - Every swap transaction must include the coin creator's vault authority account
 - This is derived using PDA: `["creator_vault", coin_creator_pubkey]`
 - Part of the trading fees automatically flow to the token creator's vault
+
+- for seaorm models, you should ommit created_at updated_at fields, they are optional and should be taken care of db during inserts and update

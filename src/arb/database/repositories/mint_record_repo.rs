@@ -1,9 +1,8 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::mint_record::{self, Entity as MintRecord, Model};
 use anyhow::Result;
-use chrono::Utc;
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveValue::{NotSet, Set}, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use solana_program::pubkey::Pubkey;
 
 pub struct MintRecordRepository {
@@ -16,17 +15,13 @@ impl MintRecordRepository {
     }
 
     pub async fn upsert_mint(&self, mut mint: Model) -> Result<Model> {
-        let now = Utc::now();
-        mint.created_at = now;
-        mint.updated_at = now;
-
         let active_model = mint_record::ActiveModel {
             address: Set(mint.address.clone()),
             symbol: Set(mint.symbol.clone()),
             decimals: Set(mint.decimals),
             program: Set(mint.program.clone()),
-            created_at: Set(mint.created_at),
-            updated_at: Set(mint.updated_at),
+            created_at: NotSet,
+            updated_at: NotSet,
         };
 
         // Try insert with on_conflict do nothing

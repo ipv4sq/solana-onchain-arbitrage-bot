@@ -10,8 +10,8 @@ pub struct Model {
     pub symbol: String,
     pub decimals: i16,
     pub program: PubkeyType,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
