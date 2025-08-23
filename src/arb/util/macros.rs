@@ -16,3 +16,10 @@ macro_rules! ok_map_else {
         }
     };
 }
+
+#[macro_export]
+macro_rules! empty_ok {
+    () => {
+        Ok(())
+    };
+}
