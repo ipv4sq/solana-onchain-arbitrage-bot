@@ -1,17 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::enums::dex_type::DexType;
-    use crate::arb::global::constant::mint::Mints;
-    use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
     use crate::arb::convention::pool::register::AnyPoolConfig;
+    use crate::arb::global::constant::mint::Mints;
+    use crate::arb::global::enums::dex_type::DexType;
+    use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
     use crate::arb::program::mev_bot::fire::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::arb::strategy::unmarshal::read_from_database;
     use crate::constants::helpers::ToPubkey;
-    use itertools::Itertools;
+
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
-    use std::cmp::min;
+
     use std::io::{self, Write};
     use tracing::info;
 
@@ -95,53 +94,5 @@ mod tests {
             1000,
         )
         .unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_polling() {
-        let pools_data = read_from_database().await.unwrap();
-        let wallet = get_wallet();
-        let unit_price = 10_000;
-        let compute_unit_limit = 400_000;
-        let minimum_profit = 1_000_000; // 0.001 SOL minimum profit
-
-        let pools_of_mint = pools_data
-            .into_iter()
-            .find_or_first(|p| p.pools.len() > 2)
-            .expect("No pools found for the target mint");
-
-        // Convert PoolInfo to AnyPoolConfig
-        let pool_configs = futures::future::join_all(pools_of_mint.pools.into_iter().map(
-            |pool_info| async move {
-                AnyPoolConfig::from_address(&pool_info.pool_id, pool_info.dex_type).await
-            },
-        ))
-        .await
-        .into_iter()
-        .filter_map(Result::ok)
-        .collect::<Vec<_>>();
-
-        // Simulate 10 times with 3 seconds interval
-        for i in 1..=10 {
-            info!("Simulation #{}", i);
-            io::stdout().flush().unwrap();
-            
-            let result = build_and_send(
-                &wallet,
-                &pools_of_mint.minor_mint,
-                compute_unit_limit,
-                unit_price,
-                &pool_configs,
-                minimum_profit,
-            )
-            .await;
-
-            println!("Result #{}: {:?}", i, result);
-            io::stdout().flush().unwrap();
-            
-            if i < 10 {
-                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-            }
-        }
     }
 }
