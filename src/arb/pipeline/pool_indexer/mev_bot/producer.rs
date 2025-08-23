@@ -40,7 +40,7 @@ impl SolanaMevBotOnchainListener {
     }
 
     async fn handle_transaction(tx_update: GrpcTransactionUpdate) -> Result<()> {
-        use crate::arb::program::mev_bot::onchain_monitor::consumer::try_publish_mev_transaction as try_publish;
+        use crate::arb::pipeline::pool_indexer::mev_bot::consumer::try_publish_mev_transaction as try_publish;
         info!("Received transaction: {:?}", tx_update.signature);
         if let Err(e) = tx_update.to_unified().and_then(try_publish) {
             tracing::error!("Failed to publish SMB transaction: {} to the consumer", e);

@@ -11,7 +11,8 @@ pub mod test;
 mod transaction;
 pub mod util;
 
-use arb::{global, program};
+use arb::pipeline::pool_indexer;
+use arb::{global, pipeline, program};
 use clap::{App, Arg};
 use std::fs;
 use std::path::Path;
@@ -76,13 +77,12 @@ async fn main() -> anyhow::Result<()> {
     info!("Blockhash holder initialized");
 
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)
-    let _ = &program::mev_bot::onchain_monitor::consumer::MEV_TX_CONSUMER;
+    let _ = &pipeline::pool_indexer::mev_bot::consumer::MEV_TX_CONSUMER;
     info!("MEV transaction consumer initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = tokio::spawn(async move {
-        if let Err(e) =
-            program::mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await
+        if let Err(e) = pipeline::pool_indexer::mev_bot::producer::start_mev_bot_subscriber().await
         {
             tracing::error!("MEV bot subscriber error: {}", e);
         }

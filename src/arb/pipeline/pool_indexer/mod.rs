@@ -1,4 +1,4 @@
+pub mod mev_bot;
 pub mod pool_recorder;
-
-mod entry;
+pub mod registrar;
 mod token_recorder;
