@@ -3,6 +3,7 @@ use crate::arb::convention::chain::transaction::Transaction;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::convention::pool::util::ata;
 use crate::arb::global::constant::token_program::TokenProgram;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::arb::util::traits::signature::ToSignature;
 use anyhow::Result;
 use instruction::create_associated_token_account_idempotent;
@@ -20,7 +21,6 @@ use spl_associated_token_account::instruction;
 use std::cmp::min;
 use std::sync::Arc;
 use tracing::info;
-use crate::arb::util::traits::pubkey::ToPubkey;
 
 pub async fn send_tx_with_retry(tx: &VersionedTransaction, max_retries: u64) -> Result<Signature> {
     let tx_bytes = bincode::serialize(tx)?;

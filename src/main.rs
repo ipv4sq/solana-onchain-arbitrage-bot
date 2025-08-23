@@ -1,7 +1,6 @@
 pub mod arb;
 mod bot;
 mod config;
-pub mod constants;
 mod dex;
 mod pools;
 mod refresh;
