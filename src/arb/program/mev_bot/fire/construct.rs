@@ -8,7 +8,6 @@ use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2I
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
-use crate::constants::addresses::SPL_TOKEN_KEY;
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
@@ -128,7 +127,7 @@ pub fn create_invoke_mev_instruction(
         minor_mint.to_readonly(),
         //TODO  below both will be updated to the real token program
         TokenProgram::SPL_TOKEN.to_program(),
-        ata(signer, minor_mint, &TokenProgram::SPL_TOKEN.to_pubkey()).to_writable(),
+        ata(signer, minor_mint, &TokenProgram::SPL_TOKEN).to_writable(),
     ]);
 
     // let the_other_mint_account = ata(&signer(), )

@@ -1,4 +1,4 @@
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::utils::expect_owner;
 use crate::dex::pool_checker::PoolChecker;
@@ -39,7 +39,7 @@ impl PoolFetch for RaydiumPool {
             ));
         }
 
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
 
         if not_in!(sol, amm_info.coin_mint, amm_info.pc_mint) {
             return Err(anyhow::anyhow!(
@@ -97,7 +97,7 @@ impl PoolFetch for RaydiumCpPool {
             ));
         }
 
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         if not_in!(sol, info.token_0_mint, info.token_1_mint) {
             return Err(anyhow::anyhow!(
                 "SOL is not present in Raydium CP pool: {}",
@@ -149,7 +149,7 @@ impl PoolFetch for RaydiumClmmPool {
         expect_owner(pool, &account, &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey())?;
 
         let info = RaydiumClmmPoolInfo::load_checked(&account.data)?;
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         info.consists_of(mint, &sol, Some(pool))?;
 
         Ok(RaydiumClmmPool {

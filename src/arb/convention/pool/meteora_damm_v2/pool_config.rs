@@ -20,8 +20,8 @@ impl PoolConfigInit<MeteoraDammV2PoolData> for MeteoraDammV2Config {
             data: pool_data,
             desired_mint,
             minor_mint,
-            desired_mint_token_program: TokenProgram::SPL_TOKEN.to_pubkey(),
-            minor_mint_token_program: TokenProgram::TOKEN_2022.to_pubkey(),
+            desired_mint_token_program: TokenProgram::SPL_TOKEN,
+            minor_mint_token_program: TokenProgram::TOKEN_2022,
         })
     }
 }

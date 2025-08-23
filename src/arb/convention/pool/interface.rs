@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::util::types::mint_pair::MintPair;
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::types::mint_pair::MintPair;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -24,6 +24,10 @@ pub trait PoolDataLoader: Sized {
 
     fn shall_contain(&self, mint: &Pubkey) -> Result<()> {
         MintPair(self.base_mint(), self.quote_mint()).shall_contain(mint)
+    }
+
+    fn mint_pair(&self) -> MintPair {
+        return MintPair(self.base_mint(), self.quote_mint());
     }
 
     fn the_other_mint(&self, excluded_mint: &Pubkey) -> Result<Pubkey> {

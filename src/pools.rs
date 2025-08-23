@@ -4,10 +4,7 @@ use crate::dex::raydium::config::{RaydiumClmmPool, RaydiumCpPool, RaydiumPool};
 use crate::dex::solfi::config::SolfiPool;
 use crate::dex::vertigo::config::VertigoPool;
 use crate::dex::whirlpool::config::WhirlpoolPool;
-use crate::{
-    constants::addresses::TokenMint,
-    dex::raydium::{pool_clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id},
-};
+use crate::dex::raydium::{pool_clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id};
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -36,7 +33,7 @@ pub struct MintPoolData {
 
 impl MintPoolData {
     pub fn new(mint: &str, wallet_account: &str, token_program: Pubkey) -> anyhow::Result<Self> {
-        let sol_mint = Pubkey::from_str(TokenMint::SOL)?;
+        let sol_mint = crate::arb::global::constant::mint::Mints::WSOL;
         let wallet_pk = Pubkey::from_str(wallet_account)?;
         let wallet_wsol_pk =
             spl_associated_token_account::get_associated_token_address(&wallet_pk, &sol_mint);

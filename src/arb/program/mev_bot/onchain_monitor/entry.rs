@@ -3,7 +3,7 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::repository::get_repository_manager;
 use crate::arb::global::state::mem_pool::mem_pool;
 use crate::arb::program::mev_bot::ix;
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use anyhow::Result;
 use tracing::info;
 
@@ -64,8 +64,8 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
         }
     }
     
-    log_token_changes(&balance_changes, TokenMint::SOL, "WSOL");
-    log_token_changes(&balance_changes, TokenMint::USDC, "USDC");
+    log_token_changes(&balance_changes, &Mints::WSOL.to_string(), "WSOL");
+    log_token_changes(&balance_changes, &Mints::USDC.to_string(), "USDC");
 
     let swaps = tx.extract_known_swap_inner_ix(inner);
     for swap in swaps {

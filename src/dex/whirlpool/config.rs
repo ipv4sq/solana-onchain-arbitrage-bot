@@ -1,4 +1,4 @@
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::utils::expect_owner;
 use crate::dex::pool_checker::PoolChecker;
@@ -27,7 +27,7 @@ impl PoolFetch for WhirlpoolPool {
         expect_owner(pool, &account, &WHIRLPOOL_PROGRAM_ID.to_pubkey())?;
 
         let info = WhirlpoolInfo::try_deserialize(&account.data)?;
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         info.consists_of(mint, &sol, Some(pool))?;
 
         Ok(WhirlpoolPool {

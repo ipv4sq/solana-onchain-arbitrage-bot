@@ -1,12 +1,12 @@
 use crate::arb::convention::chain::instruction::{Instruction, ParsedTransferChecked};
-use crate::constants::addresses::TOKEN_2022_KEY;
+use crate::arb::global::constant::token_program::TokenProgram;
 use solana_program::instruction::AccountMeta;
 use spl_token::instruction::TokenInstruction;
 
 impl Instruction {
     pub fn as_sol_token_transfer_checked(&self) -> Option<ParsedTransferChecked> {
         // Verify this is a token program instruction (supports both Token and Token-2022)
-        if self.program_id != spl_token::ID && self.program_id != *TOKEN_2022_KEY {
+        if self.program_id != spl_token::ID && self.program_id != TokenProgram::TOKEN_2022 {
             return None;
         }
         

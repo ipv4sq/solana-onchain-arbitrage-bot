@@ -1,4 +1,4 @@
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use crate::constants::helpers::ToPubkey;
 use crate::in_list;
 use solana_program::pubkey::Pubkey;
@@ -11,7 +11,7 @@ pub trait PoolChecker: Sized {
     fn get_token_vault(&self) -> Pubkey;
 
     fn include_sol(&self) -> bool {
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         in_list!(sol, self.get_base_mint(), self.get_token_mint())
     }
 
@@ -50,7 +50,7 @@ pub trait PoolChecker: Sized {
 
     fn get_sol_mint(&self) -> anyhow::Result<Pubkey> {
         self.shall_include_sol(None)?;
-        if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
+        if self.get_base_mint() == Mints::WSOL {
             Ok(self.get_base_mint())
         } else {
             Ok(self.get_token_mint())
@@ -59,7 +59,7 @@ pub trait PoolChecker: Sized {
 
     fn get_sol_vault(&self) -> anyhow::Result<Pubkey> {
         self.shall_include_sol(None)?;
-        if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
+        if self.get_base_mint() == Mints::WSOL {
             Ok(self.get_base_vault())
         } else {
             Ok(self.get_token_vault())
@@ -68,7 +68,7 @@ pub trait PoolChecker: Sized {
 
     fn get_not_sol_mint(&self) -> anyhow::Result<Pubkey> {
         self.shall_include_sol(None)?;
-        if self.get_base_mint() == TokenMint::SOL.to_pubkey() {
+        if self.get_base_mint() == Mints::WSOL {
             Ok(self.get_token_mint())
         } else {
             Ok(self.get_base_mint())

@@ -1,8 +1,9 @@
 use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mev_bot::MevBot;
+use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
-use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
@@ -113,7 +114,7 @@ pub fn is_mev_box_ix_profitable(
 // Helper function to find the owner of an ATA by trying to derive it
 fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> Option<Pubkey> {
     // Try both token programs
-    let token_programs = [spl_token::ID, *TOKEN_2022_KEY];
+    let token_programs = [spl_token::ID, TokenProgram::TOKEN_2022];
 
     // Check each potential owner with each token program
     for owner in potential_owners {
@@ -134,9 +135,9 @@ fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> O
 
 #[cfg(test)]
 mod tests {
+    use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::fetch_tx;
     use crate::arb::program::mev_bot::ix::{extract_mev_instruction, is_mev_box_ix_profitable};
-    use crate::constants::addresses::TokenMint;
     use crate::constants::helpers::ToPubkey;
 
     #[tokio::test]
@@ -210,7 +211,7 @@ mod tests {
 
         // Expected beneficial owner
         let expected_owner = "9FEjMA5uSKMWkLpaXJQY7V4nLm2xvvMxkeyeGEi7SLEg".to_pubkey();
-        let wsol_mint = TokenMint::SOL.to_pubkey();
+        let wsol_mint = Mints::WSOL;
 
         // Expected profit in lamports (0.236353237 SOL = 236353237 lamports)
         let expected_profit_lamports = 236353237i64;

@@ -1,4 +1,4 @@
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::utils::expect_owner;
 use crate::dex::meteora::constants::{METEORA_DAMM_PROGRAM_ID, METEORA_DLMM_PROGRAM_ID};
@@ -50,7 +50,7 @@ impl PoolFetch for MeteoraDAmmPool {
 
         let info = meteora_damm_cpi::Pool::deserialize_unchecked(&account.data)?;
 
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         info.consists_of(&sol, mint, Some(pool))?;
 
         Ok(MeteoraDAmmPool {
@@ -98,7 +98,7 @@ impl PoolFetch for MeteoraDlmmPool {
         expect_owner(pool, &account, &METEORA_DLMM_PROGRAM_ID.to_pubkey())?;
 
         let info = MeteoraDlmmInfo::load_checked(&account.data)?;
-        let sol = TokenMint::SOL.to_pubkey();
+        let sol = Mints::WSOL;
         info.consists_of(mint, &sol, Some(pool))?;
 
         Ok(MeteoraDlmmPool {

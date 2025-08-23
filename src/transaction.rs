@@ -18,7 +18,8 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::arb::global::constant::mev_bot::MevBot;
-use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
+use crate::constants::helpers::ToPubkey;
+use crate::arb::global::constant::mint::Mints;
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,
@@ -183,9 +184,9 @@ fn create_swap_instruction(
     let memo_program = Pubkey::from_str("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr")?;
 
     let wallet = wallet_kp.pubkey();
-    let sol_mint_pubkey = TokenMint::SOL.to_pubkey();
+    let sol_mint_pubkey = Mints::WSOL;
     let wallet_sol_account = mint_pool_data.wallet_wsol_account;
-    let usdc_mint = TokenMint::USDC.to_pubkey();
+    let usdc_mint = Mints::USDC;
 
     let mut accounts = vec![
         AccountMeta::new(wallet, true), // 0. Wallet (signer)

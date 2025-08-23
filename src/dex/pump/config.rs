@@ -1,4 +1,4 @@
-use crate::constants::addresses::TokenMint;
+use crate::arb::global::constant::mint::Mints;
 use crate::constants::helpers::ToPubkey;
 use crate::constants::utils::expect_owner;
 use crate::dex::pool_fetch::PoolFetch;
@@ -40,7 +40,7 @@ impl PoolFetch for PumpPool {
             )
         })?;
 
-        let sol_mint = TokenMint::SOL.to_pubkey();
+        let sol_mint = Mints::WSOL;
         let (sol_vault, token_vault) = amm_info.get_vaults_for_sol(&sol_mint).ok_or_else(|| {
             anyhow::anyhow!(
                 "Pump pool {} does not contain SOL. Base: {}, Quote: {}",
@@ -98,6 +98,6 @@ mod tests {
 
         let result = PumpPool::fetch(&pool_address, &mint_pubkey, &rpc_client).unwrap();
         assert_eq!(result.pool.to_string(), pool_address.to_string());
-        assert_eq!(result.base_mint, TokenMint::SOL.to_pubkey());
+        assert_eq!(result.base_mint, Mints::WSOL);
     }
 }

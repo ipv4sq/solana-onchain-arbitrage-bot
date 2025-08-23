@@ -3,7 +3,6 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 use std::str::FromStr;
 
-/// Extension trait for &str to easily convert to Pubkey
 pub trait ToPubkey {
     fn to_pubkey(&self) -> Pubkey;
 }
@@ -20,7 +19,6 @@ impl ToPubkey for String {
     }
 }
 
-/// Extension trait for &str to easily convert to Signature
 pub trait ToSignature {
     fn to_sig(&self) -> Signature;
 }
@@ -37,7 +35,6 @@ impl ToSignature for String {
     }
 }
 
-/// Extension trait for Pubkey to easily create AccountMeta
 pub trait ToAccountMeta {
     fn to_signer(&self) -> AccountMeta;
     fn to_readonly(&self) -> AccountMeta;

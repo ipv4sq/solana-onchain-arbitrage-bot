@@ -1,5 +1,4 @@
 use crate::constants::{
-    addresses::TokenMint,
     helpers::ToPubkey,
 };
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
@@ -22,6 +21,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use tracing::{error, info};
+use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 
 pub async fn initialize_pool_data(
@@ -46,7 +46,7 @@ pub async fn initialize_pool_data(
     let mint_account = rpc_client.get_account(&mint_pubkey)?;
 
     // Determine token program based on mint account owner
-    let token_2022_program_id = TokenProgram::TOKEN_2022.to_pubkey();
+    let token_2022_program_id = TokenProgram::TOKEN_2022;
     let token_program = if mint_account.owner == spl_token::ID {
         spl_token::ID
     } else if mint_account.owner == token_2022_program_id {
@@ -184,7 +184,7 @@ fn initialize_meteora_damm_pools(
                             ));
                         }
 
-                        let sol_mint = TokenMint::SOL.to_pubkey();
+                        let sol_mint = Mints::WSOL;
                         if pool.token_a_mint != sol_mint && pool.token_b_mint != sol_mint {
                             error!(
                                 "SOL is not present in Meteora DAMM pool {}",
@@ -320,14 +320,14 @@ fn initialize_meteora_damm_v2_pools(
                         );
                         info!("");
                         let token_x_vault =
-                            if TokenMint::SOL.to_pubkey() == meteora_damm_v2_info.base_mint {
+                            if Mints::WSOL == meteora_damm_v2_info.base_mint {
                                 meteora_damm_v2_info.quote_vault
                             } else {
                                 meteora_damm_v2_info.base_vault
                             };
 
                         let token_sol_vault =
-                            if TokenMint::SOL.to_pubkey() == meteora_damm_v2_info.base_mint {
+                            if Mints::WSOL == meteora_damm_v2_info.base_mint {
                                 meteora_damm_v2_info.base_vault
                             } else {
                                 meteora_damm_v2_info.quote_vault
@@ -402,13 +402,13 @@ fn initialize_solfi_pools(
                         info!("    Base vault: {}", solfi_info.base_vault.to_string());
                         info!("    Quote vault: {}", solfi_info.quote_vault.to_string());
 
-                        let token_x_vault = if TokenMint::SOL.to_pubkey() == solfi_info.base_mint {
+                        let token_x_vault = if Mints::WSOL == solfi_info.base_mint {
                             solfi_info.quote_vault
                         } else {
                             solfi_info.base_vault
                         };
 
-                        let token_sol_vault = if TokenMint::SOL.to_pubkey() == solfi_info.base_mint
+                        let token_sol_vault = if Mints::WSOL == solfi_info.base_mint
                         {
                             solfi_info.base_vault
                         } else {
