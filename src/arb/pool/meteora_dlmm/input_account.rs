@@ -6,7 +6,6 @@ use anyhow::Result;
 use itertools::concat;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use sqlx::encode::IsNull::No;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeteoraDlmmInputAccounts {

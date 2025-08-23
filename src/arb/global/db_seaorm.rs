@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::OnceCell;
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
-use crate::arb::repository::{DatabaseManager, PoolRepository, entity::{pool_mints, prelude::*}};
+use crate::arb::repository::{DatabaseManager, entity::{pool_mints, prelude::*}};
 
 #[derive(Debug, Clone)]
 pub struct PoolMint {
@@ -76,7 +76,7 @@ impl Database {
 
         // Check if pool exists
         let existing = PoolMints::find()
-            .filter(pool_mints::Column::PoolId.eq(pool_id_str.clone()))
+            .filter(pool_mints::Column::PoolId.eq(&pool_id_str))
             .one(db)
             .await
             .context("Failed to check existing pool")?;
@@ -143,13 +143,13 @@ impl Database {
                 Condition::any()
                     .add(
                         Condition::all()
-                            .add(pool_mints::Column::DesiredMint.eq(desired_mint_str.clone()))
-                            .add(pool_mints::Column::TheOtherMint.eq(the_other_mint_str.clone()))
+                            .add(pool_mints::Column::DesiredMint.eq(&desired_mint_str))
+                            .add(pool_mints::Column::TheOtherMint.eq(&the_other_mint_str))
                     )
                     .add(
                         Condition::all()
-                            .add(pool_mints::Column::DesiredMint.eq(the_other_mint_str))
-                            .add(pool_mints::Column::TheOtherMint.eq(desired_mint_str))
+                            .add(pool_mints::Column::DesiredMint.eq(&the_other_mint_str))
+                            .add(pool_mints::Column::TheOtherMint.eq(&desired_mint_str))
                     )
             )
             .order_by_desc(pool_mints::Column::CreatedAt)
@@ -173,7 +173,7 @@ mod tests {
         let pool_id = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263".to_pubkey();
         let desired_mint = "So11111111111111111111111111111111111111112".to_pubkey();
         let the_other_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
-        let dex_type = "raydium_v4";
+        let dex_type = "RaydiumV4";
 
         db.record_pool_and_mints(&pool_id, &desired_mint, &the_other_mint, dex_type)
             .await?;
@@ -181,7 +181,7 @@ mod tests {
         let all_pools = db.list_pool_mints().await?;
         assert!(!all_pools.is_empty());
 
-        let raydium_pools = db.list_pool_mints_by_dex("raydium_v4").await?;
+        let raydium_pools = db.list_pool_mints_by_dex("RaydiumV4").await?;
         assert!(!raydium_pools.is_empty());
 
         let found_pools = db

@@ -58,6 +58,9 @@ itertools = "0.10.5"
 
 # Database
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "chrono"] }
+sea-orm = { version = "0.10", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "postgres-array"] }
+sea-query = "0.28"
+sea-query-binder = { version = "0.3", features = ["sqlx-postgres"] }
 dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 parking_lot = "0.12.4"

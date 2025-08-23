@@ -54,20 +54,20 @@ impl DexType {
         }
     }
     
-    // Convert to database string representation
+    // Convert to database string representation (matches Debug format)
     pub fn to_db_string(&self) -> &'static str {
         match self {
-            DexType::RaydiumV4 => "raydium_v4",
-            DexType::RaydiumCp => "raydium_cp",
-            DexType::RaydiumClmm => "raydium_clmm",
-            DexType::Pump => "pump",
-            DexType::MeteoraDlmm => "meteora_dlmm",
-            DexType::MeteoraDamm => "meteora_damm",
-            DexType::MeteoraDammV2 => "meteora_damm_v2",
-            DexType::OrcaWhirlpool => "orca_whirlpool",
-            DexType::Solfi => "solfi",
-            DexType::Vertigo => "vertigo",
-            DexType::Unknown => "unknown",
+            DexType::RaydiumV4 => "RaydiumV4",
+            DexType::RaydiumCp => "RaydiumCp",
+            DexType::RaydiumClmm => "RaydiumClmm",
+            DexType::Pump => "Pump",
+            DexType::MeteoraDlmm => "MeteoraDlmm",
+            DexType::MeteoraDamm => "MeteoraDamm",
+            DexType::MeteoraDammV2 => "MeteoraDammV2",
+            DexType::OrcaWhirlpool => "OrcaWhirlpool",
+            DexType::Solfi => "Solfi",
+            DexType::Vertigo => "Vertigo",
+            DexType::Unknown => "Unknown",
         }
     }
 }
