@@ -26,17 +26,10 @@ pub trait PoolDataLoader: Sized {
         MintPair(self.base_mint(), self.quote_mint()).shall_contain(mint)
     }
 
-    fn mint_pair(&self) -> MintPair {
+    fn pair(&self) -> MintPair {
         return MintPair(self.base_mint(), self.quote_mint());
     }
-
-    fn the_other_mint(&self, excluded_mint: &Pubkey) -> Result<Pubkey> {
-        MintPair(self.base_mint(), self.quote_mint()).minor_mint()
-    }
-
-    fn desired_mint(&self) -> Result<Pubkey> {
-        MintPair(self.base_mint(), self.quote_mint()).desired_mint()
-    }
+    
 }
 
 #[derive(Debug, Clone)]

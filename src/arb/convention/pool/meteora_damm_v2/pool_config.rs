@@ -14,7 +14,7 @@ impl PoolConfigInit<MeteoraDammV2PoolData> for MeteoraDammV2Config {
         desired_mint: Pubkey,
     ) -> Result<Self> {
         pool_data.shall_contain(&desired_mint)?;
-        let minor_mint = pool_data.the_other_mint(pool)?;
+        let minor_mint = pool_data.pair().minor_mint()?;
         Ok(MeteoraDammV2Config {
             pool: *pool,
             data: pool_data,

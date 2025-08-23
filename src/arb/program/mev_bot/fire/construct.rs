@@ -10,6 +10,7 @@ use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
@@ -22,7 +23,6 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::info;
-use crate::arb::util::traits::pubkey::ToPubkey;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -140,7 +140,7 @@ pub fn create_invoke_mev_instruction(
                 )?;
                 accounts.extend(vec![
                     built.program,
-                    c.data.desired_mint()?.to_readonly(),
+                    c.data.pair().desired_mint()?.to_readonly(),
                     built.event_authority,
                     built.lb_pair,
                     built.reverse_x,
@@ -155,7 +155,7 @@ pub fn create_invoke_mev_instruction(
                 )?;
                 accounts.extend(vec![
                     built.meteora_program,
-                    c.data.desired_mint()?.to_readonly(),
+                    c.data.pair().desired_mint()?.to_readonly(),
                     built.event_authority,
                     built.pool_authority,
                     c.pool.to_writable(),
