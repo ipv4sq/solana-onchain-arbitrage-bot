@@ -2,7 +2,7 @@ use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::convention::chain::transaction::Transaction;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::convention::pool::util::ata;
-use crate::constants::addresses::TokenProgram;
+use crate::arb::global::constant::token_program::TokenProgram;
 use crate::constants::helpers::{ToPubkey, ToSignature};
 use anyhow::Result;
 use instruction::create_associated_token_account_idempotent;

@@ -2,7 +2,7 @@ use crate::arb::convention::pool::interface::{PoolConfig, PoolConfigInit, PoolDa
 use crate::arb::convention::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::constants::addresses::TokenProgram;
+use crate::arb::global::constant::token_program::TokenProgram;
 use crate::constants::helpers::ToPubkey;
 
 const RAYDIUM_CPMM_AUTHORITY: &str = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL";

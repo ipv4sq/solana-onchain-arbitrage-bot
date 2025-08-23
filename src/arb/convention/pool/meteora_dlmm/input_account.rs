@@ -69,7 +69,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
     ) -> Result<MeteoraDlmmInputAccounts> {
         use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
-        use crate::constants::addresses::TokenProgram;
+        use crate::arb::global::constant::token_program::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
@@ -131,7 +131,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
     ) -> Result<MeteoraDlmmInputAccounts> {
         use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
-        use crate::constants::addresses::TokenProgram;
+        use crate::arb::global::constant::token_program::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
@@ -258,7 +258,7 @@ mod tests {
     use crate::arb::convention::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
     use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::constants::addresses::TokenProgram;
+    use crate::arb::global::constant::token_program::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;

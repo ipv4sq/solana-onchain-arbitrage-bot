@@ -83,7 +83,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         output_amount: Option<u64>,
     ) -> Result<MeteoraDammV2InputAccount> {
         use crate::arb::global::constant::pool_program::PoolPrograms;
-        use crate::constants::addresses::TokenProgram;
+        use crate::arb::global::constant::token_program::TokenProgram;
         // Pool authority is a fixed PDA for DAMM V2
         let pool_authority = "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC".to_readonly();
 
@@ -188,7 +188,7 @@ mod tests {
     use crate::arb::convention::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::convention::pool::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::constants::addresses::TokenProgram;
+    use crate::arb::global::constant::token_program::TokenProgram;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
 
