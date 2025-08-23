@@ -2,6 +2,7 @@ use crate::arb::convention::pool::interface::PoolDataLoader;
 use crate::arb::convention::pool::meteora_damm_v2::pool_data_type::{
     PoolFeesStruct, PoolMetrics, RewardInfo,
 };
+use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
@@ -16,14 +17,19 @@ pub struct MeteoraDammV2PoolData {
     pub token_b_vault: Pubkey,
     pub whitelisted_vault: Pubkey,
     pub partner: Pubkey,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub liquidity: u128,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub _padding: u128,
     pub protocol_a_fee: u64,
     pub protocol_b_fee: u64,
     pub partner_a_fee: u64,
     pub partner_b_fee: u64,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub sqrt_min_price: u128,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub sqrt_max_price: u128,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub sqrt_price: u128,
     pub activation_point: u64,
     pub activation_type: u8,
@@ -35,6 +41,7 @@ pub struct MeteoraDammV2PoolData {
     pub _padding_0: [u8; 2],
     pub fee_a_per_liquidity: [u8; 32],
     pub fee_b_per_liquidity: [u8; 32],
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub permanent_lock_liquidity: u128,
     pub metrics: PoolMetrics,
     pub creator: Pubkey,

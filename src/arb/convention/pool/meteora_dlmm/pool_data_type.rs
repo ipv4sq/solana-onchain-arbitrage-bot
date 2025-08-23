@@ -1,6 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
+use crate::arb::util::serde_helpers;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
@@ -44,6 +45,7 @@ pub struct RewardInfo {
     pub funder: Pubkey,
     pub reward_duration: u64,
     pub reward_duration_end: u64,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub reward_rate: u128,
     pub last_update_time: u64,
     pub cumulative_seconds_with_empty_liquidity_reward: u64,

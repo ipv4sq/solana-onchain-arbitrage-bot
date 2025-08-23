@@ -44,7 +44,7 @@ impl BlockhashHolder {
 
                 // Run the update loop forever on this dedicated thread
                 runtime.block_on(async move {
-                    let mut interval = interval(Duration::from_millis(200));
+                    let mut interval = interval(Duration::from_millis(400));
 
                     loop {
                         interval.tick().await;

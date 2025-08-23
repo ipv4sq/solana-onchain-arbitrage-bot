@@ -1,6 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
+use crate::arb::util::serde_helpers;
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
@@ -26,7 +27,9 @@ pub struct DynamicFeeStruct {
     pub decay_period: u16,
     pub reduction_factor: u16,
     pub last_update_timestamp: u64,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub bin_step_u128: u128,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub sqrt_price_reference: u128,
     pub volatility_accumulator: u64,
     pub volatility_reference: u64,
@@ -48,7 +51,9 @@ pub struct PoolFeesStruct {
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct PoolMetrics {
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub total_lp_a_fee: u128,
+    #[serde(with = "serde_helpers::u128_as_string")]
     pub total_lp_b_fee: u128,
     pub total_protocol_a_fee: u64,
     pub total_protocol_b_fee: u64,

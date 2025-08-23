@@ -3,7 +3,6 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::pipeline::pool_indexer::mev_bot::consumer::MEV_TX_CONSUMER;
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
-use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use tracing::info;
