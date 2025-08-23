@@ -1,12 +1,10 @@
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rust_decimal::Decimal;
-use crate::arb::repository::{
-    entity::{arbitrage_results, prelude::*},
-    error::RepositoryResult,
-    traits::WithConnection,
-};
+use crate::arb::repository::core::error::RepositoryResult;
+use crate::arb::repository::core::traits::WithConnection;
+use super::super::entity::{arbitrage_results, ArbitrageResults};
 
 pub struct ArbitrageRepository<'a> {
     db: &'a DatabaseConnection,
@@ -113,7 +111,7 @@ impl<'a> ArbitrageRepository<'a> {
             .column_as(arbitrage_results::Column::GasCost.sum(), "total_gas")
             .column_as(arbitrage_results::Column::Id.count(), "trade_count")
             .column_as(
-                Expr::cust("SUM(CASE WHEN success THEN 1 ELSE 0 END)"),
+                sea_orm::sea_query::Expr::cust("SUM(CASE WHEN success THEN 1 ELSE 0 END)"),
                 "success_count"
             )
             .filter(arbitrage_results::Column::Timestamp.gte(since))

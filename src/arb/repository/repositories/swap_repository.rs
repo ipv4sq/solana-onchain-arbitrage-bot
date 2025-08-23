@@ -1,11 +1,9 @@
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
-use chrono::{DateTime, Utc};
-use crate::arb::repository::{
-    entity::{swap_history, prelude::*},
-    error::RepositoryResult,
-    traits::WithConnection,
-};
+use chrono::Utc;
+use crate::arb::repository::core::error::RepositoryResult;
+use crate::arb::repository::core::traits::WithConnection;
+use super::super::entity::{swap_history, SwapHistory};
 
 pub struct SwapRepository<'a> {
     db: &'a DatabaseConnection,
@@ -134,7 +132,7 @@ impl<'a> SwapRepository<'a> {
             .select_only()
             .column_as(swap_history::Column::AmountIn.sum(), "total_volume")
             .column_as(swap_history::Column::Id.count(), "swap_count")
-            .column_as(swap_history::Column::AmountIn.sum().div(swap_history::Column::Id.count()), "avg_swap_size")
+            .column_as(swap_history::Column::AmountIn.sum(), "avg_swap_size")
             .filter(swap_history::Column::PoolId.eq(pool_id))
             .filter(swap_history::Column::Timestamp.gte(since))
             .filter(swap_history::Column::Success.eq(true))
@@ -142,11 +140,24 @@ impl<'a> SwapRepository<'a> {
             .one(self.db)
             .await?;
 
-        Ok(VolumeStats {
-            total_volume: stats.and_then(|s| s.total_volume).unwrap_or(0),
-            swap_count: stats.and_then(|s| s.swap_count).unwrap_or(0),
-            avg_swap_size: stats.and_then(|s| s.avg_swap_size).unwrap_or(0.0),
-        })
+        let result = match stats {
+            Some(s) => VolumeStats {
+                total_volume: s.total_volume.unwrap_or(0),
+                swap_count: s.swap_count.unwrap_or(0),
+                avg_swap_size: if s.swap_count.unwrap_or(0) > 0 {
+                    s.total_volume.unwrap_or(0) as f64 / s.swap_count.unwrap_or(1) as f64
+                } else {
+                    0.0
+                },
+            },
+            None => VolumeStats {
+                total_volume: 0,
+                swap_count: 0,
+                avg_swap_size: 0.0,
+            },
+        };
+        
+        Ok(result)
     }
 
     pub async fn cleanup_old(&self, days: i64) -> RepositoryResult<u64> {

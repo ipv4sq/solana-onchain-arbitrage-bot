@@ -1,12 +1,10 @@
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rust_decimal::Decimal;
-use crate::arb::repository::{
-    entity::{pool_metrics, prelude::*},
-    error::RepositoryResult,
-    traits::WithConnection,
-};
+use crate::arb::repository::core::error::RepositoryResult;
+use crate::arb::repository::core::traits::WithConnection;
+use super::super::entity::{pool_metrics, PoolMetrics};
 
 pub struct MetricsRepository<'a> {
     db: &'a DatabaseConnection,

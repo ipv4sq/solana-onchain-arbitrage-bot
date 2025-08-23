@@ -1,6 +1,7 @@
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::future::Future;
-use crate::arb::repository::error::{RepositoryError, RepositoryResult};
+
+use crate::arb::repository::core::error::{RepositoryError, RepositoryResult};
 
 pub struct TransactionManager<'a> {
     conn: &'a DatabaseConnection,

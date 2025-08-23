@@ -1,12 +1,9 @@
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
 use chrono::Utc;
-use crate::arb::repository::{
-    entity::{pool_mints, prelude::*},
-    error::{RepositoryError, RepositoryResult},
-    traits::{Repository, Paginate, Search, BatchOperations, WithConnection},
-};
-use async_trait::async_trait;
+use crate::arb::repository::core::error::RepositoryResult;
+use crate::arb::repository::core::traits::WithConnection;
+use super::super::entity::{pool_mints, prelude::*};
 
 pub struct PoolRepository<'a> {
     db: &'a DatabaseConnection,
@@ -85,48 +82,38 @@ impl<'a> PoolRepository<'a> {
             Ok(new_pool.insert(self.db).await?)
         }
     }
-}
-
-impl<'a> WithConnection for PoolRepository<'a> {
-    fn connection(&self) -> &DatabaseConnection {
-        self.db
-    }
-}
-
-#[async_trait]
-impl<'a> Repository<pool_mints::Entity> for PoolRepository<'a> {
-    async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<pool_mints::Model>> {
+    
+    // Repository methods
+    
+    pub async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<pool_mints::Model>> {
         Ok(PoolMints::find_by_id(id).one(self.db).await?)
     }
 
-    async fn find_all(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_all(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
         Ok(PoolMints::find()
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)
             .await?)
     }
 
-    async fn create(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
+    pub async fn create(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
         Ok(model.insert(self.db).await?)
     }
 
-    async fn update(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
+    pub async fn update(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
         Ok(model.update(self.db).await?)
     }
 
-    async fn delete(&self, id: i32) -> RepositoryResult<bool> {
+    pub async fn delete(&self, id: i32) -> RepositoryResult<bool> {
         let result = PoolMints::delete_by_id(id).exec(self.db).await?;
         Ok(result.rows_affected > 0)
     }
 
-    async fn count(&self) -> RepositoryResult<u64> {
+    pub async fn count(&self) -> RepositoryResult<u64> {
         Ok(PoolMints::find().count(self.db).await?)
     }
-}
 
-#[async_trait]
-impl<'a> Paginate<pool_mints::Entity> for PoolRepository<'a> {
-    async fn paginate(
+    pub async fn paginate(
         &self,
         page: u64,
         per_page: u64,
@@ -140,11 +127,8 @@ impl<'a> Paginate<pool_mints::Entity> for PoolRepository<'a> {
 
         Ok((items, total_pages))
     }
-}
 
-#[async_trait]
-impl<'a> Search<pool_mints::Entity> for PoolRepository<'a> {
-    async fn search(&self, query: &str) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn search(&self, query: &str) -> RepositoryResult<Vec<pool_mints::Model>> {
         Ok(PoolMints::find()
             .filter(
                 Condition::any()
@@ -157,27 +141,30 @@ impl<'a> Search<pool_mints::Entity> for PoolRepository<'a> {
             .all(self.db)
             .await?)
     }
-}
 
-#[async_trait]
-impl<'a> BatchOperations<pool_mints::Entity> for PoolRepository<'a> {
-    async fn batch_create(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
+    pub async fn batch_create(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
         PoolMints::insert_many(models).exec(self.db).await?;
         Ok(())
     }
 
-    async fn batch_update(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
+    pub async fn batch_update(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
         for model in models {
             model.update(self.db).await?;
         }
         Ok(())
     }
 
-    async fn batch_delete(&self, ids: Vec<i32>) -> RepositoryResult<u64> {
+    pub async fn batch_delete(&self, ids: Vec<i32>) -> RepositoryResult<u64> {
         let result = PoolMints::delete_many()
             .filter(pool_mints::Column::Id.is_in(ids))
             .exec(self.db)
             .await?;
         Ok(result.rows_affected)
+    }
+}
+
+impl<'a> WithConnection for PoolRepository<'a> {
+    fn connection(&self) -> &DatabaseConnection {
+        self.db
     }
 }

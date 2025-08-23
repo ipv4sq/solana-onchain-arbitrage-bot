@@ -108,7 +108,7 @@ impl ArbitrageService {
         &self,
         pools: Vec<(String, String, String, String)>,
     ) -> RepositoryResult<()> {
-        use crate::arb::repository::traits::BatchOperations;
+        use crate::arb::repository::core::traits::BatchOperations;
         use crate::arb::repository::entity::pool_mints;
         use sea_orm::ActiveValue::Set;
         use chrono::Utc;
@@ -138,7 +138,7 @@ impl ArbitrageService {
         page: u64,
         per_page: u64,
     ) -> RepositoryResult<PaginatedResult> {
-        use crate::arb::repository::traits::{Search, Paginate};
+        use crate::arb::repository::core::traits::{Search, Paginate};
 
         let pool_repo = self.repo_manager.pools();
         
