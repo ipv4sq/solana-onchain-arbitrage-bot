@@ -1,15 +1,15 @@
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::arb::global::constant::mint::{USDC_KEY, WSOL_KEY};
+use crate::arb::global::constant::mint::Mints;
 
 #[derive(Debug, Clone)]
 pub struct MintPair(pub Pubkey, pub Pubkey);
 
 impl MintPair {
     pub fn sol_mint(&self) -> Result<&Pubkey> {
-        if self.0 == *WSOL_KEY {
+        if self.0 == Mints::WSOL {
             Ok(&self.0)
-        } else if self.1 == *WSOL_KEY {
+        } else if self.1 == Mints::WSOL {
             Ok(&self.1)
         } else {
             Err(anyhow::anyhow!(
@@ -21,10 +21,10 @@ impl MintPair {
     }
 
     pub fn desired_mint(&self) -> Result<Pubkey> {
-        if self.0 == *WSOL_KEY || self.1 == *WSOL_KEY {
-            Ok(*WSOL_KEY)
-        } else if self.0 == *USDC_KEY || self.1 == *USDC_KEY {
-            Ok(*USDC_KEY)
+        if self.0 == Mints::WSOL || self.1 == Mints::WSOL {
+            Ok(Mints::WSOL)
+        } else if self.0 == Mints::USDC || self.1 == Mints::USDC {
+            Ok(Mints::USDC)
         } else {
             Err(anyhow::anyhow!(""))
         }

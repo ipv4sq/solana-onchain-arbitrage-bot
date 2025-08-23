@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::mint::WSOL_KEY;
+    use crate::arb::global::constant::mint::Mints;
     use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
     use crate::arb::convention::pool::meteora_dlmm::bin_array;
     use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -28,7 +28,7 @@ mod tests {
         let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
 
         let config =
-            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
+            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), Mints::WSOL)
                 .unwrap();
 
         // Build accounts with the specific amount
@@ -36,7 +36,7 @@ mod tests {
             .build_accounts_with_amount(
                 &payer,
                 &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
-                &*WSOL_KEY,
+                &Mints::WSOL,
                 amount_in,
             )
             .unwrap();
@@ -103,14 +103,14 @@ mod tests {
             ],
         };
         let config =
-            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), *WSOL_KEY)
+            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), Mints::WSOL)
                 .unwrap();
 
         let result = config
             .build_accounts_with_amount(
                 &payer,
                 &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
-                &*WSOL_KEY,
+                &Mints::WSOL,
                 449_360_555u64,
             )
             .unwrap();

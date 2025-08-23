@@ -40,16 +40,16 @@ impl DexType {
         let program_str = program_id.to_string();
 
         match program_str.as_str() {
-            PoolOwnerPrograms::RAYDIUM_V4 => DexType::RaydiumV4,
-            PoolOwnerPrograms::RAYDIUM_CPMM => DexType::RaydiumCp,
-            PoolOwnerPrograms::RAYDIUM_CLMM => DexType::RaydiumClmm,
-            PoolOwnerPrograms::PUMP => DexType::Pump,
-            PoolOwnerPrograms::METEORA_DLMM => DexType::MeteoraDlmm,
-            PoolOwnerPrograms::METEORA_DAMM => DexType::MeteoraDamm,
-            PoolOwnerPrograms::METEORA_DAMM_V2 => DexType::MeteoraDammV2,
-            PoolOwnerPrograms::WHIRLPOOL => DexType::OrcaWhirlpool,
-            PoolOwnerPrograms::SOLFI => DexType::Solfi,
-            PoolOwnerPrograms::VERTIGO => DexType::Vertigo,
+            x if x == PoolOwnerPrograms::RAYDIUM_V4.to_string() => DexType::RaydiumV4,
+            x if x == PoolOwnerPrograms::RAYDIUM_CPMM.to_string() => DexType::RaydiumCp,
+            x if x == PoolOwnerPrograms::RAYDIUM_CLMM.to_string() => DexType::RaydiumClmm,
+            x if x == PoolOwnerPrograms::PUMP.to_string() => DexType::Pump,
+            x if x == PoolOwnerPrograms::METEORA_DLMM.to_string() => DexType::MeteoraDlmm,
+            x if x == PoolOwnerPrograms::METEORA_DAMM.to_string() => DexType::MeteoraDamm,
+            x if x == PoolOwnerPrograms::METEORA_DAMM_V2.to_string() => DexType::MeteoraDammV2,
+            x if x == PoolOwnerPrograms::WHIRLPOOL.to_string() => DexType::OrcaWhirlpool,
+            x if x == PoolOwnerPrograms::SOLFI.to_string() => DexType::Solfi,
+            x if x == PoolOwnerPrograms::VERTIGO.to_string() => DexType::Vertigo,
             _ => DexType::Unknown,
         }
     }
@@ -88,3 +88,60 @@ impl DexType {
         }
     }
 }
+
+// in dex_type_def.rs
+
+#[macro_export]
+macro_rules! define_dex_types {
+    (
+        $( // name, db_string, program_id_const
+            $name:ident => { db = $db:literal, program = $prog:path }
+        ),* $(,)?
+    ) => {
+        use sea_orm::{DeriveActiveEnum, EnumIter as SeaOrmEnumIter};
+        use serde::{Deserialize, Serialize};
+        use phf::phf_map;
+        use solana_program::pubkey::Pubkey;
+
+        #[derive(
+            Debug, Clone, PartialEq, Eq, Copy, SeaOrmEnumIter, DeriveActiveEnum, Serialize, Deserialize,
+        )]
+        #[sea_orm(rs_type = "String", db_type = "String(None)")]
+        pub enum DexType {
+            $(
+                #[sea_orm(string_value = $db)]
+                $name,
+            )*
+            #[sea_orm(string_value = "Unknown")]
+            Unknown,
+        }
+
+        // 编译期常量表：program_id -> DexType
+        static DEX_BY_PROGRAM: phf::Map<&'static str, DexType> = phf_map! {
+            $(
+                $prog => DexType::$name,
+            )*
+        };
+
+        impl DexType {
+            #[inline]
+            pub fn determine_from(program_id: &Pubkey) -> Self {
+                let s = program_id.to_string();
+                DEX_BY_PROGRAM.get(s.as_str()).copied().unwrap_or(DexType::Unknown)
+            }
+
+            // 如需“转成 DB 字符串”，其实 SeaORM 已经管了；
+            // 如果你仍想要：
+            #[inline]
+            pub fn as_db_str(&self) -> &'static str {
+                match self {
+                    $(
+                        DexType::$name => $db,
+                    )*
+                    DexType::Unknown => "Unknown",
+                }
+            }
+        }
+    }
+}
+

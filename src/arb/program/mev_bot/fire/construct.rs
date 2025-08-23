@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::util::alt::fetch_address_lookup_tables;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::global::constant::mev_bot::MevBot;
-use crate::arb::global::constant::mint::{Mints, WSOL_KEY};
+use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
@@ -106,7 +106,7 @@ pub fn create_invoke_mev_instruction(
         signer.to_signer(),
         Mints::WSOL.to_readonly(),
         fee_account.to_writable(),
-        ata_sol_token(&signer, &WSOL_KEY).to_writable(),
+        ata_sol_token(&signer, &Mints::WSOL).to_writable(),
         TokenProgram::SPL_TOKEN.to_program(),
         system_program::ID.to_readonly(),
         spl_associated_token_account::ID.to_readonly(),
@@ -117,7 +117,7 @@ pub fn create_invoke_mev_instruction(
             MevBot::FLASHLOAN_ACCOUNT.to_readonly(),
             derive_vault_token_account(
                 &MevBot::EMV_BOT_PROGRAM,
-                &Mints::WSOL.to_pubkey(), // default to wsol mint base for flashloan
+                &Mints::WSOL, // default to wsol mint base for flashloan
             )
             .0
             .to_writable(),

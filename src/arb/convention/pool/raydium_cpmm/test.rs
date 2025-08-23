@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::mint::WSOL_KEY;
+    use crate::arb::global::constant::mint::Mints;
     use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
     use crate::arb::convention::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
     use crate::arb::convention::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
@@ -22,7 +22,7 @@ mod tests {
         let account = load_data().unwrap();
         let payer = "JDDadtcuCMTNy4Y8CDQ5VmL33yqbWRPPmapJdF7sxCvF".to_pubkey();
         let config =
-            RaydiumCpmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), account, *WSOL_KEY).unwrap();
+            RaydiumCpmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), account, Mints::WSOL).unwrap();
 
         let expected = RaydiumCpmmSwapAccounts {
             payer: payer.to_signer(),
@@ -65,7 +65,7 @@ mod tests {
         // let result = config
         //     .build_accounts(
         //         &payer,
-        //         &*WSOL_KEY,
+        //         &Mints::WSOL,
         //         &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
         //         None,
         //         None,
