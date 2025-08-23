@@ -1,8 +1,8 @@
-use crate::arb::global::enums::dex_type::DexType;
+use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::pool_record::{
     self, Entity as PoolRecord, Model, PoolRecordDescriptor,
 };
-use crate::arb::database::columns::PubkeyType;
+use crate::arb::global::enums::dex_type::DexType;
 use anyhow::Result;
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
@@ -18,11 +18,7 @@ impl PoolRecordRepository {
         Self { db }
     }
 
-    pub async fn insert_pool(&self, mut pool: Model) -> Result<Model> {
-        let now = Utc::now();
-        pool.created_at = now;
-        pool.updated_at = now;
-
+    pub async fn insert(&self, mut pool: Model) -> Result<Model> {
         let active_model = pool_record::ActiveModel {
             address: Set(pool.address),
             name: Set(pool.name),
@@ -87,6 +83,7 @@ impl PoolRecordRepository {
 mod tests {
     use super::*;
     use serde_json::json;
+    use sqlx::encode::IsNull::No;
 
     #[test]
     fn test_pool_record_model_creation() {
@@ -111,8 +108,8 @@ mod tests {
                 quote: usdc,
             },
             data_snapshot: json!({"test": "data"}),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: None,
+            updated_at: None,
         };
 
         assert_eq!(model.address.0, pool_address);

@@ -20,8 +20,8 @@ pub struct Model {
     pub description: PoolRecordDescriptor,
     #[sea_orm(column_type = "JsonBinary")]
     pub data_snapshot: Json,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
