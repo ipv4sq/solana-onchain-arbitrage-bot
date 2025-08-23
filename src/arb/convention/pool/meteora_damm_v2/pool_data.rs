@@ -1,5 +1,7 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
-use crate::arb::convention::pool::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
+use crate::arb::convention::pool::meteora_damm_v2::pool_data_type::{
+    PoolFeesStruct, PoolMetrics, RewardInfo,
+};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 

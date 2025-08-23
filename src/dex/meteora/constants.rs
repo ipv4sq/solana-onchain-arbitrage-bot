@@ -1,8 +1,8 @@
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
-pub const METEORA_DLMM_PROGRAM_ID : &str = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo";
-pub const METEORA_DAMM_PROGRAM_ID : &str = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB";
+pub const METEORA_DLMM_PROGRAM_ID: &str = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo";
+pub const METEORA_DAMM_PROGRAM_ID: &str = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB";
 
 pub fn dlmm_program_id() -> Pubkey {
     Pubkey::from_str("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo").unwrap()

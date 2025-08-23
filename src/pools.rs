@@ -4,7 +4,6 @@ use crate::dex::raydium::config::{RaydiumClmmPool, RaydiumCpPool, RaydiumPool};
 use crate::dex::solfi::config::SolfiPool;
 use crate::dex::vertigo::config::VertigoPool;
 use crate::dex::whirlpool::config::WhirlpoolPool;
-use crate::dex::raydium::{pool_clmm_info::POOL_TICK_ARRAY_BITMAP_SEED, raydium_clmm_program_id};
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -54,8 +53,6 @@ impl MintPoolData {
             vertigo_pools: Vec::new(),
         })
     }
-
-
 
     pub fn add_meteora_damm_pool(
         &mut self,

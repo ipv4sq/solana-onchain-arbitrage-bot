@@ -32,5 +32,3 @@ pub struct TransactionMeta {
     pub loaded_writable_addresses: Vec<Pubkey>,
     pub loaded_readonly_addresses: Vec<Pubkey>,
 }
-
-

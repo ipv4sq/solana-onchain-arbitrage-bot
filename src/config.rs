@@ -75,9 +75,9 @@ where
     D: Deserializer<'de>,
 {
     let toml_value = String::deserialize(deserializer)?;
-    match toml_value.starts_with( "$") {
+    match toml_value.starts_with("$") {
         true => env::var(&toml_value[1..]).map_err(serde::de::Error::custom),
-        false => Ok(toml_value)
+        false => Ok(toml_value),
     }
 
     // let value_or_env = String::deserialize(deserializer)?;

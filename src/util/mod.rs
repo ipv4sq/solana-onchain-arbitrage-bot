@@ -1,7 +1,5 @@
 pub mod list_util;
 
-pub use list_util::*;
-
 use rand::Rng;
 
 pub fn random_select<T>(items: &[T]) -> Option<&T> {

@@ -1,12 +1,12 @@
-use sea_orm::*;
-use sea_orm::ActiveValue::Set;
-use chrono::Utc;
-use solana_sdk::pubkey::Pubkey;
+use super::super::entity::pool_mints;
+use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::repository::core::error::RepositoryResult;
 use crate::arb::repository::core::traits::WithConnection;
 use crate::arb::repository::entity::PoolMints;
-use super::super::entity::{pool_mints};
-use crate::arb::global::enums::dex_type::DexType;
+use chrono::Utc;
+use sea_orm::ActiveValue::Set;
+use sea_orm::*;
+use solana_sdk::pubkey::Pubkey;
 
 pub struct PoolRepository<'a> {
     db: &'a DatabaseConnection,
@@ -17,7 +17,10 @@ impl<'a> PoolRepository<'a> {
         Self { db }
     }
 
-    pub async fn find_by_pool_id(&self, pool_id: &str) -> RepositoryResult<Option<pool_mints::Model>> {
+    pub async fn find_by_pool_id(
+        &self,
+        pool_id: &str,
+    ) -> RepositoryResult<Option<pool_mints::Model>> {
         Ok(PoolMints::find()
             .filter(pool_mints::Column::PoolId.eq(pool_id))
             .one(self.db)
@@ -35,20 +38,23 @@ impl<'a> PoolRepository<'a> {
                     .add(
                         Condition::all()
                             .add(pool_mints::Column::DesiredMint.eq(mint1))
-                            .add(pool_mints::Column::TheOtherMint.eq(mint2))
+                            .add(pool_mints::Column::TheOtherMint.eq(mint2)),
                     )
                     .add(
                         Condition::all()
                             .add(pool_mints::Column::DesiredMint.eq(mint2))
-                            .add(pool_mints::Column::TheOtherMint.eq(mint1))
-                    )
+                            .add(pool_mints::Column::TheOtherMint.eq(mint1)),
+                    ),
             )
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)
             .await?)
     }
 
-    pub async fn find_by_dex_types(&self, dex_types: Vec<DexType>) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_by_dex_types(
+        &self,
+        dex_types: Vec<DexType>,
+    ) -> RepositoryResult<Vec<pool_mints::Model>> {
         Ok(PoolMints::find()
             .filter(pool_mints::Column::DexType.is_in(dex_types))
             .order_by_desc(pool_mints::Column::CreatedAt)
@@ -78,18 +84,18 @@ impl<'a> PoolRepository<'a> {
         desired_mint: &Pubkey,
         the_other_mint: &Pubkey,
     ) -> RepositoryResult<Vec<pool_mints::Model>> {
-        self.find_by_mints(
-            &desired_mint.to_string(),
-            &the_other_mint.to_string(),
-        )
-        .await
+        self.find_by_mints(&desired_mint.to_string(), &the_other_mint.to_string())
+            .await
     }
 
     pub async fn list_pool_mints(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
         self.find_all().await
     }
 
-    pub async fn list_pool_mints_by_dex(&self, dex_type: DexType) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn list_pool_mints_by_dex(
+        &self,
+        dex_type: DexType,
+    ) -> RepositoryResult<Vec<pool_mints::Model>> {
         self.find_by_dex_types(vec![dex_type]).await
     }
 
@@ -122,9 +128,9 @@ impl<'a> PoolRepository<'a> {
             Ok(new_pool.insert(self.db).await?)
         }
     }
-    
+
     // Repository methods
-    
+
     pub async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<pool_mints::Model>> {
         Ok(PoolMints::find_by_id(id).one(self.db).await?)
     }
@@ -136,11 +142,17 @@ impl<'a> PoolRepository<'a> {
             .await?)
     }
 
-    pub async fn create(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
+    pub async fn create(
+        &self,
+        model: pool_mints::ActiveModel,
+    ) -> RepositoryResult<pool_mints::Model> {
         Ok(model.insert(self.db).await?)
     }
 
-    pub async fn update(&self, model: pool_mints::ActiveModel) -> RepositoryResult<pool_mints::Model> {
+    pub async fn update(
+        &self,
+        model: pool_mints::ActiveModel,
+    ) -> RepositoryResult<pool_mints::Model> {
         Ok(model.update(self.db).await?)
     }
 
@@ -175,7 +187,7 @@ impl<'a> PoolRepository<'a> {
                     .add(pool_mints::Column::PoolId.contains(query))
                     .add(pool_mints::Column::DesiredMint.contains(query))
                     .add(pool_mints::Column::TheOtherMint.contains(query))
-                    .add(pool_mints::Column::DexType.eq(query))
+                    .add(pool_mints::Column::DexType.eq(query)),
             )
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)

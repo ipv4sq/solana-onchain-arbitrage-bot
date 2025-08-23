@@ -1,6 +1,6 @@
-use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
-use sea_orm::sea_query::{ArrayType, ColumnType, Nullable, ValueType, ValueTypeErr};
 use crate::arb::repository::entity::pool_record::PoolRecordDescriptor;
+use sea_orm::sea_query::{ArrayType, ColumnType, Nullable, ValueType, ValueTypeErr};
+use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
 
 impl From<PoolRecordDescriptor> for Value {
     fn from(desc: PoolRecordDescriptor) -> Self {
@@ -19,9 +19,7 @@ impl TryGetable for PoolRecordDescriptor {
 impl ValueType for PoolRecordDescriptor {
     fn try_from(v: Value) -> Result<Self, ValueTypeErr> {
         match v {
-            Value::Json(Some(json)) => {
-                serde_json::from_value(*json).map_err(|_| ValueTypeErr)
-            }
+            Value::Json(Some(json)) => serde_json::from_value(*json).map_err(|_| ValueTypeErr),
             _ => Err(ValueTypeErr),
         }
     }
@@ -47,6 +45,8 @@ impl Nullable for PoolRecordDescriptor {
 
 impl sea_orm::TryFromU64 for PoolRecordDescriptor {
     fn try_from_u64(_n: u64) -> Result<Self, DbErr> {
-        Err(DbErr::Type("PoolRecordDescriptor cannot be created from u64".to_string()))
+        Err(DbErr::Type(
+            "PoolRecordDescriptor cannot be created from u64".to_string(),
+        ))
     }
 }

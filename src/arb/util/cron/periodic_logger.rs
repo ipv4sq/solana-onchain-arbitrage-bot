@@ -11,7 +11,10 @@ pub struct PeriodicLogger<K: MetricKey = String> {
     metrics: Arc<LoggerMetrics<K>>,
 }
 
-pub trait MetricKey: Send + Sync + Clone + Eq + std::hash::Hash + std::fmt::Display + 'static {}
+pub trait MetricKey:
+    Send + Sync + Clone + Eq + std::hash::Hash + std::fmt::Display + 'static
+{
+}
 
 impl MetricKey for String {}
 impl MetricKey for &'static str {}
@@ -47,7 +50,7 @@ impl<K: MetricKey> PeriodicLogger<K> {
         tokio::spawn(async move {
             let mut ticker = interval(self.interval);
             ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-            
+
             loop {
                 ticker.tick().await;
                 self.log_metrics();
@@ -57,14 +60,14 @@ impl<K: MetricKey> PeriodicLogger<K> {
 
     fn log_metrics(&self) {
         let counters = self.metrics.counters.read().unwrap();
-        
+
         if counters.is_empty() {
             return;
         }
 
         let mut entries = Vec::new();
         let mut total = 0u64;
-        
+
         for (key, counter) in counters.iter() {
             let value = counter.swap(0, Ordering::Relaxed);
             if value > 0 {
@@ -74,12 +77,7 @@ impl<K: MetricKey> PeriodicLogger<K> {
         }
 
         if !entries.is_empty() {
-            info!(
-                "[{}] Total: {} | {}",
-                self.name,
-                total,
-                entries.join(", ")
-            );
+            info!("[{}] Total: {} | {}", self.name, total, entries.join(", "));
         }
     }
 }
@@ -92,13 +90,15 @@ pub struct MetricsHandle<K: MetricKey> {
 impl<K: MetricKey> MetricsHandle<K> {
     pub fn add(&self, key: K, count: u64) {
         let counters = self.metrics.counters.read().unwrap();
-        
+
         if let Some(counter) = counters.get(&key) {
             counter.fetch_add(count, Ordering::Relaxed);
         } else {
             drop(counters);
             let mut counters = self.metrics.counters.write().unwrap();
-            let counter = counters.entry(key).or_insert_with(|| Arc::new(AtomicU64::new(0)));
+            let counter = counters
+                .entry(key)
+                .or_insert_with(|| Arc::new(AtomicU64::new(0)));
             counter.fetch_add(count, Ordering::Relaxed);
         }
     }
@@ -109,7 +109,8 @@ impl<K: MetricKey> MetricsHandle<K> {
 
     pub fn get(&self, key: &K) -> u64 {
         let counters = self.metrics.counters.read().unwrap();
-        counters.get(key)
+        counters
+            .get(key)
             .map(|c| c.load(Ordering::Relaxed))
             .unwrap_or(0)
     }
@@ -187,11 +188,11 @@ mod tests {
     fn test_string_metrics() {
         let logger = PeriodicLogger::<String>::new("test", Duration::from_secs(5));
         let handle = logger.metrics_handle();
-        
+
         handle.inc("received".to_string());
         handle.add("processed".to_string(), 5);
         handle.inc("failed".to_string());
-        
+
         assert_eq!(handle.get(&"received".to_string()), 1);
         assert_eq!(handle.get(&"processed".to_string()), 5);
         assert_eq!(handle.get(&"failed".to_string()), 1);
@@ -202,11 +203,11 @@ mod tests {
     fn test_enum_metrics() {
         let logger = PeriodicLogger::<TransactionMetric>::new("test", Duration::from_secs(5));
         let handle = logger.metrics_handle();
-        
+
         handle.inc(TransactionMetric::Received);
         handle.inc(TransactionMetric::Success);
         handle.add(TransactionMetric::Failed, 3);
-        
+
         assert_eq!(handle.get(&TransactionMetric::Received), 1);
         assert_eq!(handle.get(&TransactionMetric::Success), 1);
         assert_eq!(handle.get(&TransactionMetric::Failed), 3);
@@ -216,11 +217,11 @@ mod tests {
     fn test_static_str_metrics() {
         let logger = PeriodicLogger::<&'static str>::new("test", Duration::from_secs(5));
         let handle = logger.metrics_handle();
-        
+
         handle.inc("transactions");
         handle.inc("errors");
         handle.add("bytes_processed", 1024);
-        
+
         assert_eq!(handle.get(&"transactions"), 1);
         assert_eq!(handle.get(&"errors"), 1);
         assert_eq!(handle.get(&"bytes_processed"), 1024);

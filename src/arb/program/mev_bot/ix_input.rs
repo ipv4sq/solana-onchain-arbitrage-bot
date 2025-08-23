@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use spl_token::state::Account;
 
 #[derive(Debug)]
 pub struct SolanaMevBotIxInputData {

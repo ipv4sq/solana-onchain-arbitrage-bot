@@ -1,9 +1,8 @@
 use crate::constants::helpers::ToPubkey;
 use crate::dex::pool_checker::PoolChecker;
-use crate::dex::raydium::{raydium_clmm_program_id, RAYDIUM_CLMM_PROGRAM_ID};
+use crate::dex::raydium::RAYDIUM_CLMM_PROGRAM_ID;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::pubkey;
 
 pub const TICK_ARRAY_SEED: &str = "tick_array";
 pub const TICK_ARRAY_SIZE: i32 = 60;
@@ -198,10 +197,7 @@ impl RaydiumClmmPoolInfo {
         })
     }
 
-    pub fn get_tick_arrays(
-        &self,
-        pool: &Pubkey,
-    ) -> Result<Vec<Pubkey>> {
+    pub fn get_tick_arrays(&self, pool: &Pubkey) -> Result<Vec<Pubkey>> {
         _get_tick_array_pubkeys(
             pool,
             self.tick_current,
@@ -215,7 +211,8 @@ impl RaydiumClmmPoolInfo {
         Pubkey::find_program_address(
             &[POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(), pool.as_ref()],
             &RAYDIUM_CLMM_PROGRAM_ID.to_pubkey(),
-        ).0
+        )
+        .0
     }
 }
 

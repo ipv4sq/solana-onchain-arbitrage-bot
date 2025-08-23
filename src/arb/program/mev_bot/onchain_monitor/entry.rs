@@ -1,9 +1,9 @@
 use crate::arb::convention::chain::types::LitePool;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::repository::get_repository_manager;
+use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::mem_pool::mem_pool;
 use crate::arb::program::mev_bot::ix;
-use crate::arb::global::constant::mint::Mints;
+use crate::arb::repository::get_repository_manager;
 use anyhow::Result;
 use tracing::info;
 
@@ -14,25 +14,30 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 
     // Check if transaction has metadata
     if tx.meta.is_none() {
-        info!("Transaction {} has no metadata - cannot extract token balance changes", tx.signature);
+        info!(
+            "Transaction {} has no metadata - cannot extract token balance changes",
+            tx.signature
+        );
     } else if let Some(ref meta) = tx.meta {
-        info!("Transaction {} has {} pre and {} post token balances", 
+        info!(
+            "Transaction {} has {} pre and {} post token balances",
             tx.signature,
             meta.pre_token_balances.len(),
             meta.post_token_balances.len()
         );
     }
-    
+
     // Log token balance changes for WSOL and USDC
     let balance_changes = tx.token_balance_changes();
-    
+
     // Debug: log all mints that have balance changes with full details
     if !balance_changes.is_empty() {
-        info!("Transaction {} has balance changes for {} mints", 
-            tx.signature, 
+        info!(
+            "Transaction {} has balance changes for {} mints",
+            tx.signature,
             balance_changes.len()
         );
-        
+
         // Log all balance changes to see what we're actually getting
         for (mint, owner_changes) in &balance_changes {
             info!("  Mint: {} (length: {})", mint, mint.len());
@@ -53,7 +58,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
     } else {
         info!("Transaction {} has no token balance changes", tx.signature);
     }
-    
+
     // Also check if any mint contains SOL or starts with expected patterns
     for mint in balance_changes.keys() {
         if mint.contains("111111111111111111111111111111111") || mint.starts_with("So1") {
@@ -63,7 +68,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
             }
         }
     }
-    
+
     log_token_changes(&balance_changes, &Mints::WSOL.to_string(), "WSOL");
     log_token_changes(&balance_changes, &Mints::USDC.to_string(), "USDC");
 
@@ -85,7 +90,13 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 }
 
 fn log_token_changes(
-    balance_changes: &std::collections::HashMap<String, std::collections::HashMap<String, crate::arb::convention::chain::util::transaction::TokenBalanceChange>>,
+    balance_changes: &std::collections::HashMap<
+        String,
+        std::collections::HashMap<
+            String,
+            crate::arb::convention::chain::util::transaction::TokenBalanceChange,
+        >,
+    >,
     token_mint: &str,
     token_name: &str,
 ) {
@@ -95,7 +106,10 @@ fn log_token_changes(
 }
 
 fn log_token_changes_for_mint(
-    token_changes: &std::collections::HashMap<String, crate::arb::convention::chain::util::transaction::TokenBalanceChange>,
+    token_changes: &std::collections::HashMap<
+        String,
+        crate::arb::convention::chain::util::transaction::TokenBalanceChange,
+    >,
     token_mint: &str,
     token_name: &str,
 ) {
@@ -126,12 +140,14 @@ pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
         "Recording pool {} with desired mint {} and other mint {} for {}",
         lite_pool.pool_address, desired_mint, the_other_mint, dex_type_str
     );
-    manager.pools().record_pool_and_mints(
-        &lite_pool.pool_address,
-        &desired_mint,
-        &the_other_mint,
-        lite_pool.dex_type,
-    )
-    .await?;
+    manager
+        .pools()
+        .record_pool_and_mints(
+            &lite_pool.pool_address,
+            &desired_mint,
+            &the_other_mint,
+            lite_pool.dex_type,
+        )
+        .await?;
     Ok(())
 }

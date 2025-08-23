@@ -3,7 +3,6 @@ use crate::dex::pool_checker::PoolChecker;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
-use tracing::info;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]

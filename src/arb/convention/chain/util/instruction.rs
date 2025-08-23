@@ -9,10 +9,10 @@ impl Instruction {
         if self.program_id != spl_token::ID && self.program_id != TokenProgram::TOKEN_2022 {
             return None;
         }
-        
+
         // transfer_checked requires exactly 4 accounts:
         // 1. Source token account (writable)
-        // 2. Token mint (read-only) 
+        // 2. Token mint (read-only)
         // 3. Destination token account (writable)
         // 4. Authority/owner (signer or read-only if multisig)
         if self.accounts.len() < 4 {
@@ -23,7 +23,7 @@ impl Instruction {
         if self.data.is_empty() {
             return None;
         }
-        
+
         // The first byte should be the instruction discriminator (12 for TransferChecked)
         match TokenInstruction::unpack(&self.data) {
             Ok(TokenInstruction::TransferChecked { amount, decimals }) => {
@@ -41,10 +41,11 @@ impl Instruction {
     }
 
     pub fn account_at(&self, index: usize) -> anyhow::Result<AccountMeta> {
-        let account = self.accounts
+        let account = self
+            .accounts
             .get(index)
             .ok_or_else(|| anyhow::anyhow!("Missing account at index {}", index))?;
-        
+
         // The AccountMeta in the instruction already has the correct writability
         // information after our refactoring, so we can just return it directly
         Ok(account.clone())

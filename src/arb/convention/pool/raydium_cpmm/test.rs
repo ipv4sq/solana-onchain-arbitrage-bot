@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::mint::Mints;
     use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
     use crate::arb::convention::pool::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
     use crate::arb::convention::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
     use crate::arb::convention::pool::raydium_cpmm::pool_config::*;
+    use crate::arb::global::constant::mint::Mints;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use anyhow::Result;
     use base64::engine::general_purpose;
@@ -22,7 +22,8 @@ mod tests {
         let account = load_data().unwrap();
         let payer = "JDDadtcuCMTNy4Y8CDQ5VmL33yqbWRPPmapJdF7sxCvF".to_pubkey();
         let config =
-            RaydiumCpmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), account, Mints::WSOL).unwrap();
+            RaydiumCpmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), account, Mints::WSOL)
+                .unwrap();
 
         let expected = RaydiumCpmmSwapAccounts {
             payer: payer.to_signer(),
@@ -71,7 +72,7 @@ mod tests {
         //         None,
         //     )
         //     .unwrap();
-        // 
+        //
         // assert_eq!(expected, result);
     }
 

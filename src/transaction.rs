@@ -18,8 +18,9 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::arb::global::constant::mev_bot::MevBot;
-use crate::constants::helpers::ToPubkey;
 use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::state::rpc;
+use crate::constants::helpers::ToPubkey;
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,
@@ -36,7 +37,6 @@ use solana_program::system_program;
 use spl_associated_token_account::ID as associated_token_program_id;
 use spl_token::ID as token_program_id;
 use std::str::FromStr;
-use crate::arb::global::state::rpc;
 
 pub async fn build_and_send_transaction(
     wallet_kp: &Keypair,
@@ -237,14 +237,8 @@ fn create_swap_instruction(
     };
 
     if use_flashloan {
-        accounts.push(AccountMeta::new_readonly(
-            MevBot::FLASHLOAN_ACCOUNT,
-            false,
-        ));
-        let token_pda = derive_vault_token_account(
-            &MevBot::EMV_BOT_PROGRAM,
-            &flashloan_base_mint,
-        );
+        accounts.push(AccountMeta::new_readonly(MevBot::FLASHLOAN_ACCOUNT, false));
+        let token_pda = derive_vault_token_account(&MevBot::EMV_BOT_PROGRAM, &flashloan_base_mint);
         accounts.push(AccountMeta::new(token_pda.0, false));
     }
 
@@ -481,7 +475,7 @@ mod tests {
     fn test_derive_vault_token_account() {
         let program_id = Pubkey::from_str("MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz").unwrap();
         let sol_mint = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
-        
+
         let (pda, bump) = derive_vault_token_account(&program_id, &sol_mint);
         println!("PDA: {}, Bump: {}", pda, bump);
     }

@@ -28,9 +28,7 @@ mod tests {
 
         assert_eq!(
             account.pool_bump,
-            json["pool_bump"]["data"]
-                .as_u64()
-                .unwrap() as u8
+            json["pool_bump"]["data"].as_u64().unwrap() as u8
         );
         assert_eq!(
             account.index,

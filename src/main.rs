@@ -12,12 +12,12 @@ pub mod test;
 mod transaction;
 pub mod util;
 
-use clap::{App, Arg};
-use tracing::{info, Level};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use arb::{global, program};
+use clap::{App, Arg};
 use std::fs;
 use std::path::Path;
+use tracing::{info, Level};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     if !logs_dir.exists() {
         fs::create_dir(logs_dir)?;
     }
-    
+
     // Create a file for logging with timestamp
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let log_file_path = format!("logs/bot_{}.log", timestamp);
@@ -35,26 +35,25 @@ async fn main() -> anyhow::Result<()> {
         .write(true)
         .append(true)
         .open(&log_file_path)?;
-    
+
     // Create file layer for logging to file
     let file_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::sync::Arc::new(file))
-        .with_ansi(false)  // No color codes in file
+        .with_ansi(false) // No color codes in file
         .with_line_number(true)
         .with_file(true);
-    
+
     // Create console layer for logging to stdout
     let console_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::io::stdout)
-        .with_ansi(true);  // Color codes for console
-    
+        .with_ansi(true); // Color codes for console
+
     // Combine both layers with filtering
     // Default to info level, but exclude sqlx debug/trace logs
     let filter = tracing_subscriber::EnvFilter::new(
-        std::env::var("RUST_LOG")
-            .unwrap_or_else(|_| "info,sqlx=warn".to_string())
+        std::env::var("RUST_LOG").unwrap_or_else(|_| "info,sqlx=warn".to_string()),
     );
-    
+
     tracing_subscriber::registry()
         .with(console_layer)
         .with(file_layer)
@@ -75,7 +74,9 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = tokio::spawn(async move {
-        if let Err(e) = program::mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await {
+        if let Err(e) =
+            program::mev_bot::onchain_monitor::producer::start_mev_bot_subscriber().await
+        {
             tracing::error!("MEV bot subscriber error: {}", e);
         }
     });

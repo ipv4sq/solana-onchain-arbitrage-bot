@@ -95,7 +95,7 @@ pub const TICK_ARRAY_SIZE: usize = 88;
 
 use crate::constants::helpers::ToPubkey;
 use crate::dex::pool_checker::PoolChecker;
-use crate::dex::whirlpool::constants::{whirlpool_program_id, WHIRLPOOL_PROGRAM_ID};
+use crate::dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
 use std::io::{Error, ErrorKind, Result};
 
 impl WhirlpoolInfo {

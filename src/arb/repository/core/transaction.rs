@@ -17,7 +17,8 @@ impl<'a> TransactionManager<'a> {
         F: FnOnce(&DatabaseTransaction) -> Fut,
         Fut: Future<Output = RepositoryResult<R>>,
     {
-        let txn = self.conn
+        let txn = self
+            .conn
             .begin()
             .await
             .map_err(|e| RepositoryError::TransactionFailed {
@@ -44,17 +45,13 @@ impl<'a> TransactionManager<'a> {
         }
     }
 
-    pub async fn execute_with_retry<F, R, Fut>(
-        &self,
-        f: F,
-        max_retries: u32,
-    ) -> RepositoryResult<R>
+    pub async fn execute_with_retry<F, R, Fut>(&self, f: F, max_retries: u32) -> RepositoryResult<R>
     where
         F: Fn(&DatabaseTransaction) -> Fut,
         Fut: Future<Output = RepositoryResult<R>>,
     {
         let mut attempts = 0;
-        
+
         loop {
             match self.execute(&f).await {
                 Ok(result) => return Ok(result),
@@ -66,7 +63,8 @@ impl<'a> TransactionManager<'a> {
                         max_retries,
                         e
                     );
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * attempts as u64)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * attempts as u64))
+                        .await;
                 }
                 Err(e) => return Err(e),
             }

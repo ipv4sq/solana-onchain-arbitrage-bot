@@ -144,4 +144,3 @@ macro_rules! define_dex_types {
         }
     }
 }
-

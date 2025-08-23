@@ -1,6 +1,6 @@
-use crate::arb::global::state::rpc::rpc_client;
-use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::state::rpc::rpc_client;
 use solana_program::pubkey::Pubkey;
 
 const BINS_PER_ARRAY: i32 = 70;
@@ -17,7 +17,10 @@ pub async fn calculate_bin_arrays_for_swap(
         &PoolPrograms::METEORA_DLMM,
     );
 
-    let bitmap_extension = rpc_client().get_account_data(&bitmap_extension_key).await.ok();
+    let bitmap_extension = rpc_client()
+        .get_account_data(&bitmap_extension_key)
+        .await
+        .ok();
 
     let mut bin_array_pubkeys = get_bin_array_pubkeys_for_swap(
         pool_data,
@@ -29,12 +32,8 @@ pub async fn calculate_bin_arrays_for_swap(
 
     // If no bin arrays found with liquidity check, generate them based on active bin
     if bin_array_pubkeys.is_empty() {
-        bin_array_pubkeys = generate_bin_arrays_for_swap(
-            pool_data.active_id,
-            pool,
-            swap_for_y,
-            num_arrays,
-        );
+        bin_array_pubkeys =
+            generate_bin_arrays_for_swap(pool_data.active_id, pool, swap_for_y, num_arrays);
     }
 
     Ok(bin_array_pubkeys)
@@ -71,9 +70,9 @@ pub fn estimate_num_bin_arrays(amount: u64) -> usize {
     match amount {
         // For test compatibility: this specific amount uses 3 arrays
         543235989680078 => 3,
-        0..=1_000_000_000_000 => 3,            // Small swaps: 3 arrays (<1T)
-        1_000_000_000_001..=100_000_000_000_000 => 4,  // Medium swaps: 4 arrays (1T-100T)
-        _ => 5,                                 // Large swaps: 5 arrays (>100T)
+        0..=1_000_000_000_000 => 3, // Small swaps: 3 arrays (<1T)
+        1_000_000_000_001..=100_000_000_000_000 => 4, // Medium swaps: 4 arrays (1T-100T)
+        _ => 5,                     // Large swaps: 5 arrays (>100T)
     }
 }
 

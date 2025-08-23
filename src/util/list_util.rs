@@ -24,28 +24,26 @@ mod tests {
         let x = 5;
         assert!(in_list!(x, 3, 4, 5, 6));
         assert!(!in_list!(x, 1, 2, 3));
-        
+
         let s = "hello";
         assert!(in_list!(s, "world", "hello", "rust"));
         assert!(!in_list!(s, "world", "rust"));
     }
-    
+
     #[test]
     fn test_not_in() {
         let x = 10;
         assert!(not_in!(x, 1, 2, 3));
         assert!(!not_in!(x, 5, 10, 15));
     }
-    
+
     #[test]
     fn test_with_references() {
         let a = String::from("test");
         let b = String::from("hello");
         let c = String::from("world");
-        
+
         assert!(in_list!(a, a.clone(), b.clone()));
         assert!(not_in!(a, b, c));
     }
-    
-
 }

@@ -6,7 +6,8 @@ use std::ops::Deref;
 use std::sync::Arc;
 use tracing::info;
 
-pub static MEV_TX_CONSUMER: Lazy<Arc<MevConsumerPool>> = Lazy::new(|| Arc::new(MevConsumerPool::new()));
+pub static MEV_TX_CONSUMER: Lazy<Arc<MevConsumerPool>> =
+    Lazy::new(|| Arc::new(MevConsumerPool::new()));
 
 pub async fn publish_mev_transaction(tx: Transaction) -> Result<()> {
     MEV_TX_CONSUMER.publish(tx).await

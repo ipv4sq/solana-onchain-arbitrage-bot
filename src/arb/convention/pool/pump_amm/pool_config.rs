@@ -1,9 +1,8 @@
 use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
 use crate::arb::convention::pool::pump_amm::data::{PumpAmmPoolConfig, PumpAmmPoolData};
+use crate::arb::global::constant::token_program::TokenProgram;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::arb::global::constant::token_program::TokenProgram;
-use crate::constants::helpers::ToPubkey;
 
 impl PoolConfigInit<PumpAmmPoolData> for PumpAmmPoolConfig {
     fn from_pool_data(

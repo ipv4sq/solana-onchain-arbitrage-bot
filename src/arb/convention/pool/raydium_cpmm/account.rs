@@ -16,4 +16,3 @@ pub struct RaydiumCpmmSwapAccounts {
     pub output_token_mint: AccountMeta,
     pub observation_state: AccountMeta,
 }
-

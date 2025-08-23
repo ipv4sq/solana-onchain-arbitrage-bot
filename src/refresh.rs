@@ -1,6 +1,5 @@
-use crate::constants::{
-    helpers::ToPubkey,
-};
+use crate::arb::global::constant::token_program::TokenProgram;
+use crate::constants::helpers::ToPubkey;
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
 use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::MeteoraDlmmInfo};
@@ -22,7 +21,6 @@ use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use tracing::{error, info};
 use crate::arb::global::constant::mint::Mints;
-use crate::arb::global::constant::token_program::TokenProgram;
 
 pub async fn initialize_pool_data(
     mint: &str,
@@ -95,7 +93,6 @@ pub async fn initialize_pool_data(
             Err(e) => error!("Failed to fetch raydium clmm pool: {}", e),
         });
 
-    
     meteora_dlmm_pools_config
         .into_iter()
         .flatten()
@@ -113,7 +110,6 @@ pub async fn initialize_pool_data(
             Ok(pool) => global_pool_config.whirlpool_pools.push(pool),
             Err(e) => error!("Failed to fetch whirlpool pool: {}", e),
         });
-
 
     meteora_damm_pools
         .map(|pools| {
@@ -146,7 +142,6 @@ pub async fn initialize_pool_data(
 
     Ok(global_pool_config)
 }
-
 
 fn initialize_meteora_damm_pools(
     pools: &Vec<String>,
@@ -319,19 +314,17 @@ fn initialize_meteora_damm_v2_pools(
                             meteora_damm_v2_info.quote_vault.to_string()
                         );
                         info!("");
-                        let token_x_vault =
-                            if Mints::WSOL == meteora_damm_v2_info.base_mint {
-                                meteora_damm_v2_info.quote_vault
-                            } else {
-                                meteora_damm_v2_info.base_vault
-                            };
+                        let token_x_vault = if Mints::WSOL == meteora_damm_v2_info.base_mint {
+                            meteora_damm_v2_info.quote_vault
+                        } else {
+                            meteora_damm_v2_info.base_vault
+                        };
 
-                        let token_sol_vault =
-                            if Mints::WSOL == meteora_damm_v2_info.base_mint {
-                                meteora_damm_v2_info.base_vault
-                            } else {
-                                meteora_damm_v2_info.quote_vault
-                            };
+                        let token_sol_vault = if Mints::WSOL == meteora_damm_v2_info.base_mint {
+                            meteora_damm_v2_info.base_vault
+                        } else {
+                            meteora_damm_v2_info.quote_vault
+                        };
 
                         let (token_mint, base_mint) =
                             if mint_pubkey == &meteora_damm_v2_info.base_mint {
@@ -408,8 +401,7 @@ fn initialize_solfi_pools(
                             solfi_info.base_vault
                         };
 
-                        let token_sol_vault = if Mints::WSOL == solfi_info.base_mint
-                        {
+                        let token_sol_vault = if Mints::WSOL == solfi_info.base_mint {
                             solfi_info.base_vault
                         } else {
                             solfi_info.quote_vault

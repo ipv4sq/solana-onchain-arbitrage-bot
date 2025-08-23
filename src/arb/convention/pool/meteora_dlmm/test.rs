@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::mint::Mints;
     use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
     use crate::arb::convention::pool::meteora_dlmm::bin_array;
     use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::convention::pool::meteora_dlmm::pool_config::*;
     use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+    use crate::arb::global::constant::mint::Mints;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use anyhow::Result;
     use base64::engine::general_purpose;
@@ -16,8 +16,7 @@ mod tests {
 
     fn load_data() -> Result<MeteoraDlmmPoolData> {
         let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
-        let account =
-            MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
+        let account = MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
         Ok(account)
     }
 
@@ -27,9 +26,12 @@ mod tests {
         let amount_in = 449_360_555u64;
         let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
 
-        let config =
-            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), Mints::WSOL)
-                .unwrap();
+        let config = MeteoraDlmmPoolConfig::from_pool_data(
+            &POOL_ADDRESS.to_pubkey(),
+            load_data().unwrap(),
+            Mints::WSOL,
+        )
+        .unwrap();
 
         // Build accounts with the specific amount
         let result = config
@@ -40,8 +42,6 @@ mod tests {
                 amount_in,
             )
             .unwrap();
-
-
 
         // Compare with expected from transaction
         let expected_arrays = vec![
@@ -102,9 +102,12 @@ mod tests {
                 "433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU".to_writable(),
             ],
         };
-        let config =
-            MeteoraDlmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), load_data().unwrap(), Mints::WSOL)
-                .unwrap();
+        let config = MeteoraDlmmPoolConfig::from_pool_data(
+            &POOL_ADDRESS.to_pubkey(),
+            load_data().unwrap(),
+            Mints::WSOL,
+        )
+        .unwrap();
 
         let result = config
             .build_accounts_with_amount(
@@ -126,8 +129,7 @@ mod tests {
         let data = general_purpose::STANDARD
             .decode(ACCOUNT_DATA_BASE64)
             .unwrap();
-        let account =
-            MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
+        let account = MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
 
         let json: Value = serde_json::from_str(ACCOUNT_DATA_JSON).expect("Failed to parse JSON");
 

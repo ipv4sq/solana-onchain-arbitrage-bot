@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::pubkey::Pubkey;
 use solana_transaction_status::{
-    option_serializer::OptionSerializer, parse_accounts::ParsedAccount,
+    option_serializer::OptionSerializer,
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInstruction, UiMessage,
     UiParsedInstruction, UiParsedMessage, UiRawMessage,
 };
@@ -66,7 +66,7 @@ fn convert_parsed_message(msg: &UiParsedMessage) -> Result<Message> {
         .iter()
         .map(|parsed_acc| {
             let pubkey = Pubkey::from_str(&parsed_acc.pubkey)?;
-            
+
             Ok(if parsed_acc.signer && parsed_acc.writable {
                 AccountMeta::new(pubkey, true)
             } else if parsed_acc.signer {
@@ -110,11 +110,21 @@ fn convert_raw_message_with_loaded(
 
     // Parse loaded addresses if available
     let loaded_writable: Vec<Pubkey> = loaded_addresses
-        .map(|la| la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .map(|la| {
+            la.writable
+                .iter()
+                .filter_map(|s| Pubkey::from_str(s).ok())
+                .collect()
+        })
         .unwrap_or_default();
-    
+
     let loaded_readonly: Vec<Pubkey> = loaded_addresses
-        .map(|la| la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect())
+        .map(|la| {
+            la.readonly
+                .iter()
+                .filter_map(|s| Pubkey::from_str(s).ok())
+                .collect()
+        })
         .unwrap_or_default();
 
     // Get header information for determining permissions
@@ -125,33 +135,33 @@ fn convert_raw_message_with_loaded(
 
     // Build account_keys as Vec<AccountMeta> with proper permissions
     let mut account_keys: Vec<AccountMeta> = Vec::new();
-    
+
     // Process static accounts with header-based permissions
     for (idx, pubkey) in static_pubkeys.iter().enumerate() {
         let is_signer = idx < num_required_signatures;
-        
+
         let is_writable = if idx < num_required_signatures - num_readonly_signed_accounts {
-            true  // Writable signer
+            true // Writable signer
         } else if idx < num_required_signatures {
-            false  // Readonly signer
+            false // Readonly signer
         } else if idx < static_account_len - num_readonly_unsigned_accounts {
-            true  // Writable non-signer
+            true // Writable non-signer
         } else {
-            false  // Readonly non-signer
+            false // Readonly non-signer
         };
-        
+
         if is_writable {
             account_keys.push(AccountMeta::new(*pubkey, is_signer));
         } else {
             account_keys.push(AccountMeta::new_readonly(*pubkey, is_signer));
         }
     }
-    
+
     // Add loaded writable addresses (never signers)
     for pubkey in loaded_writable {
         account_keys.push(AccountMeta::new(pubkey, false));
     }
-    
+
     // Add loaded readonly addresses (never signers)
     for pubkey in loaded_readonly {
         account_keys.push(AccountMeta::new_readonly(pubkey, false));
@@ -247,10 +257,7 @@ fn convert_parsed_instruction(
                                 .iter()
                                 .find(|meta| meta.pubkey == target_pubkey)
                                 .ok_or_else(|| {
-                                    anyhow::anyhow!(
-                                        "Account {} not found in account_keys",
-                                        acc_str
-                                    )
+                                    anyhow::anyhow!("Account {} not found in account_keys", acc_str)
                                 })
                                 .map(|meta| meta.clone())
                         })
@@ -281,15 +288,23 @@ fn convert_meta(
 ) -> Result<TransactionMeta> {
     // Extract loaded addresses from the meta for backward compatibility
     let loaded_writable_addresses: Vec<Pubkey> = match &meta.loaded_addresses {
-        OptionSerializer::Some(la) => la.writable.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect(),
+        OptionSerializer::Some(la) => la
+            .writable
+            .iter()
+            .filter_map(|s| Pubkey::from_str(s).ok())
+            .collect(),
         _ => Vec::new(),
     };
-    
+
     let loaded_readonly_addresses: Vec<Pubkey> = match &meta.loaded_addresses {
-        OptionSerializer::Some(la) => la.readonly.iter().filter_map(|s| Pubkey::from_str(s).ok()).collect(),
+        OptionSerializer::Some(la) => la
+            .readonly
+            .iter()
+            .filter_map(|s| Pubkey::from_str(s).ok())
+            .collect(),
         _ => Vec::new(),
     };
-    
+
     let inner_instructions = match &meta.inner_instructions {
         OptionSerializer::Some(inner) => inner
             .iter()
@@ -385,14 +400,16 @@ fn convert_ui_instruction_to_unified(
             let program_id = program_account.pubkey;
 
             let data = bs58::decode(&compiled.data).into_vec().unwrap_or_default();
-            
+
             let accounts: Vec<AccountMeta> = compiled
                 .accounts
                 .iter()
                 .map(|&account_idx| {
                     account_keys
                         .get(account_idx as usize)
-                        .ok_or_else(|| anyhow::anyhow!("Invalid account index in inner instruction"))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Invalid account index in inner instruction")
+                        })
                         .map(|meta| meta.clone())
                 })
                 .collect::<Result<_>>()?;
@@ -421,7 +438,10 @@ fn convert_ui_instruction_to_unified(
                                 .find(|meta| meta.pubkey == target_pubkey)
                                 .ok_or_else(|| {
                                     // If not found, default to readonly for inner instructions
-                                    Ok::<AccountMeta, anyhow::Error>(AccountMeta::new_readonly(target_pubkey, false))
+                                    Ok::<AccountMeta, anyhow::Error>(AccountMeta::new_readonly(
+                                        target_pubkey,
+                                        false,
+                                    ))
                                 })
                                 .and_then(|meta| Ok(meta.clone()))
                                 .or_else(|_| Ok(AccountMeta::new_readonly(target_pubkey, false)))

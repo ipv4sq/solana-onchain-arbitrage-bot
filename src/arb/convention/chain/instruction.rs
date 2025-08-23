@@ -1,5 +1,5 @@
-use solana_sdk::pubkey::Pubkey;
 use solana_sdk::instruction::AccountMeta;
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Debug, Clone)]
 pub struct Instruction {

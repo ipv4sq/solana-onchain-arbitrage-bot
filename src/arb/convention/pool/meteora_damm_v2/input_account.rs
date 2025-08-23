@@ -181,14 +181,14 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::convention::chain::Transaction;
-    use crate::arb::global::constant::pool_program::PoolPrograms;
-    use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::convention::pool::interface::InputAccountUtil;
     use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
     use crate::arb::convention::pool::meteora_damm_v2::input_data::is_meteora_damm_v2_swap;
     use crate::arb::convention::pool::meteora_damm_v2::pool_data::test::load_pool_data;
-    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
+    use crate::arb::global::constant::pool_program::PoolPrograms;
     use crate::arb::global::constant::token_program::TokenProgram;
+    use crate::arb::global::state::rpc::fetch_tx_sync;
+    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
 

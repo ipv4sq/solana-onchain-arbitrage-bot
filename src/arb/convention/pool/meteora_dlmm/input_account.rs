@@ -67,21 +67,17 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
+        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::global::constant::token_program::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         let token_x_mint = &pool_data.token_x_mint;
         let token_y_mint = &pool_data.token_y_mint;
-        
-        let bin_arrays = bin_array::generate_bin_arrays_for_swap(
-            pool_data.active_id,
-            pool,
-            true,
-            3,
-        );
+
+        let bin_arrays =
+            bin_array::generate_bin_arrays_for_swap(pool_data.active_id, pool, true, 3);
 
         let token_x_program = TokenProgram::SPL_TOKEN.to_program();
         let token_y_program = TokenProgram::SPL_TOKEN.to_program();
@@ -129,8 +125,8 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
+        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::global::constant::token_program::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
@@ -251,14 +247,14 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::pool_program::PoolPrograms;
-    use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::convention::pool::meteora_dlmm::input_data::is_meteora_dlmm_swap;
     use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
+    use crate::arb::global::constant::pool_program::PoolPrograms;
     use crate::arb::global::constant::token_program::TokenProgram;
+    use crate::arb::global::state::rpc::fetch_tx_sync;
+    use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::constants::helpers::{ToAccountMeta, ToPubkey};
     use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;

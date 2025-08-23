@@ -48,7 +48,6 @@ impl PoolConfigInit<MeteoraDammV2AccountData> for MeteoraPoolConfig {
     ) -> Result<Self> {
         todo!()
     }
-
 }
 
 impl MeteoraDammV2AccountData {}

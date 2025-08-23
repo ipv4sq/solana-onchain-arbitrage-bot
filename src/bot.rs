@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::constants;
 use crate::refresh::initialize_pool_data;
 use crate::service::assemble_create_ata_account_ix;
 use crate::transaction::build_and_send_transaction;
@@ -12,15 +13,12 @@ use solana_sdk::signer::Signer;
 use solana_sdk::{
     address_lookup_table::state::AddressLookupTable, compute_budget::ComputeBudgetInstruction,
 };
-use spl_associated_token_account::{
-    get_associated_token_address_with_program_id,
-};
+use spl_associated_token_account::get_associated_token_address_with_program_id;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
-use crate::constants;
 
 pub async fn run_bot(config_path: &str) -> anyhow::Result<()> {
     let config = Config::load(config_path)?;

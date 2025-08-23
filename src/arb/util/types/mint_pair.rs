@@ -1,6 +1,6 @@
+use crate::arb::global::constant::mint::Mints;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use crate::arb::global::constant::mint::Mints;
 
 #[derive(Debug, Clone)]
 pub struct MintPair(pub Pubkey, pub Pubkey);

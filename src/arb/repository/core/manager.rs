@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use sea_orm::DatabaseConnection;
+use std::sync::Arc;
 
 use crate::arb::repository::repositories::*;
 
@@ -11,9 +11,10 @@ pub struct RepositoryManager {
 impl RepositoryManager {
     /// Create a new repository manager from a database manager
     pub async fn new() -> RepositoryResult<Self> {
-        let manager = DatabaseManager::new().await
-            .map_err(|e| crate::arb::repository::core::error::RepositoryError::Connection(e.to_string()))?;
-        
+        let manager = DatabaseManager::new().await.map_err(|e| {
+            crate::arb::repository::core::error::RepositoryError::Connection(e.to_string())
+        })?;
+
         Ok(Self {
             db: Arc::new(manager.connection().clone()),
         })
@@ -21,9 +22,7 @@ impl RepositoryManager {
 
     /// Create from an existing database connection
     pub fn from_connection(db: DatabaseConnection) -> Self {
-        Self {
-            db: Arc::new(db),
-        }
+        Self { db: Arc::new(db) }
     }
 
     pub fn connection(&self) -> &DatabaseConnection {
@@ -33,7 +32,6 @@ impl RepositoryManager {
     pub fn pools(&self) -> PoolRepository {
         PoolRepository::new(&self.db)
     }
-
 
     pub fn transaction_manager(&self) -> TransactionManager {
         TransactionManager::new(&self.db)
@@ -49,7 +47,7 @@ impl RepositoryManager {
 
     pub async fn health_check(&self) -> RepositoryResult<bool> {
         use sea_orm::{ConnectionTrait, Statement};
-        
+
         self.db
             .execute(Statement::from_string(
                 sea_orm::DatabaseBackend::Postgres,
@@ -57,15 +55,17 @@ impl RepositoryManager {
             ))
             .await
             .map(|_| true)
-            .map_err(|e| crate::arb::repository::core::error::RepositoryError::Connection(e.to_string()))
+            .map_err(|e| {
+                crate::arb::repository::core::error::RepositoryError::Connection(e.to_string())
+            })
     }
 }
 
 // Singleton instance for global access
-use tokio::sync::OnceCell;
 use crate::arb::repository::core::database::DatabaseManager;
 use crate::arb::repository::core::error::RepositoryResult;
 use crate::arb::repository::core::transaction::TransactionManager;
+use tokio::sync::OnceCell;
 
 static REPOSITORY_MANAGER: OnceCell<Arc<RepositoryManager>> = OnceCell::const_new();
 
@@ -73,12 +73,18 @@ static REPOSITORY_MANAGER: OnceCell<Arc<RepositoryManager>> = OnceCell::const_ne
 pub async fn get_repository_manager() -> RepositoryResult<Arc<RepositoryManager>> {
     REPOSITORY_MANAGER
         .get_or_init(|| async {
-            Arc::new(RepositoryManager::new().await.expect("Failed to initialize repository manager"))
+            Arc::new(
+                RepositoryManager::new()
+                    .await
+                    .expect("Failed to initialize repository manager"),
+            )
         })
         .await
         .clone()
         .try_into()
-        .map_err(|_| crate::arb::repository::core::error::RepositoryError::Connection(
-            "Failed to get repository manager instance".to_string()
-        ))
+        .map_err(|_| {
+            crate::arb::repository::core::error::RepositoryError::Connection(
+                "Failed to get repository manager instance".to_string(),
+            )
+        })
 }

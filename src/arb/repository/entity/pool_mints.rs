@@ -1,6 +1,6 @@
-use sea_orm::entity::prelude::*;
-use chrono::{DateTime, Utc};
 use crate::arb::global::enums::dex_type::DexType;
+use chrono::{DateTime, Utc};
+use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "pool_mints")]

@@ -2,7 +2,6 @@ pub mod config;
 pub mod constants;
 pub mod pool_clmm;
 
-use crate::dex::whirlpool::config::*;
 use crate::dex::whirlpool::constants::{MAX_TICK_INDEX, MIN_TICK_INDEX};
 use crate::dex::whirlpool::pool_clmm::{WhirlpoolInfo, TICK_ARRAY_SIZE};
 use solana_program::instruction::AccountMeta;

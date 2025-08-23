@@ -88,9 +88,7 @@ fn json_config() -> RpcTransactionConfig {
 pub async fn ensure_mint_account_exists(mint: &Pubkey, wallet: &Keypair) -> Result<bool> {
     let owner = &wallet.pubkey();
     let mint_owner = rpc_client().get_account(mint).await?.owner;
-    if mint_owner != TokenProgram::TOKEN_2022
-        && mint_owner != TokenProgram::SPL_TOKEN
-    {
+    if mint_owner != TokenProgram::TOKEN_2022 && mint_owner != TokenProgram::SPL_TOKEN {
         return Err(anyhow::anyhow!(
             "mint owner should be Token2022 or SPL Token program but instead it's: {}",
             mint_owner

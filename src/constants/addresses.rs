@@ -1,7 +1,5 @@
 use crate::constants::helpers::ToPubkey;
-use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
-
 
 // Address lookup table addresses
 pub struct LookupTable;
@@ -15,15 +13,11 @@ mod tests {
     use super::*;
     use solana_program::pubkey::Pubkey;
     use std::str::FromStr;
-    use crate::arb::global::constant::token_program::TokenProgram;
-    use crate::arb::global::constant::mint::Mints;
 
     #[test]
     fn test_all_addresses_are_valid() {
         // All addresses for validation
-        let all_addresses = &[
-            ("LookupTable::DEFAULT", LookupTable::DEFAULT),
-        ];
+        let all_addresses = &[("LookupTable::DEFAULT", LookupTable::DEFAULT)];
 
         for (name, address) in all_addresses {
             // Test that it's a valid Pubkey

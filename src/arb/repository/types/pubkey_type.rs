@@ -1,8 +1,8 @@
-use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
 use sea_orm::sea_query::{ArrayType, ColumnType, Nullable, ValueType, ValueTypeErr};
+use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 use std::ops::Deref;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy, Default, Hash)]
 #[serde(transparent)]
@@ -10,7 +10,7 @@ pub struct PubkeyType(pub Pubkey);
 
 impl Deref for PubkeyType {
     type Target = Pubkey;
-    
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -85,7 +85,9 @@ impl Nullable for PubkeyType {
 
 impl sea_orm::TryFromU64 for PubkeyType {
     fn try_from_u64(_n: u64) -> Result<Self, DbErr> {
-        Err(DbErr::Type("PubkeyType cannot be created from u64".to_string()))
+        Err(DbErr::Type(
+            "PubkeyType cannot be created from u64".to_string(),
+        ))
     }
 }
 

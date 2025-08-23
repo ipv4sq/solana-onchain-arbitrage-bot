@@ -1,6 +1,6 @@
 use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
-use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::chain::types::SwapInstruction;
+use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
@@ -51,7 +51,8 @@ impl Transaction {
             None => return HashMap::new(),
         };
 
-        let mut balance_map: HashMap<(String, String), (Option<u64>, Option<u64>, u8)> = HashMap::new();
+        let mut balance_map: HashMap<(String, String), (Option<u64>, Option<u64>, u8)> =
+            HashMap::new();
 
         meta.pre_token_balances.iter().for_each(|pre| {
             if let Some(owner) = &pre.owner {
@@ -68,42 +69,48 @@ impl Transaction {
             if let Some(owner) = &post.owner {
                 let key = (post.mint.clone(), owner.clone());
                 let amount = post.ui_token_amount.amount.parse::<u64>().unwrap_or(0);
-                let entry = balance_map
-                    .entry(key)
-                    .or_insert((None, None, post.ui_token_amount.decimals));
+                let entry =
+                    balance_map
+                        .entry(key)
+                        .or_insert((None, None, post.ui_token_amount.decimals));
                 entry.1 = Some(amount);
                 entry.2 = post.ui_token_amount.decimals;
             }
         });
 
         let mut result: HashMap<String, HashMap<String, TokenBalanceChange>> = HashMap::new();
-        
+
         balance_map
             .into_iter()
             .for_each(|((mint, owner), (pre, post, decimals))| {
                 let pre_balance = pre.unwrap_or(0);
                 let post_balance = post.unwrap_or(0);
                 let change = post_balance as i128 - pre_balance as i128;
-                
+
                 if change != 0 {
                     result
                         .entry(mint.clone())
                         .or_insert_with(HashMap::new)
-                        .insert(owner, TokenBalanceChange {
-                            mint,
-                            pre_balance,
-                            post_balance,
-                            change,
-                            decimals,
-                        });
+                        .insert(
+                            owner,
+                            TokenBalanceChange {
+                                mint,
+                                pre_balance,
+                                post_balance,
+                                change,
+                                decimals,
+                            },
+                        );
                 }
             });
-        
+
         result
     }
 }
 
-pub fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<Pubkey, &Instruction> {
+pub fn inner_to_filtered_map(
+    inner_instructions: &InnerInstructions,
+) -> HashMap<Pubkey, &Instruction> {
     inner_instructions
         .instructions
         .iter()

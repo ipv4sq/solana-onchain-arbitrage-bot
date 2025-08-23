@@ -1,9 +1,11 @@
-use anyhow::Result;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use crate::arb::repository::entity::pool_record::{self, Entity as PoolRecord, Model, PoolRecordDescriptor};
 use crate::arb::global::enums::dex_type::DexType;
+use crate::arb::repository::entity::pool_record::{
+    self, Entity as PoolRecord, Model, PoolRecordDescriptor,
+};
 use crate::arb::repository::types::PubkeyType;
+use anyhow::Result;
 use chrono::Utc;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -29,7 +31,7 @@ impl PoolRecordRepository {
         data_snapshot: serde_json::Value,
     ) -> Result<Model> {
         let now = Utc::now();
-        
+
         let active_model = pool_record::ActiveModel {
             address: Set(address.into()),
             name: Set(name),
@@ -47,19 +49,15 @@ impl PoolRecordRepository {
         Ok(active_model.insert(&self.db).await?)
     }
 
-    pub async fn find_by_mints(
-        &self,
-        mint1: &Pubkey,
-        mint2: &Pubkey,
-    ) -> Result<Vec<Model>> {
+    pub async fn find_by_mints(&self, mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<Model>> {
         let pools = PoolRecord::find()
             .filter(
-                pool_record::Column::BaseMint.eq(PubkeyType::from(*mint1))
+                pool_record::Column::BaseMint
+                    .eq(PubkeyType::from(*mint1))
                     .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
-                    .or(
-                        pool_record::Column::BaseMint.eq(PubkeyType::from(*mint2))
-                            .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint1)))
-                    )
+                    .or(pool_record::Column::BaseMint
+                        .eq(PubkeyType::from(*mint2))
+                        .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
             )
             .all(&self.db)
             .await?;
@@ -106,7 +104,7 @@ mod tests {
         let usdc = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
         let vault1 = Pubkey::from_str("11111111111111111111111111111113").unwrap();
         let vault2 = Pubkey::from_str("11111111111111111111111111111114").unwrap();
-        
+
         let model = Model {
             address: pool_address.into(),
             name: "Test Pool".to_string(),
@@ -136,7 +134,7 @@ mod tests {
     fn test_pool_record_descriptor() {
         let wsol = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
         let usdc = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
-        
+
         let descriptor = PoolRecordDescriptor {
             base_symbol: "SOL".to_string(),
             quote_symbol: "USDC".to_string(),
