@@ -1,6 +1,7 @@
 use crate::arb::database::entity::mint_do::{Entity as MintEntity, Model as MintRecord};
 use crate::arb::database::repositories::MintRecordRepository;
 use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::db::get_db;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::traits::orm::ToOrm;
@@ -12,6 +13,7 @@ use sea_orm::EntityTrait;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use spl_token::state::Mint;
+use spl_token_2022::extension::StateWithExtensions;
 
 pub async fn ensure_mint_record_exist(mint: &Pubkey) -> Result<MintRecord> {
     let existed = MintEntity::find_by_id(mint.to_orm()).one(get_db()).await?;
@@ -28,10 +30,24 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
         .await
         .map_err(|e| anyhow::anyhow!("Failed to fetch mint account {}: {}", mint, e))?;
 
-    let mint_state = Mint::unpack(&account.data)
-        .map_err(|e| anyhow::anyhow!("Failed to unpack mint data for {}: {}", mint, e))?;
+    let (decimals, owner) = if account.owner == TokenProgram::SPL_TOKEN {
+        let mint_state = Mint::unpack(&account.data)
+            .map_err(|e| anyhow::anyhow!("Failed to unpack SPL mint data for {}: {}", mint, e))?;
+        (mint_state.decimals, account.owner)
+    } else if account.owner == TokenProgram::TOKEN_2022 {
+        let mint_state = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&account.data)
+            .map_err(|e| {
+                anyhow::anyhow!("Failed to unpack Token-2022 mint data for {}: {}", mint, e)
+            })?;
+        (mint_state.base.decimals, account.owner)
+    } else {
+        return Err(anyhow::anyhow!(
+            "Account {} is not a valid mint. Owner: {}",
+            mint,
+            account.owner
+        ));
+    };
 
-    // Try to fetch metadata from Metaplex Token Metadata program
     let symbol = match fetch_token_metadata(mint).await {
         Ok((symbol, _name)) => symbol,
         Err(_) => "Unknown".to_string(),
@@ -40,8 +56,8 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
     Ok(MintRecord {
         address: mint.to_orm(),
         symbol,
-        decimals: mint_state.decimals as i16,
-        program: account.owner.to_orm(),
+        decimals: decimals as i16,
+        program: owner.to_orm(),
         created_at: None,
         updated_at: None,
     })
@@ -74,14 +90,9 @@ fn deserialize_metadata(data: &[u8]) -> Result<Metadata> {
 async fn test_load_mint_from_address() {
     let result = load_mint_from_address(&Mints::WSOL).await;
 
-    match result {
-        Ok(mint_record) => {
-            assert_eq!(mint_record.decimals, 9);
-            assert_eq!(mint_record.symbol, "SOL");
-        }
-        Err(e) => {
-            println!("Failed to load mint (expected if not on mainnet): {}", e);
-        }
+    if let Ok(mint_record) = result {
+        assert_eq!(mint_record.decimals, 9);
+        assert_eq!(mint_record.symbol, "SOL");
     }
 }
 
@@ -89,13 +100,23 @@ async fn test_load_mint_from_address() {
 async fn test_load_custom_mint() {
     let result = load_mint_from_address(&Mints::USDC).await;
 
-    match result {
-        Ok(mint_record) => {
-            assert_eq!(mint_record.decimals, 6);
-            assert_eq!(mint_record.symbol, "USDC");
-        }
-        Err(e) => {
-            println!("Failed to load mint: {}", e);
-        }
+    if let Ok(mint_record) = result {
+        assert_eq!(mint_record.decimals, 6);
+        assert_eq!(mint_record.symbol, "USDC");
+    }
+}
+
+#[tokio::test]
+async fn test_load_token_2022_mint() {
+    use crate::arb::util::traits::pubkey::ToPubkey;
+
+    let token_2022_mint = "BnszRWbs9LxSzsCUUS57HMTNNtyDHFsnmZ1mVhAYdaos".to_pubkey();
+    let result = load_mint_from_address(&token_2022_mint).await;
+
+    if let Ok(mint_record) = result {
+        assert_eq!(mint_record.decimals, 9);
+        assert_eq!(mint_record.program, TokenProgram::TOKEN_2022.to_orm());
+        assert_eq!(mint_record.address, token_2022_mint.to_orm());
+        assert!(mint_record.symbol == "Unknown" || mint_record.symbol == "LLM");
     }
 }

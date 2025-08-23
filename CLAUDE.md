@@ -279,14 +279,24 @@ sqlx database drop
 
 This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
 
+### Code Hygiene
+
+- **NO COMMENTS**: Write self-documenting code. Comments are code smell.
+    - Exception: Use `//` ONLY when the code does something non-obvious that cannot be made clear through naming
+- **NO DOC COMMENTS**: Never use `///`. They clutter the code.
+- **NO DEBUG LOGS**: Remove ALL debug `println!`, `dbg!`, or debug logs after debugging
+    - Production code should only log critical events via proper logging framework
+    - Tests should only assert, never print (unless actively debugging, then remove)
+- **NO EXPLANATORY TEST MESSAGES**: Assertions should be clear without messages
+    - Bad: `assert_eq!(x, 5, "x should be 5 because...")`
+    - Good: `assert_eq!(x, 5)`
+- **CLEAN COMMITS**: Never commit debugging artifacts, commented-out code, or TODO comments
+
 ### General
 
-- **ABSOLUTELY NO `///` DOC COMMENTS** - They clutter the code. Never use them.
-- **NO COMMENTS** - Write self-documenting code. Only use `//` when absolutely critical for understanding.
-- Think carefully and only action the specific task I have given you with the most concise and elegant solution that
-  changes as little code as possible.
-- When writing tests, avoid extra printing, it's difficult to follow and read
-- Avoid unnecessary indents, be careful of using if Some() or match expression.
+- Think carefully and only action the specific task with the most concise and elegant solution
+- Change as little code as possible
+- Avoid unnecessary indents, be careful of using if Some() or match expressions
 
 ### Functional Programming Style
 
