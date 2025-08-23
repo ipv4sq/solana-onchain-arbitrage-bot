@@ -17,11 +17,10 @@ use solana_program::pubkey::Pubkey;
 use spl_token::state::Mint;
 
 pub async fn ensure_mint_record_exist(mint: &Pubkey) -> Result<()> {
-    let db = get_db();
 
     // Check if mint already exists in database
     if MintEntity::find_by_id(mint.to_orm())
-        .one(db)
+        .one(get_db())
         .await?
         .is_some()
     {
