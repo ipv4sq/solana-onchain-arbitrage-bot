@@ -103,12 +103,12 @@ impl Transaction {
     }
 }
 
-pub fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<String, &Instruction> {
+pub fn inner_to_filtered_map(inner_instructions: &InnerInstructions) -> HashMap<Pubkey, &Instruction> {
     inner_instructions
         .instructions
         .iter()
         .filter(|ix| (*RECOGNIZED_POOL_OWNER_PROGRAMS).contains(&ix.program_id))
         .filter(|ix| ix.accounts.len() >= 5)
-        .map(|ix| (ix.program_id.to_string(), ix))
+        .map(|ix| (ix.program_id, ix))
         .collect()
 }
