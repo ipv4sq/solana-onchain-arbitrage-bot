@@ -1,200 +1,148 @@
-use super::super::entity::pool_mints;
-use crate::arb::database::core::error::RepositoryResult;
-use crate::arb::database::core::traits::WithConnection;
-use crate::arb::database::entity::PoolMints;
-use crate::arb::global::enums::dex_type::DexType;
-use chrono::Utc;
-use pool_mints::Model;
-use sea_orm::ActiveValue::Set;
-use sea_orm::*;
-use solana_sdk::pubkey::Pubkey;
+use crate::arb::database::columns::PubkeyType;
+use crate::arb::database::entity::pool_do::{self, Entity as PoolRecord, Model};
+use crate::arb::global::db::get_db;
+use anyhow::Result;
+use sea_orm::sea_query::OnConflict;
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    ColumnTrait, EntityTrait, QueryFilter,
+};
+use solana_program::pubkey::Pubkey;
 
-pub struct PoolRepository<'a> {
-    db: &'a DatabaseConnection,
-}
+pub struct PoolRecordRepository;
 
-impl<'a> PoolRepository<'a> {
-    pub fn new(db: &'a DatabaseConnection) -> Self {
-        Self { db }
-    }
+impl PoolRecordRepository {
+    pub async fn upsert_pool(pool: Model) -> Result<Model> {
+        let db = get_db();
+        let active_model = pool_do::ActiveModel {
+            address: Set(pool.address.clone()),
+            name: Set(pool.name.clone()),
+            dex_type: Set(pool.dex_type.clone()),
+            base_mint: Set(pool.base_mint.clone()),
+            quote_mint: Set(pool.quote_mint.clone()),
+            base_vault: Set(pool.base_vault.clone()),
+            quote_vault: Set(pool.quote_vault.clone()),
+            description: Set(pool.description.clone()),
+            data_snapshot: Set(pool.data_snapshot.clone()),
+            created_at: NotSet,
+            updated_at: NotSet,
+        };
 
-    pub async fn find_by_pool_id(&self, pool_id: &str) -> RepositoryResult<Option<Model>> {
-        Ok(PoolMints::find()
-            .filter(pool_mints::Column::PoolId.eq(pool_id))
-            .one(self.db)
-            .await?)
-    }
-
-    pub async fn find_by_mints(&self, mint1: &str, mint2: &str) -> RepositoryResult<Vec<Model>> {
-        Ok(PoolMints::find()
-            .filter(
-                Condition::any()
-                    .add(
-                        Condition::all()
-                            .add(pool_mints::Column::DesiredMint.eq(mint1))
-                            .add(pool_mints::Column::TheOtherMint.eq(mint2)),
-                    )
-                    .add(
-                        Condition::all()
-                            .add(pool_mints::Column::DesiredMint.eq(mint2))
-                            .add(pool_mints::Column::TheOtherMint.eq(mint1)),
-                    ),
+        let result = PoolRecord::insert(active_model)
+            .on_conflict(
+                OnConflict::column(pool_do::Column::Address)
+                    .do_nothing()
+                    .to_owned(),
             )
-            .order_by_desc(pool_mints::Column::CreatedAt)
-            .all(self.db)
-            .await?)
-    }
+            .exec(db)
+            .await;
 
-    pub async fn find_by_dex_types(&self, dex_types: Vec<DexType>) -> RepositoryResult<Vec<Model>> {
-        Ok(PoolMints::find()
-            .filter(pool_mints::Column::DexType.is_in(dex_types))
-            .order_by_desc(pool_mints::Column::CreatedAt)
-            .all(self.db)
-            .await?)
-    }
-
-    pub async fn record_pool_and_mints(
-        &self,
-        pool_id: &Pubkey,
-        desired_mint: &Pubkey,
-        the_other_mint: &Pubkey,
-        dex_type: DexType,
-    ) -> RepositoryResult<()> {
-        self.upsert(
-            pool_id.to_string(),
-            desired_mint.to_string(),
-            the_other_mint.to_string(),
-            dex_type,
-        )
-        .await?;
-        Ok(())
-    }
-
-    pub async fn find_pools_by_mints_pubkey(
-        &self,
-        desired_mint: &Pubkey,
-        the_other_mint: &Pubkey,
-    ) -> RepositoryResult<Vec<Model>> {
-        self.find_by_mints(&desired_mint.to_string(), &the_other_mint.to_string())
-            .await
-    }
-
-    pub async fn list_pool_mints(&self) -> RepositoryResult<Vec<Model>> {
-        self.find_all().await
-    }
-
-    pub async fn list_pool_mints_by_dex(&self, dex_type: DexType) -> RepositoryResult<Vec<Model>> {
-        self.find_by_dex_types(vec![dex_type]).await
-    }
-
-    pub async fn upsert(
-        &self,
-        pool_id: String,
-        desired_mint: String,
-        the_other_mint: String,
-        dex_type: DexType,
-    ) -> RepositoryResult<Model> {
-        let existing = self.find_by_pool_id(&pool_id).await?;
-
-        if let Some(model) = existing {
-            let mut active: pool_mints::ActiveModel = model.into();
-            active.desired_mint = Set(desired_mint);
-            active.the_other_mint = Set(the_other_mint);
-            active.dex_type = Set(dex_type);
-            active.updated_at = Set(Some(Utc::now()));
-            Ok(active.update(self.db).await?)
-        } else {
-            let new_pool = pool_mints::ActiveModel {
-                pool_id: Set(pool_id),
-                desired_mint: Set(desired_mint),
-                the_other_mint: Set(the_other_mint),
-                dex_type: Set(dex_type),
-                created_at: Set(Some(Utc::now())),
-                updated_at: Set(Some(Utc::now())),
-                ..Default::default()
-            };
-            Ok(new_pool.insert(self.db).await?)
+        match result {
+            Ok(_) => Ok(pool),
+            Err(_) => Self::find_by_address(&pool.address.0)
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing pool")),
         }
     }
 
-    // Repository methods
-
-    pub async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<Model>> {
-        Ok(PoolMints::find_by_id(id).one(self.db).await?)
-    }
-
-    pub async fn find_all(&self) -> RepositoryResult<Vec<Model>> {
-        Ok(PoolMints::find()
-            .order_by_desc(pool_mints::Column::CreatedAt)
-            .all(self.db)
-            .await?)
-    }
-
-    pub async fn create(&self, model: pool_mints::ActiveModel) -> RepositoryResult<Model> {
-        Ok(model.insert(self.db).await?)
-    }
-
-    pub async fn update(&self, model: pool_mints::ActiveModel) -> RepositoryResult<Model> {
-        Ok(model.update(self.db).await?)
-    }
-
-    pub async fn delete(&self, id: i32) -> RepositoryResult<bool> {
-        let result = PoolMints::delete_by_id(id).exec(self.db).await?;
-        Ok(result.rows_affected > 0)
-    }
-
-    pub async fn count(&self) -> RepositoryResult<u64> {
-        Ok(PoolMints::find().count(self.db).await?)
-    }
-
-    pub async fn paginate(&self, page: u64, per_page: u64) -> RepositoryResult<(Vec<Model>, u64)> {
-        let paginator = PoolMints::find()
-            .order_by_desc(pool_mints::Column::CreatedAt)
-            .paginate(self.db, per_page);
-
-        let total_pages = paginator.num_pages().await?;
-        let items = paginator.fetch_page(page - 1).await?;
-
-        Ok((items, total_pages))
-    }
-
-    pub async fn search(&self, query: &str) -> RepositoryResult<Vec<Model>> {
-        Ok(PoolMints::find()
+    pub async fn find_by_mints(mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
             .filter(
-                Condition::any()
-                    .add(pool_mints::Column::PoolId.contains(query))
-                    .add(pool_mints::Column::DesiredMint.contains(query))
-                    .add(pool_mints::Column::TheOtherMint.contains(query))
-                    .add(pool_mints::Column::DexType.eq(query)),
+                pool_do::Column::BaseMint
+                    .eq(PubkeyType::from(*mint1))
+                    .and(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
+                    .or(pool_do::Column::BaseMint
+                        .eq(PubkeyType::from(*mint2))
+                        .and(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
             )
-            .order_by_desc(pool_mints::Column::CreatedAt)
-            .all(self.db)
+            .all(db)
             .await?)
     }
 
-    pub async fn batch_create(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
-        PoolMints::insert_many(models).exec(self.db).await?;
-        Ok(())
+    pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
+            .filter(pool_do::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
+            .all(db)
+            .await?)
     }
 
-    pub async fn batch_update(&self, models: Vec<pool_mints::ActiveModel>) -> RepositoryResult<()> {
-        for model in models {
-            model.update(self.db).await?;
-        }
-        Ok(())
+    pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
+            .filter(pool_do::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
+            .all(db)
+            .await?)
     }
 
-    pub async fn batch_delete(&self, ids: Vec<i32>) -> RepositoryResult<u64> {
-        let result = PoolMints::delete_many()
-            .filter(pool_mints::Column::Id.is_in(ids))
-            .exec(self.db)
-            .await?;
-        Ok(result.rows_affected)
+    pub async fn find_by_address(address: &Pubkey) -> Result<Option<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find_by_id(PubkeyType::from(*address))
+            .one(db)
+            .await?)
     }
 }
 
-impl<'a> WithConnection for PoolRepository<'a> {
-    fn connection(&self) -> &DatabaseConnection {
-        self.db
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::arb::database::entity::pool_do::PoolRecordDescriptor;
+    use crate::arb::global::enums::dex_type::DexType;
+    use serde_json::json;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_pool_record_model_creation() {
+        let pool_address = Pubkey::from_str("11111111111111111111111111111112").unwrap();
+        let wsol = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+        let usdc = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+        let vault1 = Pubkey::from_str("11111111111111111111111111111113").unwrap();
+        let vault2 = Pubkey::from_str("11111111111111111111111111111114").unwrap();
+
+        let model = Model {
+            address: pool_address.into(),
+            name: "Test Pool".to_string(),
+            dex_type: DexType::RaydiumV4,
+            base_mint: wsol.into(),
+            quote_mint: usdc.into(),
+            base_vault: vault1.into(),
+            quote_vault: vault2.into(),
+            description: PoolRecordDescriptor {
+                base_symbol: "SOL".to_string(),
+                quote_symbol: "USDC".to_string(),
+                base: wsol,
+                quote: usdc,
+            },
+            data_snapshot: json!({"test": "data"}),
+            created_at: None,
+            updated_at: None,
+        };
+
+        assert_eq!(model.address.0, pool_address);
+        assert_eq!(model.name, "Test Pool");
+        assert_eq!(model.base_mint.0, wsol);
+        assert_eq!(model.quote_mint.0, usdc);
+    }
+
+    #[test]
+    fn test_pool_record_descriptor() {
+        let wsol = Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap();
+        let usdc = Pubkey::from_str("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").unwrap();
+
+        let descriptor = PoolRecordDescriptor {
+            base_symbol: "SOL".to_string(),
+            quote_symbol: "USDC".to_string(),
+            base: wsol,
+            quote: usdc,
+        };
+
+        let json_value = serde_json::to_value(descriptor.clone()).unwrap();
+        let deserialized: PoolRecordDescriptor = serde_json::from_value(json_value).unwrap();
+
+        assert_eq!(deserialized.base_symbol, "SOL");
+        assert_eq!(deserialized.quote_symbol, "USDC");
+        assert_eq!(deserialized.base, wsol);
+        assert_eq!(deserialized.quote, usdc);
     }
 }

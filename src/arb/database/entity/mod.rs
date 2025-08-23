@@ -1,7 +1,5 @@
-pub mod pool_mints;
-pub mod pool_record;
-pub mod mint_record;
+pub mod mint_do;
+pub mod pool_do;
 
-pub use pool_mints::Entity as PoolMints;
-pub use mint_record::Entity as MintRecord;
-pub use pool_record::Entity as PoolRecord;
+pub use mint_do::Entity as MintRecord;
+pub use pool_do::Entity as PoolRecord;

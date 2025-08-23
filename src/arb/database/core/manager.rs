@@ -29,10 +29,6 @@ impl RepositoryManager {
         &self.db
     }
 
-    pub fn pools(&self) -> PoolRepository {
-        PoolRepository::new(&self.db)
-    }
-
     pub fn transaction_manager(&self) -> TransactionManager {
         TransactionManager::new(&self.db)
     }
@@ -69,7 +65,6 @@ use tokio::sync::OnceCell;
 
 static REPOSITORY_MANAGER: OnceCell<Arc<RepositoryManager>> = OnceCell::const_new();
 
-/// Get or initialize the global repository manager
 pub async fn get_repository_manager() -> RepositoryResult<Arc<RepositoryManager>> {
     REPOSITORY_MANAGER
         .get_or_init(|| async {
