@@ -68,7 +68,7 @@ impl MintPair {
         }
     }
 
-    pub fn the_other_mint(&self) -> Result<Pubkey> {
+    pub fn minor_mint(&self) -> Result<Pubkey> {
         let desired_mint = self.desired_mint()?;
         if self.0 == desired_mint {
             Ok(self.1)

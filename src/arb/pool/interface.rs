@@ -27,7 +27,7 @@ pub trait PoolDataLoader: Sized {
     }
 
     fn the_other_mint(&self, excluded_mint: &Pubkey) -> Result<Pubkey> {
-        MintPair(self.base_mint(), self.quote_mint()).the_other_mint()
+        MintPair(self.base_mint(), self.quote_mint()).minor_mint()
     }
 
     fn desired_mint(&self) -> Result<Pubkey> {

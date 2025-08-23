@@ -1,5 +1,5 @@
 use crate::arb::constant::dex_type::DexType;
-use crate::arb::global::db::get_database;
+use crate::arb::repository::get_repository_manager;
 use crate::constants::helpers::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
@@ -17,8 +17,8 @@ pub struct PoolsOfMint {
 }
 
 pub async fn read_from_database() -> Result<Vec<PoolsOfMint>> {
-    let db = get_database().await?;
-    let pool_mints = db.list_pool_mints().await?;
+    let manager = get_repository_manager().await?;
+    let pool_mints = manager.pools().list_pool_mints().await?;
 
     let mint_pools_map = pool_mints
         .into_iter()

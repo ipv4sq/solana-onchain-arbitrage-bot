@@ -26,37 +26,19 @@ impl RepositoryManager {
         }
     }
 
-    /// Get the database connection
     pub fn connection(&self) -> &DatabaseConnection {
         &self.db
     }
 
-    /// Get a pool repository
     pub fn pools(&self) -> PoolRepository {
         PoolRepository::new(&self.db)
     }
 
-    /// Get a swap repository
-    pub fn swaps(&self) -> SwapRepository {
-        SwapRepository::new(&self.db)
-    }
 
-    /// Get an arbitrage repository
-    pub fn arbitrage(&self) -> ArbitrageRepository {
-        ArbitrageRepository::new(&self.db)
-    }
-
-    /// Get a metrics repository
-    pub fn metrics(&self) -> MetricsRepository {
-        MetricsRepository::new(&self.db)
-    }
-
-    /// Get a transaction manager for database transactions
     pub fn transaction_manager(&self) -> TransactionManager {
         TransactionManager::new(&self.db)
     }
 
-    /// Execute a function within a database transaction
     pub async fn with_transaction<F, R, Fut>(&self, f: F) -> RepositoryResult<R>
     where
         F: FnOnce(&sea_orm::DatabaseTransaction) -> Fut,
@@ -65,7 +47,6 @@ impl RepositoryManager {
         self.transaction_manager().execute(f).await
     }
 
-    /// Check database health
     pub async fn health_check(&self) -> RepositoryResult<bool> {
         use sea_orm::{ConnectionTrait, Statement};
         

@@ -6,11 +6,10 @@ pub mod entity; // SeaORM entity models
 // Repository Implementations
 pub mod repositories; // Repository implementations
 
-// Legacy/Compatibility
-pub mod pool_repository; // Keep for backward compatibility
+// Core components
+pub mod core;
 
 // Optional examples
-pub mod core;
 #[cfg(feature = "examples")]
 pub mod usage_example;
 

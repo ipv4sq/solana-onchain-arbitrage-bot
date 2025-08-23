@@ -1,6 +1,7 @@
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
 use chrono::Utc;
+use solana_sdk::pubkey::Pubkey;
 use crate::arb::repository::core::error::RepositoryResult;
 use crate::arb::repository::core::traits::WithConnection;
 use super::super::entity::{pool_mints, prelude::*};
@@ -51,6 +52,43 @@ impl<'a> PoolRepository<'a> {
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)
             .await?)
+    }
+
+    pub async fn record_pool_and_mints(
+        &self,
+        pool_id: &Pubkey,
+        desired_mint: &Pubkey,
+        the_other_mint: &Pubkey,
+        dex_type: &str,
+    ) -> RepositoryResult<()> {
+        self.upsert(
+            pool_id.to_string(),
+            desired_mint.to_string(),
+            the_other_mint.to_string(),
+            dex_type.to_string(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn find_pools_by_mints_pubkey(
+        &self,
+        desired_mint: &Pubkey,
+        the_other_mint: &Pubkey,
+    ) -> RepositoryResult<Vec<pool_mints::Model>> {
+        self.find_by_mints(
+            &desired_mint.to_string(),
+            &the_other_mint.to_string(),
+        )
+        .await
+    }
+
+    pub async fn list_pool_mints(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
+        self.find_all().await
+    }
+
+    pub async fn list_pool_mints_by_dex(&self, dex_type: &str) -> RepositoryResult<Vec<pool_mints::Model>> {
+        self.find_by_dex_types(vec![dex_type.to_string()]).await
     }
 
     pub async fn upsert(
