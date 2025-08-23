@@ -18,32 +18,23 @@ impl PoolRecordRepository {
         Self { db }
     }
 
-    pub async fn insert_pool(
-        &self,
-        address: Pubkey,
-        name: String,
-        dex_type: DexType,
-        base_mint: Pubkey,
-        quote_mint: Pubkey,
-        base_vault: Pubkey,
-        quote_vault: Pubkey,
-        description: PoolRecordDescriptor,
-        data_snapshot: serde_json::Value,
-    ) -> Result<Model> {
+    pub async fn insert_pool(&self, mut pool: Model) -> Result<Model> {
         let now = Utc::now();
+        pool.created_at = now;
+        pool.updated_at = now;
 
         let active_model = pool_record::ActiveModel {
-            address: Set(address.into()),
-            name: Set(name),
-            dex_type: Set(dex_type),
-            base_mint: Set(base_mint.into()),
-            quote_mint: Set(quote_mint.into()),
-            base_vault: Set(base_vault.into()),
-            quote_vault: Set(quote_vault.into()),
-            description: Set(description),
-            data_snapshot: Set(data_snapshot),
-            created_at: Set(now),
-            updated_at: Set(now),
+            address: Set(pool.address),
+            name: Set(pool.name),
+            dex_type: Set(pool.dex_type),
+            base_mint: Set(pool.base_mint),
+            quote_mint: Set(pool.quote_mint),
+            base_vault: Set(pool.base_vault),
+            quote_vault: Set(pool.quote_vault),
+            description: Set(pool.description),
+            data_snapshot: Set(pool.data_snapshot),
+            created_at: Set(pool.created_at),
+            updated_at: Set(pool.updated_at),
         };
 
         Ok(active_model.insert(&self.db).await?)
