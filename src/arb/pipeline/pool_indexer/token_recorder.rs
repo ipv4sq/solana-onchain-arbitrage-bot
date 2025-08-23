@@ -4,7 +4,6 @@ use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::db::get_db;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::traits::orm::ToOrm;
-use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::return_ok_if_some;
 use anyhow::Result;
 use mpl_token_metadata::accounts::Metadata;
