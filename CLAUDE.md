@@ -4,9 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Solana onchain arbitrage bot that monitors and executes arbitrage opportunities across multiple DEX protocols using an onchain program. It includes advanced features like real-time pool monitoring, database persistence, and multiple subscription methods.
+This is a sophisticated Solana MEV bot and arbitrage system that monitors and executes arbitrage opportunities across multiple DEX protocols using an onchain program. The project has evolved into a modular architecture with advanced features including:
+
+- **MEV Bot Integration**: Real-time monitoring of onchain MEV opportunities
+- **Database Persistence**: SeaORM-based data management for pools and mints
+- **Pool Abstraction**: Unified interface for all DEX protocols
+- **Advanced Pipeline**: Pool indexing, swap monitoring, and trade strategy execution
+- **Multi-DEX Support**: Comprehensive coverage of Solana DEX ecosystem
 
 **Onchain Program ID**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
+
+## MCP Tools Available
+
+Claude Code has access to specialized MCP tools for Solana development:
+
+### Solana Development Tools
+- **`mcp__http-server__Solana_Expert__Ask_For_Help`**: Expert assistance for Solana development questions (how-to, concepts, APIs, SDKs, errors). Use for complex Solana-specific issues.
+- **`mcp__http-server__Solana_Documentation_Search`**: RAG-based search across Solana ecosystem documentation. Use when you need up-to-date information about Solana features.
+- **`mcp__http-server__Ask_Solana_Anchor_Framework_Expert`**: Specialized help for Anchor Framework development. Use for Anchor-specific queries.
+
+### Development Support Tools
+- **`mcp__ide__getDiagnostics`**: Get IDE diagnostic information for code issues
+- **`mcp__context7__resolve-library-id`** and **`mcp__context7__get-library-docs`**: Fetch up-to-date documentation for any library. Use when you need current library documentation beyond the knowledge cutoff.
+
+**When to use MCP tools**: Prefer these tools for Solana-specific questions, current documentation needs, or when dealing with complex Solana/Anchor concepts that require expert knowledge.
 
 ## Build and Run Commands
 
@@ -14,16 +35,19 @@ This is a Solana onchain arbitrage bot that monitors and executes arbitrage oppo
 # Build the project
 cargo build --release
 
-# Run the bot with configuration
-cargo run --release --bin solana-onchain-arbitrage-bot -- --config config.toml
-
 # Check for compilation errors
 cargo check
+
+# Run the MEV bot listener (main entry point)
+cargo run --release
+
+# Run with specific configuration
+cargo run --release --bin solana-onchain-arbitrage-bot -- --config config.toml
 
 # Setup configuration (first time only)
 cp config.toml.example config.toml
 
-# Setup database (if using database features)
+# Setup database (required for new architecture)
 cp .env.example .env
 # Configure DATABASE_URL in .env
 
@@ -31,10 +55,16 @@ cp .env.example .env
 cargo install sqlx-cli --no-default-features --features postgres
 
 # Run database migrations
-./scripts/migrate.sh
-# Or manually:
-# sqlx database create
-# sqlx migrate run
+sqlx migrate run
+
+# Run tests
+cargo test
+
+# Format code
+cargo fmt
+
+# Lint code
+cargo clippy
 ```
 
 ## Logging
@@ -42,142 +72,168 @@ cargo install sqlx-cli --no-default-features --features postgres
 The bot logs to both console and file simultaneously:
 
 - **Log Directory**: `logs/` (created automatically on first run)
-- **Log File Format**: `bot_YYYYMMDD_HHMMSS.log` (e.g., `bot_20250817_164316.log`)
+- **Log File Format**: `bot_YYYYMMDD_HHMMSS.log` (e.g., `bot_20250823_164316.log`)
 - **View Latest Logs**: Use `./tail_logs.sh` to tail the most recent log file
 - **Manual Tail**: `tail -f logs/bot_*.log`
-- **Log Level**: Controlled by `RUST_LOG` environment variable (default: `info`)
+- **Log Level**: Controlled by `RUST_LOG` environment variable (default: `info,sqlx=warn`)
 
 The `logs/` directory is in `.gitignore` so log files won't be committed to the repository.
 
-## Architecture
+## Modern Architecture
 
-### Core Components
+### Core Modules
 
-1. **Bot Engine** (`src/bot.rs`): Main orchestrator that:
-    - Creates ATAs automatically
-    - Manages pool initialization for all DEXes
-    - Refreshes blockhash every 10 seconds
-    - Spawns concurrent tasks per token mint
+#### 1. **Convention Module** (`src/arb/convention/`)
+Provides abstraction layers for consistent interaction across different components:
 
-2. **Arbitrage Module** (`src/arb/`): Advanced arbitrage implementation with:
-    - **Chain Analysis** (`arb/chain/`): Transaction parsing and analysis
-    - **Pool Management** (`arb/pool/`): DEX-specific pool implementations
-    - **Global State** (`arb/global/`): Database connections and shared state
-    - **Subscribers** (`arb/subscriber/`): PubSub and Yellowstone gRPC support
-    - **Constants** (`arb/constant/`): DEX types, pool owners, and program IDs
-    - **Utilities** (`arb/util/`): Helper functions and common operations
+- **Chain** (`convention/chain/`): Transaction and instruction parsing
+  - Mappers for converting from gRPC/RPC formats
+  - Instruction analysis and metadata extraction
+  - ALT (Address Lookup Table) utilities
+  - Transaction simulation capabilities
 
-3. **DEX Modules** (`src/dex/`): Each DEX has its own module with specific swap instruction implementations:
-    - Raydium (V4, CPMM, CLMM)
-    - Meteora (DLMM, Dynamic AMM, DAMM V2)
-    - Orca Whirlpool
-    - Pump, SolFi, Vertigo
+- **Pool** (`convention/pool/`): Unified pool interface
+  - `PoolDataLoader` trait for consistent pool data access
+  - `PoolConfigInit` for pool initialization
+  - DEX-specific implementations (Meteora DLMM/DAMM, Raydium CPMM, Whirlpool, Pump)
+  - Account and data structures for each pool type
 
-4. **Transaction System** (`src/transaction.rs`):
-    - Builds arbitrage instructions with compute budget optimization
-    - Uses Address Lookup Tables (ALTs) for transaction compression
-    - Supports multi-RPC broadcasting ("spam" mode)
-    - Integrates Kamino flashloans when enabled
+#### 2. **Pipeline Module** (`src/arb/pipeline/`)
+Orchestrates the main business logic flow:
 
-5. **Pool Management** (`src/pools.rs`, `src/refresh.rs`):
-    - Unified data structures for different pool types
-    - Real-time account data refresh
-    - Tracks vault accounts, authorities, and fees
-    - Pool checker for validation
+- **Pool Indexer** (`pipeline/pool_indexer/`): 
+  - Pool discovery and registration
+  - Mint metadata fetching and caching
+  - Database persistence of pool configurations
 
-6. **Web Server** (`src/server.rs`): HTTP API endpoints for monitoring
+- **Swap Monitor** (`pipeline/swap_monitor/`): Real-time monitoring (placeholder for future implementation)
 
-7. **Database Integration**: Optional PostgreSQL support for:
-    - Pool mint tracking
-    - Historical data storage
-    - Analytics and reporting
+- **Trade Strategy** (`pipeline/trade_strategy/`): Arbitrage strategy execution (placeholder)
 
-### Subscription Methods
+- **Uploader** (`pipeline/uploader/`): Data upload services (placeholder)
 
-The bot supports multiple ways to monitor the blockchain:
+#### 3. **Database Module** (`src/arb/database/`)
+SeaORM-based data persistence layer:
 
-1. **PubSub** (`arb/subscriber/pubsub.rs`): WebSocket-based real-time updates
-2. **Yellowstone gRPC** (`arb/subscriber/yellowstone.rs`): High-performance streaming
+- **Core** (`database/core/`): Database connection management, transactions
+- **Entities** (`database/entity/`): 
+  - `mint_record`: Token metadata and information
+  - `pool_record`: Pool configurations with snapshots
+- **Repositories** (`database/repositories/`): Data access patterns
+- **Custom Types**: `PubkeyType` for Solana address storage
 
-### Key Design Patterns
+#### 4. **Global State** (`src/arb/global/`)
+Shared state and utilities:
 
-- **Configuration-driven**: All settings in `config.toml`
-- **Async processing**: Heavy use of Tokio for concurrency
-- **Modular DEX support**: Each DEX isolated in its own module
-- **Error resilience**: Continues operation on individual failures
-- **Database optional**: Can run with or without PostgreSQL
+- **State Management** (`global/state/`):
+  - `blockhash`: Dedicated thread for blockhash refresh (200ms intervals)
+  - `rpc`: Global RPC client management
+  - `mem_pool`: Memory pool for transaction management
 
-### Transaction Flow
+- **Constants** (`global/constant/`):
+  - MEV bot configuration
+  - Well-known mint addresses
+  - DEX program IDs
 
-1. Bot monitors configured token mints
-2. Refreshes pool data from all configured DEXes
-3. Calculates optimal arbitrage amounts
-4. Builds transaction with:
-    - Compute budget instructions
-    - Optional flashloan borrow
-    - Swap instructions for each DEX
-    - Optional flashloan repay
-5. Sends transaction through configured RPCs
+- **Enums** (`global/enums/`): Type-safe DEX type definitions
 
-### Important Constants
+#### 5. **Program Module** (`src/arb/program/`)
+Onchain program interaction:
 
-- **WSOL Mint**: `So11111111111111111111111111111111111111112`
-- **Token Programs**: Supports both SPL Token and Token 2022
-- **Max Compute Units**: Configurable via `compute_unit_limit`
+- **MEV Bot** (`program/mev_bot/`):
+  - Instruction building and serialization
+  - Onchain monitoring with producer/consumer pattern
+  - Fire module for transaction construction
+
+#### 6. **Utility Module** (`src/arb/util/`)
+Common utilities and traits:
+
+- **Traits** (`util/traits/`):
+  - `pubkey`: Extension methods for Pubkey (`.to_pubkey()`)
+  - `orm`: SeaORM conversion traits
+  - `signature`: Signature handling
+
+- **Workers** (`util/worker/`): PubSub worker implementations
+
+- **Types** (`util/types/`): Common type definitions like `MintPair`
+
+### DEX Modules (`src/dex/`)
+
+Each DEX has its own module with:
+- Configuration structures
+- Constants (program IDs, fees)
+- Pool information structures
+- Swap instruction builders
+
+Supported DEXes:
+- **Raydium**: AMM V4, CPMM, CLMM
+- **Meteora**: DLMM, DAMM, DAMM V2
+- **Orca**: Whirlpool
+- **Pump.fun**: AMM
+- **SolFi**: Custom pools
+- **Vertigo**: CLMM
 
 ### Configuration Structure
 
-The `config.toml` must include:
+The `config.toml` includes:
 
-- Bot settings (compute limits, delays)
-- Routing config with mint lists and pool addresses per DEX:
-  - `pump_pool_list`
-  - `raydium_pool_list`
-  - `raydium_cp_pool_list`
-  - `raydium_clmm_pool_list`
-  - `meteora_damm_pool_list`
-  - `meteora_dlmm_pool_list`
-  - `meteora_damm_v2_pool_list`
-  - `whirlpool_pool_list`
-  - `vertigo_pool_list`
-  - `lookup_table_accounts`
-- RPC endpoints
-- Wallet private key
-- Optional: Spam mode settings, Kamino flashloan
+```toml
+[bot]
+compute_unit_limit = 1400000
 
-### Development Notes
+[routing]
+[[routing.mint_config_list]]
+mint = "..."
+raydium_pool_list = ["..."]
+meteora_dlmm_pool_list = ["..."]
+# ... other pool lists
+lookup_table_accounts = ["..."]
+process_delay = 100
 
-- Includes test utilities in `src/test/`
-- Pool addresses must be manually configured
-- Lookup table accounts required for transaction compression
-- Each DEX module contains specific instruction building logic
-- Transaction size optimization critical for success
-- Database schema migrations may be required for updates
-- Supports both mainnet and devnet configurations
+[rpc]
+url = "$RPC_URL"  # Can use environment variables
 
-## Database Management
+[wallet]
+private_key = "$WALLET_PRIVATE_KEY"
 
-### Initial Setup
+[spam]  # Optional
+enabled = true
+sending_rpc_urls = ["..."]
+compute_unit_price = 1000000
 
-```bash
-# Install sqlx-cli (one-time setup)
-cargo install sqlx-cli --no-default-features --features postgres
-
-# Configure database connection
-cp .env.example .env
-# Edit .env and set DATABASE_URL=postgresql://username:password@localhost/database_name
-
-# Create database (if not exists)
-sqlx database create
-
-# Run existing migrations
-sqlx migrate run
+[flashloan]  # Optional
+enabled = false
 ```
 
-### Migration Commands
+## Database Schema
+
+### Tables
+
+#### `pools`
+- `address` (PubkeyType, PRIMARY KEY): Pool address
+- `name` (String): Pool name
+- `dex_type` (DexType): DEX protocol type
+- `base_mint` (PubkeyType): Base token mint
+- `quote_mint` (PubkeyType): Quote token mint
+- `base_vault` (PubkeyType): Base token vault
+- `quote_vault` (PubkeyType): Quote token vault
+- `description` (JSON): Pool metadata descriptor
+- `data_snapshot` (JSON): Latest pool state snapshot
+- `created_at` (DateTime, optional)
+- `updated_at` (DateTime, optional)
+
+#### `mint_records`
+- `address` (PubkeyType, PRIMARY KEY): Mint address
+- `symbol` (String): Token symbol
+- `decimals` (i16): Token decimals
+- `program` (PubkeyType): Token program ID
+- `created_at` (DateTime, optional)
+- `updated_at` (DateTime, optional)
+
+### Database Management
 
 ```bash
-# Create a new migration
+# Create new migration
 sqlx migrate add <migration_name>
 # This creates a new file in migrations/ directory
 
@@ -192,40 +248,13 @@ sqlx migrate info
 
 # List all applied migrations
 sqlx migrate list
+
+# Create database (if not exists)
+sqlx database create
+
+# Drop database
+sqlx database drop
 ```
-
-### Database Backup and Restore
-
-```bash
-# Backup data only (without schema)
-source .env && pg_dump -a "$DATABASE_URL" > ~/Downloads/backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Backup full database (schema + data)
-source .env && pg_dump "$DATABASE_URL" > ~/Downloads/full_backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Restore from backup
-source .env && psql "$DATABASE_URL" < ~/Downloads/backup_file.sql
-```
-
-### Current Database Schema
-
-The database currently has the following table:
-
-- **pool_mints**: Stores DEX pool information
-  - `id`: Primary key
-  - `pool_id`: Unique pool identifier
-  - `desired_mint`: Token mint address
-  - `the_other_mint`: Paired token mint address  
-  - `dex_type`: DEX protocol type (e.g., MeteoraDlmm, RaydiumV4)
-  - `created_at`: Timestamp of record creation
-  - `updated_at`: Timestamp of last update
-
-### Database Usage in Code
-
-The bot uses the database through `src/arb/global/db.rs` which provides:
-- Connection pooling via sqlx
-- Async database operations
-- Pool mint tracking and queries
 
 ## Coding Principles
 I am an experienced engineer with typescript, java, kotlin but not familiar with rust, I need you advise on best practice and help me code.
@@ -278,4 +307,40 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 - This is derived using PDA: `["creator_vault", coin_creator_pubkey]`
 - Part of the trading fees automatically flow to the token creator's vault
 
-- for seaorm models, you should ommit created_at updated_at fields, they are optional and should be taken care of db during inserts and update
+### SeaORM Models
+
+- For SeaORM models, omit `created_at` and `updated_at` fields in insert/update operations
+- These fields are optional and handled automatically by the database
+- Use `.to_orm()` trait method for converting Pubkey to database-compatible format
+
+## Important Instructions
+
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
+
+## Key Design Patterns
+
+- **Async-first**: All operations use Tokio runtime
+- **Error Resilience**: Use `Result<T>` everywhere, handle errors gracefully
+- **Modular Architecture**: Each component has clear boundaries
+- **Trait-based Abstraction**: Use traits for cross-DEX compatibility
+- **Database Optional**: Core functionality works without database
+- **Configuration-driven**: Behavior controlled via config.toml
+
+## Development Workflow
+
+1. **Check compilation**: `cargo check` before any commits
+2. **Run clippy**: `cargo clippy` for linting
+3. **Format code**: `cargo fmt` for consistent style
+4. **Test changes**: Run relevant tests with `cargo test`
+5. **Monitor logs**: Use dual console/file logging for debugging
+6. **Database migrations**: Always use SeaORM CLI for schema changes
+
+## Important Constants
+
+- **WSOL Mint**: `So11111111111111111111111111111111111111112`
+- **Token Programs**: SPL Token and Token-2022 supported
+- **Blockhash Refresh**: Every 200ms via dedicated thread
+- **Database Pool**: 100 max connections, 5 min connections
