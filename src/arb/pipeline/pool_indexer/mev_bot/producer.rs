@@ -1,5 +1,7 @@
 use crate::arb::convention::chain::mapper::traits::ToUnified;
+use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mev_bot::MevBot;
+use crate::arb::pipeline::pool_indexer::mev_bot::consumer::MEV_TX_CONSUMER;
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
 use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
@@ -40,9 +42,8 @@ impl SolanaMevBotOnchainListener {
     }
 
     async fn handle_transaction(tx_update: GrpcTransactionUpdate) -> Result<()> {
-        use crate::arb::pipeline::pool_indexer::mev_bot::consumer::try_publish_mev_transaction as try_publish;
         info!("Received transaction: {:?}", tx_update.signature);
-        if let Err(e) = tx_update.to_unified().and_then(try_publish) {
+        if let Err(e) = tx_update.to_unified().and_then(try_publish_mev_transaction) {
             tracing::error!("Failed to publish SMB transaction: {} to the consumer", e);
         }
         Ok(())
@@ -52,4 +53,12 @@ impl SolanaMevBotOnchainListener {
 pub async fn start_mev_bot_subscriber() -> Result<()> {
     let subscriber = SolanaMevBotOnchainListener::from_env(MevBot::EMV_BOT_PROGRAM)?;
     subscriber.start(true).await // auto_retry = true
+}
+
+pub async fn publish_mev_transaction(tx: Transaction) -> Result<()> {
+    MEV_TX_CONSUMER.publish(tx).await
+}
+
+pub fn try_publish_mev_transaction(tx: Transaction) -> Result<()> {
+    MEV_TX_CONSUMER.try_publish(tx)
 }
