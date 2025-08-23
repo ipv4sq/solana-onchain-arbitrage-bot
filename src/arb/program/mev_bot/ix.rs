@@ -4,7 +4,7 @@ use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
@@ -138,7 +138,7 @@ mod tests {
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::fetch_tx;
     use crate::arb::program::mev_bot::ix::{extract_mev_instruction, is_mev_box_ix_profitable};
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
     async fn test_account_metadata_mapping() {

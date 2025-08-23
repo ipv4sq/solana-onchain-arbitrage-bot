@@ -32,7 +32,7 @@ pub async fn fetch_address_lookup_tables(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
     async fn test_fetch_address_lookup_tables() {

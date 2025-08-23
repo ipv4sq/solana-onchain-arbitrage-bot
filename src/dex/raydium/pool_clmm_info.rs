@@ -1,4 +1,4 @@
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::dex::pool_checker::PoolChecker;
 use crate::dex::raydium::RAYDIUM_CLMM_PROGRAM_ID;
 use anyhow::Result;

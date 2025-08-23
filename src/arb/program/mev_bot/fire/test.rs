@@ -6,7 +6,7 @@ mod tests {
     use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
     use crate::arb::program::mev_bot::fire::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};

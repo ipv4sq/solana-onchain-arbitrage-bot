@@ -2,7 +2,7 @@
 mod tests {
     use crate::arb::convention::pool::interface::PoolDataLoader;
     use crate::arb::convention::pool::pump_amm::data::PumpAmmPoolData;
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[test]
     fn test_get_creator_vault_authority() {

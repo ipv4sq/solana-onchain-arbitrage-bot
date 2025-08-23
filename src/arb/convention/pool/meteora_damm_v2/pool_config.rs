@@ -1,7 +1,7 @@
 use crate::arb::convention::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::global::constant::token_program::TokenProgram;
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 

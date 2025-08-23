@@ -70,7 +70,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
         use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::global::constant::token_program::TokenProgram;
-        use crate::constants::helpers::ToAccountMeta;
+        use crate::arb::util::traits::account_meta::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         let token_x_mint = &pool_data.token_x_mint;
@@ -128,7 +128,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
         use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::global::constant::token_program::TokenProgram;
-        use crate::constants::helpers::ToAccountMeta;
+        use crate::arb::util::traits::account_meta::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         // Determine swap direction (swap_for_y means swapping X for Y)
@@ -255,11 +255,12 @@ mod tests {
     use crate::arb::global::constant::token_program::TokenProgram;
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+    use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     static PAYER: &str = "4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5";
     fn expected_result() -> MeteoraDlmmInputAccounts {

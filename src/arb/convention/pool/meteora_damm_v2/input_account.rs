@@ -3,7 +3,7 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader, TradeDirection};
 use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::convention::pool::util::ata;
-use crate::constants::helpers::ToAccountMeta;
+use crate::arb::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -189,7 +189,8 @@ mod tests {
     use crate::arb::global::constant::token_program::TokenProgram;
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+    use crate::arb::util::traits::pubkey::ToPubkey;
+    use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::test::test_utils::get_test_rpc_client;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP

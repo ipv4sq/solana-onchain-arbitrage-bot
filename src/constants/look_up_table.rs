@@ -1,4 +1,4 @@
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use solana_program::pubkey::Pubkey;
 
 // Address lookup table addresses

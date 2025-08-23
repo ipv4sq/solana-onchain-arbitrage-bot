@@ -9,7 +9,7 @@ use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
-use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
@@ -22,6 +22,7 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::info;
+use crate::arb::util::traits::pubkey::ToPubkey;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;

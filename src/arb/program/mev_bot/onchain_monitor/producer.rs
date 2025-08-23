@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_sdk::pubkey::Pubkey;
 use tracing::info;

@@ -6,11 +6,11 @@ mod tests {
     use crate::arb::convention::pool::meteora_dlmm::pool_config::*;
     use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::global::constant::mint::Mints;
-    use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+    use crate::arb::util::traits::account_meta::ToAccountMeta;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
-
+    use crate::arb::util::traits::pubkey::ToPubkey;
     // tx1: https://solscan.io/tx/2qVruJuf1dUTnUfG3ePnp4cRSg4WGK3P1AVUaB7MQdEJ7UMnzVdWL2677BNuPJJmowmvmfirEC9XvQ4uPZpcaTxw
     // tx2:
 

@@ -2,7 +2,7 @@
 mod tests {
     use crate::arb::convention::pool::interface::PoolDataLoader;
     use crate::arb::convention::pool::whirlpool::data::WhirlpoolPoolData;
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[test]
     fn test_tick_arrays() {

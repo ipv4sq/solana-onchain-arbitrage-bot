@@ -20,7 +20,7 @@ use tracing::{debug, error, info};
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::rpc;
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,

@@ -5,10 +5,11 @@ mod tests {
     use crate::arb::convention::pool::raydium_cpmm::data::RaydiumCpmmAPoolData;
     use crate::arb::convention::pool::raydium_cpmm::pool_config::*;
     use crate::arb::global::constant::mint::Mints;
-    use crate::constants::helpers::{ToAccountMeta, ToPubkey};
+    use crate::arb::util::traits::account_meta::ToAccountMeta;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
+    use crate::arb::util::traits::pubkey::ToPubkey;
     // tx: https://solscan.io/tx/4mUwr6wFSxmmaThPELhF5WZECS9GLm6DQqBu3fUKQNaMQ8MXUvaykKnmJGfK8MCHMk3xVSTbrMVBnzKrKE3MnRXS
 
     fn load_data() -> Result<RaydiumCpmmAPoolData> {

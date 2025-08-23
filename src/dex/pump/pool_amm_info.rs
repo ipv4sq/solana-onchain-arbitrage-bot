@@ -1,4 +1,4 @@
-use crate::constants::helpers::ToPubkey;
+use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
 use solana_program::pubkey::Pubkey;
@@ -88,7 +88,7 @@ impl PumpAmmInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::helpers::ToPubkey;
+    use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::test::test_utils::{get_test_rpc_client, pool_addresses};
 
     #[test]
