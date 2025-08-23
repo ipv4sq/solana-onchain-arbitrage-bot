@@ -2,7 +2,7 @@ use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::types::mint_pair::MintPair;
-use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolConfigInit};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::convention::pool::meteora_damm_v2::pool_config::MeteoraDammV2Config;
@@ -18,8 +18,8 @@ use crate::arb::convention::chain::Transaction;
 lazy_static::lazy_static! {
     pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {
         let mut set = HashSet::new();
-        set.insert(PoolOwnerPrograms::METEORA_DLMM);
-        set.insert(PoolOwnerPrograms::METEORA_DAMM_V2);
+        set.insert(PoolPrograms::METEORA_DLMM);
+        set.insert(PoolPrograms::METEORA_DAMM_V2);
         set
     };
 }
@@ -49,7 +49,7 @@ impl AnyPoolConfig {
     pub fn from_ix(ix: &Instruction, tx: &Transaction) -> Result<SwapInstruction> {
         let program_id_str = ix.program_id.to_string();
         match program_id_str.as_str() {
-            x if x == PoolOwnerPrograms::METEORA_DLMM.to_string().as_str() => {
+            x if x == PoolPrograms::METEORA_DLMM.to_string().as_str() => {
                 use crate::arb::convention::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
                 
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
@@ -68,7 +68,7 @@ impl AnyPoolConfig {
                     trade_direction: (trade_direction.from, trade_direction.to),
                 })
             }
-            x if x == PoolOwnerPrograms::METEORA_DAMM_V2.to_string().as_str() => {
+            x if x == PoolPrograms::METEORA_DAMM_V2.to_string().as_str() => {
                 use crate::arb::convention::pool::meteora_damm_v2::input_data::MeteoraDammV2InputData;
                 
                 let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;

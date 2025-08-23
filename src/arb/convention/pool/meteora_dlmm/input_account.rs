@@ -67,7 +67,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
         use crate::constants::addresses::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
@@ -98,11 +98,11 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         );
 
         let event_authority =
-            Pubkey::find_program_address(&[b"__event_authority"], &PoolOwnerPrograms::METEORA_DLMM).0;
+            Pubkey::find_program_address(&[b"__event_authority"], &PoolPrograms::METEORA_DLMM).0;
 
         Ok(MeteoraDlmmInputAccounts {
             lb_pair: pool.to_writable(),
-            bin_array_bitmap_extension: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            bin_array_bitmap_extension: PoolPrograms::METEORA_DLMM.to_program(),
             reverse_x: pool_data.reserve_x.to_writable(),
             reverse_y: pool_data.reserve_y.to_writable(),
             user_token_in: user_token_x.to_writable(),
@@ -110,12 +110,12 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             token_x_mint: pool_data.token_x_mint.to_readonly(),
             token_y_mint: pool_data.token_y_mint.to_readonly(),
             oracle: pool_data.oracle.to_writable(),
-            host_fee_in: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            host_fee_in: PoolPrograms::METEORA_DLMM.to_program(),
             user: payer.to_signer(),
             token_x_program,
             token_y_program,
             event_authority: event_authority.to_readonly(),
-            program: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            program: PoolPrograms::METEORA_DLMM.to_program(),
             bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
         })
     }
@@ -129,7 +129,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::arb::convention::pool::meteora_dlmm::bin_array;
         use crate::constants::addresses::TokenProgram;
         use crate::constants::helpers::ToAccountMeta;
@@ -166,11 +166,11 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
         // Event authority is a PDA
         let event_authority =
-            Pubkey::find_program_address(&[b"__event_authority"], &PoolOwnerPrograms::METEORA_DLMM).0;
+            Pubkey::find_program_address(&[b"__event_authority"], &PoolPrograms::METEORA_DLMM).0;
 
         Ok(MeteoraDlmmInputAccounts {
             lb_pair: pool.to_writable(),
-            bin_array_bitmap_extension: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            bin_array_bitmap_extension: PoolPrograms::METEORA_DLMM.to_program(),
             reverse_x: pool_data.reserve_x.to_writable(),
             reverse_y: pool_data.reserve_y.to_writable(),
             user_token_in: user_token_in.to_writable(),
@@ -178,12 +178,12 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
             token_x_mint: pool_data.token_x_mint.to_readonly(),
             token_y_mint: pool_data.token_y_mint.to_readonly(),
             oracle: pool_data.oracle.to_writable(),
-            host_fee_in: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            host_fee_in: PoolPrograms::METEORA_DLMM.to_program(),
             user: payer.to_signer(),
             token_x_program,
             token_y_program,
             event_authority: event_authority.to_readonly(),
-            program: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            program: PoolPrograms::METEORA_DLMM.to_program(),
             bin_arrays: bin_arrays.iter().map(|a| a.to_writable()).collect(),
         })
     }
@@ -251,7 +251,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+    use crate::arb::global::constant::pool_program::PoolPrograms;
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -282,7 +282,7 @@ mod tests {
             token_x_program: TokenProgram::SPL_TOKEN.to_program(),
             token_y_program: TokenProgram::SPL_TOKEN.to_program(),
             event_authority: "D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6".to_readonly(),
-            program: PoolOwnerPrograms::METEORA_DLMM.to_program(),
+            program: PoolPrograms::METEORA_DLMM.to_program(),
             bin_arrays: vec![
                 "B2a1aWZxBSm1qWwEccceUzrkL76Ab9UYEesgmqdvv449".to_writable(),
                 "99NKxVHj9vRRQQQAYArBiB2L8wxPC9SEqKPdijYA5TXT".to_writable(),

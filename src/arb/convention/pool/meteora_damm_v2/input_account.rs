@@ -82,7 +82,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> Result<MeteoraDammV2InputAccount> {
-        use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+        use crate::arb::global::constant::pool_program::PoolPrograms;
         use crate::constants::addresses::TokenProgram;
         // Pool authority is a fixed PDA for DAMM V2
         let pool_authority = "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC".to_readonly();
@@ -123,9 +123,9 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             payer: payer.to_signer(),
             token_a_program,
             token_b_program,
-            referral_token_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
+            referral_token_program: PoolPrograms::METEORA_DAMM_V2.to_program(),
             event_authority,
-            meteora_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
+            meteora_program: PoolPrograms::METEORA_DAMM_V2.to_program(),
         })
     }
 
@@ -181,7 +181,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::convention::chain::Transaction;
-    use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+    use crate::arb::global::constant::pool_program::PoolPrograms;
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::convention::pool::interface::InputAccountUtil;
     use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
@@ -214,9 +214,9 @@ mod tests {
             payer: "4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5".to_signer(),
             token_a_program: TokenProgram::SPL_TOKEN.to_program(),
             token_b_program: TokenProgram::SPL_TOKEN.to_program(),
-            referral_token_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
+            referral_token_program: PoolPrograms::METEORA_DAMM_V2.to_program(),
             event_authority: "3rmHSu74h1ZcmAisVcWerTCiRDQbUrBKmcwptYGjHfet".to_readonly(),
-            meteora_program: PoolOwnerPrograms::METEORA_DAMM_V2.to_program(),
+            meteora_program: PoolPrograms::METEORA_DAMM_V2.to_program(),
         }
     }
 

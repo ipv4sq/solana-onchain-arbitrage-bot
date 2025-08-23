@@ -1,4 +1,4 @@
-use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::convention::pool::interface::{PoolConfig, PoolDataLoader};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -54,7 +54,7 @@ impl PumpAmmPoolData {
     pub(crate) fn get_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
         Pubkey::find_program_address(
             &[b"creator_vault", coin_creator.as_ref()],
-            &PoolOwnerPrograms::PUMP,
+            &PoolPrograms::PUMP,
         )
         .0
     }

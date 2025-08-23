@@ -1,6 +1,6 @@
 use crate::arb::convention::chain::util::transaction::inner_to_filtered_map;
 use crate::arb::convention::pool::register::AnyPoolConfig;
-use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::fetch_tx_sync;
 use crate::arb::program::mev_bot::ix::{convert_to_smb_ix, extract_mev_instruction};
@@ -51,7 +51,7 @@ fn test_modular_functions() {
     assert!(!swap_ixs.is_empty());
 
     for (program_id, ix) in swap_ixs.iter() {
-        if *program_id == PoolOwnerPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
+        if *program_id == PoolPrograms::METEORA_DLMM && ix.accounts.len() >= 15 {
             let swap_ix =
                 AnyPoolConfig::from_ix(ix, &tx).expect("Failed to parse swap instruction");
             assert_eq!(swap_ix.dex_type, DexType::MeteoraDlmm);

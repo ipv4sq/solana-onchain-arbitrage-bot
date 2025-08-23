@@ -1,4 +1,4 @@
-use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+use crate::arb::global::constant::pool_program::PoolPrograms;
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveActiveEnum, EnumIter as SeaOrmEnumIter};
 use serde::{Deserialize, Serialize};
@@ -40,16 +40,16 @@ impl DexType {
         let program_str = program_id.to_string();
 
         match program_str.as_str() {
-            x if x == PoolOwnerPrograms::RAYDIUM_V4.to_string() => DexType::RaydiumV4,
-            x if x == PoolOwnerPrograms::RAYDIUM_CPMM.to_string() => DexType::RaydiumCp,
-            x if x == PoolOwnerPrograms::RAYDIUM_CLMM.to_string() => DexType::RaydiumClmm,
-            x if x == PoolOwnerPrograms::PUMP.to_string() => DexType::Pump,
-            x if x == PoolOwnerPrograms::METEORA_DLMM.to_string() => DexType::MeteoraDlmm,
-            x if x == PoolOwnerPrograms::METEORA_DAMM.to_string() => DexType::MeteoraDamm,
-            x if x == PoolOwnerPrograms::METEORA_DAMM_V2.to_string() => DexType::MeteoraDammV2,
-            x if x == PoolOwnerPrograms::WHIRLPOOL.to_string() => DexType::OrcaWhirlpool,
-            x if x == PoolOwnerPrograms::SOLFI.to_string() => DexType::Solfi,
-            x if x == PoolOwnerPrograms::VERTIGO.to_string() => DexType::Vertigo,
+            x if x == PoolPrograms::RAYDIUM_V4.to_string() => DexType::RaydiumV4,
+            x if x == PoolPrograms::RAYDIUM_CPMM.to_string() => DexType::RaydiumCp,
+            x if x == PoolPrograms::RAYDIUM_CLMM.to_string() => DexType::RaydiumClmm,
+            x if x == PoolPrograms::PUMP.to_string() => DexType::Pump,
+            x if x == PoolPrograms::METEORA_DLMM.to_string() => DexType::MeteoraDlmm,
+            x if x == PoolPrograms::METEORA_DAMM.to_string() => DexType::MeteoraDamm,
+            x if x == PoolPrograms::METEORA_DAMM_V2.to_string() => DexType::MeteoraDammV2,
+            x if x == PoolPrograms::WHIRLPOOL.to_string() => DexType::OrcaWhirlpool,
+            x if x == PoolPrograms::SOLFI.to_string() => DexType::Solfi,
+            x if x == PoolPrograms::VERTIGO.to_string() => DexType::Vertigo,
             _ => DexType::Unknown,
         }
     }
