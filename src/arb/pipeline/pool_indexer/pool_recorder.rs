@@ -49,8 +49,8 @@ async fn build_model<T: PoolDataLoader + Serialize>(
         description: PoolRecordDescriptor {
             base_symbol: base.symbol,
             quote_symbol: quote.symbol,
-            base: data.base_mint(),
-            quote: data.quote_mint(),
+            base: data.base_mint().to_string(),
+            quote: data.quote_mint().to_string(),
         },
         data_snapshot: serde_json::json!(data),
         created_at: None,
