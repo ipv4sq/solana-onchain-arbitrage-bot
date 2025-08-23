@@ -2,29 +2,6 @@ use crate::constants::helpers::ToPubkey;
 use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
 
-// Token mint addresses
-pub struct TokenMint;
-impl TokenMint {
-    // Native SOL mint address
-    pub const SOL: &'static str = "So11111111111111111111111111111111111111112";
-
-    pub const USDC: &'static str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-}
-
-// Token program addresses
-pub struct TokenProgram;
-impl TokenProgram {
-    // SPL Token program (included for completeness, use spl_token::ID when possible)
-    pub const SPL_TOKEN: &'static str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-
-    // Token 2022 program
-    pub const TOKEN_2022: &'static str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
-}
-
-lazy_static! {
-    pub static ref SPL_TOKEN_KEY: Pubkey = TokenProgram::SPL_TOKEN.to_pubkey();
-    pub static ref TOKEN_2022_KEY: Pubkey = TokenProgram::TOKEN_2022.to_pubkey();
-}
 
 // Address lookup table addresses
 pub struct LookupTable;
@@ -38,14 +15,13 @@ mod tests {
     use super::*;
     use solana_program::pubkey::Pubkey;
     use std::str::FromStr;
+    use crate::arb::global::constant::token_program::TokenProgram;
+    use crate::arb::global::constant::mint::Mints;
 
     #[test]
     fn test_all_addresses_are_valid() {
         // All addresses for validation
         let all_addresses = &[
-            ("TokenMint::SOL", TokenMint::SOL),
-            ("TokenProgram::SPL_TOKEN", TokenProgram::SPL_TOKEN),
-            ("TokenProgram::TOKEN_2022", TokenProgram::TOKEN_2022),
             ("LookupTable::DEFAULT", LookupTable::DEFAULT),
         ];
 
