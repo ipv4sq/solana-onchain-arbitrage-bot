@@ -130,7 +130,7 @@ pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
         &lite_pool.pool_address,
         &desired_mint,
         &the_other_mint,
-        &dex_type_str,
+        lite_pool.dex_type,
     )
     .await?;
     Ok(())

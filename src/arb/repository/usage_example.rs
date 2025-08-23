@@ -1,9 +1,6 @@
+use crate::arb::constant::dex_type::DexType;
+use crate::arb::repository::{get_repository_manager, RepositoryManager, RepositoryResult};
 use solana_sdk::pubkey::Pubkey;
-use crate::arb::repository::{
-    RepositoryManager,
-    get_repository_manager,
-    RepositoryResult,
-};
 
 /// Example of using the repository pattern with dependency injection
 pub struct ArbitrageService {
@@ -22,34 +19,27 @@ impl ArbitrageService {
         pool_id: &Pubkey,
         desired_mint: &Pubkey,
         other_mint: &Pubkey,
-        dex_type: &str,
+        dex_type: DexType,
     ) -> RepositoryResult<()> {
         // Use transaction to ensure atomicity
-        self.repo_manager.with_transaction(|txn| {
-            Box::pin(async move {
-                // 1. Create or update pool
-                let pool_repo = crate::arb::repository::repositories::PoolRepository::new(txn);
-                pool_repo.upsert(
-                    pool_id.to_string(),
-                    desired_mint.to_string(),
-                    other_mint.to_string(),
-                    dex_type.to_string(),
-                ).await?;
+        self.repo_manager
+            .with_transaction(|txn| {
+                Box::pin(async move {
+                    // 1. Create or update pool
+                    let pool_repo = crate::arb::repository::repositories::PoolRepository::new(txn);
+                    pool_repo
+                        .upsert(
+                            pool_id.to_string(),
+                            desired_mint.to_string(),
+                            other_mint.to_string(),
+                            dex_type,
+                        )
+                        .await?;
 
-                // 2. Initialize metrics
-                let metrics_repo = crate::arb::repository::repositories::MetricsRepository::new(txn);
-                metrics_repo.update_pool_metrics(
-                    pool_id.to_string(),
-                    dex_type.to_string(),
-                    rust_decimal::Decimal::ZERO,
-                    rust_decimal::Decimal::ZERO,
-                    rust_decimal::Decimal::ZERO,
-                    0,
-                ).await?;
-
-                Ok(())
+                    Ok(())
+                })
             })
-        }).await
+            .await
     }
 
     /// Example: Find arbitrage opportunities
@@ -58,23 +48,22 @@ impl ArbitrageService {
         mint: &Pubkey,
     ) -> RepositoryResult<Vec<ArbitrageOpportunity>> {
         let pool_repo = self.repo_manager.pools();
-        
+
         // Find all pools containing this mint
-        let pools = pool_repo.find_by_mints(
-            &mint.to_string(),
-            &mint.to_string(),
-        ).await?;
+        let pools = pool_repo
+            .find_by_mints(&mint.to_string(), &mint.to_string())
+            .await?;
 
         // Get metrics for these pools
         let metrics_repo = self.repo_manager.metrics();
-        
+
         let mut opportunities = Vec::new();
         for pool in pools {
             if let Ok(metrics) = metrics_repo.find_by_dex_type(&pool.dex_type).await {
                 for metric in metrics {
                     opportunities.push(ArbitrageOpportunity {
                         pool_id: pool.pool_id.clone(),
-                        dex_type: pool.dex_type.clone(),
+                        dex_type: pool.dex_type,
                         tvl: metric.tvl_usd,
                         volume_24h: metric.volume_24h_usd,
                     });
@@ -106,17 +95,17 @@ impl ArbitrageService {
     /// Example: Batch operations
     pub async fn batch_import_pools(
         &self,
-        pools: Vec<(String, String, String, String)>,
+        pools: Vec<(String, String, String, DexType)>,
     ) -> RepositoryResult<()> {
         use crate::arb::repository::core::traits::BatchOperations;
         use crate::arb::repository::entity::pool_mints;
-        use sea_orm::ActiveValue::Set;
         use chrono::Utc;
+        use sea_orm::ActiveValue::Set;
 
         let models: Vec<pool_mints::ActiveModel> = pools
             .into_iter()
-            .map(|(pool_id, desired_mint, other_mint, dex_type)| {
-                pool_mints::ActiveModel {
+            .map(
+                |(pool_id, desired_mint, other_mint, dex_type)| pool_mints::ActiveModel {
                     pool_id: Set(pool_id),
                     desired_mint: Set(desired_mint),
                     the_other_mint: Set(other_mint),
@@ -124,8 +113,8 @@ impl ArbitrageService {
                     created_at: Set(Some(Utc::now())),
                     updated_at: Set(Some(Utc::now())),
                     ..Default::default()
-                }
-            })
+                },
+            )
             .collect();
 
         self.repo_manager.pools().batch_create(models).await
@@ -138,10 +127,10 @@ impl ArbitrageService {
         page: u64,
         per_page: u64,
     ) -> RepositoryResult<PaginatedResult> {
-        use crate::arb::repository::core::traits::{Search, Paginate};
+        use crate::arb::repository::core::traits::{Paginate, Search};
 
         let pool_repo = self.repo_manager.pools();
-        
+
         // Search and paginate
         let search_results = pool_repo.search(search_term).await?;
         let (items, total_pages) = pool_repo.paginate(page, per_page).await?;
@@ -159,7 +148,7 @@ impl ArbitrageService {
 #[derive(Debug)]
 pub struct ArbitrageOpportunity {
     pub pool_id: String,
-    pub dex_type: String,
+    pub dex_type: DexType,
     pub tvl: rust_decimal::Decimal,
     pub volume_24h: rust_decimal::Decimal,
 }

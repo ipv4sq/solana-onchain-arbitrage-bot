@@ -23,7 +23,7 @@ pub async fn read_from_database() -> Result<Vec<PoolsOfMint>> {
     let mint_pools_map = pool_mints
         .into_iter()
         .filter_map(|row| {
-            let dex_type = DexType::from_db_string(&row.dex_type);
+            let dex_type = row.dex_type;
             (dex_type != DexType::Unknown).then_some((
                 row.the_other_mint.to_pubkey(),
                 PoolInfo {

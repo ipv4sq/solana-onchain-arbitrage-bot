@@ -1,19 +1,34 @@
 use solana_program::pubkey::Pubkey;
 use crate::arb::constant::pool_owner::PoolOwnerPrograms;
+use sea_orm::entity::prelude::*;
+use sea_orm::{DeriveActiveEnum, EnumIter as SeaOrmEnumIter};
+use serde::{Deserialize, Serialize};
 
 // DEX types that can be identified in the transaction
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, SeaOrmEnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "String(None)")]
 pub enum DexType {
+    #[sea_orm(string_value = "RaydiumV4")]
     RaydiumV4,
+    #[sea_orm(string_value = "RaydiumCp")]
     RaydiumCp,
+    #[sea_orm(string_value = "RaydiumClmm")]
     RaydiumClmm,
+    #[sea_orm(string_value = "Pump")]
     Pump,
+    #[sea_orm(string_value = "MeteoraDlmm")]
     MeteoraDlmm,
+    #[sea_orm(string_value = "MeteoraDamm")]
     MeteoraDamm,
+    #[sea_orm(string_value = "MeteoraDammV2")]
     MeteoraDammV2,
+    #[sea_orm(string_value = "OrcaWhirlpool")]
     OrcaWhirlpool,
+    #[sea_orm(string_value = "Solfi")]
     Solfi,
+    #[sea_orm(string_value = "Vertigo")]
     Vertigo,
+    #[sea_orm(string_value = "Unknown")]
     Unknown,
 }
 

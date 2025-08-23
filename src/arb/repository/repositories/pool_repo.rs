@@ -4,7 +4,9 @@ use chrono::Utc;
 use solana_sdk::pubkey::Pubkey;
 use crate::arb::repository::core::error::RepositoryResult;
 use crate::arb::repository::core::traits::WithConnection;
-use super::super::entity::{pool_mints, prelude::*};
+use crate::arb::repository::entity::PoolMints;
+use super::super::entity::{pool_mints};
+use crate::arb::constant::dex_type::DexType;
 
 pub struct PoolRepository<'a> {
     db: &'a DatabaseConnection,
@@ -46,7 +48,7 @@ impl<'a> PoolRepository<'a> {
             .await?)
     }
 
-    pub async fn find_by_dex_types(&self, dex_types: Vec<String>) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_by_dex_types(&self, dex_types: Vec<DexType>) -> RepositoryResult<Vec<pool_mints::Model>> {
         Ok(PoolMints::find()
             .filter(pool_mints::Column::DexType.is_in(dex_types))
             .order_by_desc(pool_mints::Column::CreatedAt)
@@ -59,13 +61,13 @@ impl<'a> PoolRepository<'a> {
         pool_id: &Pubkey,
         desired_mint: &Pubkey,
         the_other_mint: &Pubkey,
-        dex_type: &str,
+        dex_type: DexType,
     ) -> RepositoryResult<()> {
         self.upsert(
             pool_id.to_string(),
             desired_mint.to_string(),
             the_other_mint.to_string(),
-            dex_type.to_string(),
+            dex_type,
         )
         .await?;
         Ok(())
@@ -87,8 +89,8 @@ impl<'a> PoolRepository<'a> {
         self.find_all().await
     }
 
-    pub async fn list_pool_mints_by_dex(&self, dex_type: &str) -> RepositoryResult<Vec<pool_mints::Model>> {
-        self.find_by_dex_types(vec![dex_type.to_string()]).await
+    pub async fn list_pool_mints_by_dex(&self, dex_type: DexType) -> RepositoryResult<Vec<pool_mints::Model>> {
+        self.find_by_dex_types(vec![dex_type]).await
     }
 
     pub async fn upsert(
@@ -96,7 +98,7 @@ impl<'a> PoolRepository<'a> {
         pool_id: String,
         desired_mint: String,
         the_other_mint: String,
-        dex_type: String,
+        dex_type: DexType,
     ) -> RepositoryResult<pool_mints::Model> {
         let existing = self.find_by_pool_id(&pool_id).await?;
 
@@ -173,7 +175,7 @@ impl<'a> PoolRepository<'a> {
                     .add(pool_mints::Column::PoolId.contains(query))
                     .add(pool_mints::Column::DesiredMint.contains(query))
                     .add(pool_mints::Column::TheOtherMint.contains(query))
-                    .add(pool_mints::Column::DexType.contains(query))
+                    .add(pool_mints::Column::DexType.eq(query))
             )
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)
