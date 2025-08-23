@@ -1,7 +1,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::Serialize;
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct StaticParameters {
     pub base_factor: u16,
@@ -17,7 +18,7 @@ pub struct StaticParameters {
     pub _padding: [u8; 5],
 }
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct VariableParameters {
     pub volatility_accumulator: u32,
@@ -28,14 +29,14 @@ pub struct VariableParameters {
     pub _padding_1: [u8; 8],
 }
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct ProtocolFee {
     pub amount_x: u64,
     pub amount_y: u64,
 }
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct RewardInfo {
     pub mint: Pubkey,

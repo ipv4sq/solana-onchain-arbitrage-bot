@@ -19,8 +19,7 @@ pub async fn ensure_mint_record_exist(mint: &Pubkey) -> Result<MintRecord> {
     return_ok_if_some!(existed);
 
     let record = load_mint_from_address(mint).await?;
-    let repo = MintRecordRepository::new();
-    Ok(repo.upsert_mint(record).await?)
+    Ok(MintRecordRepository::upsert_mint(record).await?)
 }
 
 pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {

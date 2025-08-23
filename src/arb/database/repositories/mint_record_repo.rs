@@ -9,11 +9,7 @@ use crate::arb::global::db::get_db;
 pub struct MintRecordRepository;
 
 impl MintRecordRepository {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub async fn upsert_mint(&self, mint: Model) -> Result<Model> {
+    pub async fn upsert_mint(mint: Model) -> Result<Model> {
         let db = get_db();
         let active_model = mint_record::ActiveModel {
             address: Set(mint.address.clone()),
@@ -38,14 +34,14 @@ impl MintRecordRepository {
             Ok(_) => Ok(mint), // Successfully inserted, return the model we built
             Err(_) => {
                 // Conflict occurred, fetch existing record
-                self.find_by_address(mint.address.0)
+                Self::find_by_address(mint.address.0)
                     .await?
                     .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing mint"))
             }
         }
     }
 
-    pub async fn find_by_address(&self, address: Pubkey) -> Result<Option<Model>> {
+    pub async fn find_by_address(address: Pubkey) -> Result<Option<Model>> {
         let db = get_db();
         Ok(MintRecord::find()
             .filter(mint_record::Column::Address.eq(PubkeyType::from(address)))

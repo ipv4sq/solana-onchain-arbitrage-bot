@@ -1,43 +1,54 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::pool_record::{
-    self, Entity as PoolRecord, Model, PoolRecordDescriptor,
+    self, Entity as PoolRecord, Model,
 };
-use crate::arb::global::enums::dex_type::DexType;
+use crate::arb::global::db::get_db;
 use anyhow::Result;
-use chrono::Utc;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveValue::{NotSet, Set}, ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::sea_query::OnConflict;
 use solana_program::pubkey::Pubkey;
-use std::str::FromStr;
 
-pub struct PoolRecordRepository {
-    db: DatabaseConnection,
-}
+pub struct PoolRecordRepository;
 
 impl PoolRecordRepository {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-
-    pub async fn insert(&self, mut pool: Model) -> Result<Model> {
+    pub async fn upsert_pool(pool: Model) -> Result<Model> {
+        let db = get_db();
         let active_model = pool_record::ActiveModel {
-            address: Set(pool.address),
-            name: Set(pool.name),
-            dex_type: Set(pool.dex_type),
-            base_mint: Set(pool.base_mint),
-            quote_mint: Set(pool.quote_mint),
-            base_vault: Set(pool.base_vault),
-            quote_vault: Set(pool.quote_vault),
-            description: Set(pool.description),
-            data_snapshot: Set(pool.data_snapshot),
-            created_at: Set(pool.created_at),
-            updated_at: Set(pool.updated_at),
+            address: Set(pool.address.clone()),
+            name: Set(pool.name.clone()),
+            dex_type: Set(pool.dex_type.clone()),
+            base_mint: Set(pool.base_mint.clone()),
+            quote_mint: Set(pool.quote_mint.clone()),
+            base_vault: Set(pool.base_vault.clone()),
+            quote_vault: Set(pool.quote_vault.clone()),
+            description: Set(pool.description.clone()),
+            data_snapshot: Set(pool.data_snapshot.clone()),
+            created_at: NotSet,
+            updated_at: NotSet,
         };
 
-        Ok(active_model.insert(&self.db).await?)
+        let result = PoolRecord::insert(active_model)
+            .on_conflict(
+                OnConflict::column(pool_record::Column::Address)
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .exec(db)
+            .await;
+
+        match result {
+            Ok(_) => Ok(pool),
+            Err(_) => {
+                Self::find_by_address(&pool.address.0)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing pool"))
+            }
+        }
     }
 
-    pub async fn find_by_mints(&self, mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<Model>> {
-        let pools = PoolRecord::find()
+    pub async fn find_by_mints(mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
             .filter(
                 pool_record::Column::BaseMint
                     .eq(PubkeyType::from(*mint1))
@@ -46,44 +57,41 @@ impl PoolRecordRepository {
                         .eq(PubkeyType::from(*mint2))
                         .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
             )
-            .all(&self.db)
-            .await?;
-
-        Ok(pools)
+            .all(db)
+            .await?)
     }
 
-    pub async fn find_by_base_mint(&self, base_mint: &Pubkey) -> Result<Vec<Model>> {
-        let pools = PoolRecord::find()
+    pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
             .filter(pool_record::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
-            .all(&self.db)
-            .await?;
-
-        Ok(pools)
+            .all(db)
+            .await?)
     }
 
-    pub async fn find_by_quote_mint(&self, quote_mint: &Pubkey) -> Result<Vec<Model>> {
-        let pools = PoolRecord::find()
+    pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
             .filter(pool_record::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
-            .all(&self.db)
-            .await?;
-
-        Ok(pools)
+            .all(db)
+            .await?)
     }
 
-    pub async fn find_by_address(&self, address: &Pubkey) -> Result<Option<Model>> {
-        let pool = PoolRecord::find_by_id(PubkeyType::from(*address))
-            .one(&self.db)
-            .await?;
-
-        Ok(pool)
+    pub async fn find_by_address(address: &Pubkey) -> Result<Option<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find_by_id(PubkeyType::from(*address))
+            .one(db)
+            .await?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arb::database::entity::pool_record::PoolRecordDescriptor;
+    use crate::arb::global::enums::dex_type::DexType;
     use serde_json::json;
-    use sqlx::encode::IsNull::No;
+    use std::str::FromStr;
 
     #[test]
     fn test_pool_record_model_creation() {

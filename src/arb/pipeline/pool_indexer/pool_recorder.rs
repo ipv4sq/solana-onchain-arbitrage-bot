@@ -1,18 +1,18 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::entity::pool_record::{Model as PoolRecord, PoolRecordDescriptor};
+use crate::arb::database::repositories::pool_record_repo::PoolRecordRepository;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::pipeline::pool_indexer::token_recorder;
 use crate::arb::util::traits::orm::ToOrm;
 use anyhow::Result;
-use sea_orm::EntityTrait;
-use solana_program::program_pack::Pack;
+use serde::Serialize;
 use solana_program::pubkey::Pubkey;
 
 pub async fn upsert_pool(pool: &Pubkey, dex_type: DexType) -> Result<()> {
     let any_config = AnyPoolConfig::from_address(pool, dex_type).await?;
 
-    async fn build_model<T: PoolDataLoader>(
+    async fn build_model<T: PoolDataLoader + Serialize>(
         pool: &Pubkey,
         data: &T,
         dex_type: DexType,
@@ -34,16 +34,18 @@ pub async fn upsert_pool(pool: &Pubkey, dex_type: DexType) -> Result<()> {
                 base: data.base_mint(),
                 quote: data.quote_mint(),
             },
-            data_snapshot: serde_json::json!({}), // Can't serialize generic data
+            data_snapshot: serde_json::json!(data),
             created_at: None,
             updated_at: None,
         })
     }
 
-    let _dto = match any_config {
+    let dto = match any_config {
         AnyPoolConfig::MeteoraDlmm(c) => build_model(pool, &c.data, dex_type).await?,
         AnyPoolConfig::MeteoraDammV2(c) => build_model(pool, &c.data, dex_type).await?,
         AnyPoolConfig::Unsupported => todo!(),
     };
+
+    PoolRecordRepository::upsert_pool(dto).await?;
     Ok(())
 }

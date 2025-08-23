@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a sophisticated Solana MEV bot and arbitrage system that monitors and executes arbitrage opportunities across multiple DEX protocols using an onchain program. The project has evolved into a modular architecture with advanced features including:
+This is a sophisticated Solana MEV bot and arbitrage system that monitors and executes arbitrage opportunities across
+multiple DEX protocols using an onchain program. The project has evolved into a modular architecture with advanced
+features including:
 
 - **MEV Bot Integration**: Real-time monitoring of onchain MEV opportunities
 - **Database Persistence**: SeaORM-based data management for pools and mints
@@ -19,15 +21,22 @@ This is a sophisticated Solana MEV bot and arbitrage system that monitors and ex
 Claude Code has access to specialized MCP tools for Solana development:
 
 ### Solana Development Tools
-- **`mcp__http-server__Solana_Expert__Ask_For_Help`**: Expert assistance for Solana development questions (how-to, concepts, APIs, SDKs, errors). Use for complex Solana-specific issues.
-- **`mcp__http-server__Solana_Documentation_Search`**: RAG-based search across Solana ecosystem documentation. Use when you need up-to-date information about Solana features.
-- **`mcp__http-server__Ask_Solana_Anchor_Framework_Expert`**: Specialized help for Anchor Framework development. Use for Anchor-specific queries.
+
+- **`mcp__http-server__Solana_Expert__Ask_For_Help`**: Expert assistance for Solana development questions (how-to,
+  concepts, APIs, SDKs, errors). Use for complex Solana-specific issues.
+- **`mcp__http-server__Solana_Documentation_Search`**: RAG-based search across Solana ecosystem documentation. Use when
+  you need up-to-date information about Solana features.
+- **`mcp__http-server__Ask_Solana_Anchor_Framework_Expert`**: Specialized help for Anchor Framework development. Use for
+  Anchor-specific queries.
 
 ### Development Support Tools
-- **`mcp__ide__getDiagnostics`**: Get IDE diagnostic information for code issues
-- **`mcp__context7__resolve-library-id`** and **`mcp__context7__get-library-docs`**: Fetch up-to-date documentation for any library. Use when you need current library documentation beyond the knowledge cutoff.
 
-**When to use MCP tools**: Prefer these tools for Solana-specific questions, current documentation needs, or when dealing with complex Solana/Anchor concepts that require expert knowledge.
+- **`mcp__ide__getDiagnostics`**: Get IDE diagnostic information for code issues
+- **`mcp__context7__resolve-library-id`** and **`mcp__context7__get-library-docs`**: Fetch up-to-date documentation for
+  any library. Use when you need current library documentation beyond the knowledge cutoff.
+
+**When to use MCP tools**: Prefer these tools for Solana-specific questions, current documentation needs, or when
+dealing with complex Solana/Anchor concepts that require expert knowledge.
 
 ## Build and Run Commands
 
@@ -84,27 +93,29 @@ The `logs/` directory is in `.gitignore` so log files won't be committed to the 
 ### Core Modules
 
 #### 1. **Convention Module** (`src/arb/convention/`)
+
 Provides abstraction layers for consistent interaction across different components:
 
 - **Chain** (`convention/chain/`): Transaction and instruction parsing
-  - Mappers for converting from gRPC/RPC formats
-  - Instruction analysis and metadata extraction
-  - ALT (Address Lookup Table) utilities
-  - Transaction simulation capabilities
+    - Mappers for converting from gRPC/RPC formats
+    - Instruction analysis and metadata extraction
+    - ALT (Address Lookup Table) utilities
+    - Transaction simulation capabilities
 
 - **Pool** (`convention/pool/`): Unified pool interface
-  - `PoolDataLoader` trait for consistent pool data access
-  - `PoolConfigInit` for pool initialization
-  - DEX-specific implementations (Meteora DLMM/DAMM, Raydium CPMM, Whirlpool, Pump)
-  - Account and data structures for each pool type
+    - `PoolDataLoader` trait for consistent pool data access
+    - `PoolConfigInit` for pool initialization
+    - DEX-specific implementations (Meteora DLMM/DAMM, Raydium CPMM, Whirlpool, Pump)
+    - Account and data structures for each pool type
 
 #### 2. **Pipeline Module** (`src/arb/pipeline/`)
+
 Orchestrates the main business logic flow:
 
-- **Pool Indexer** (`pipeline/pool_indexer/`): 
-  - Pool discovery and registration
-  - Mint metadata fetching and caching
-  - Database persistence of pool configurations
+- **Pool Indexer** (`pipeline/pool_indexer/`):
+    - Pool discovery and registration
+    - Mint metadata fetching and caching
+    - Database persistence of pool configurations
 
 - **Swap Monitor** (`pipeline/swap_monitor/`): Real-time monitoring (placeholder for future implementation)
 
@@ -113,45 +124,49 @@ Orchestrates the main business logic flow:
 - **Uploader** (`pipeline/uploader/`): Data upload services (placeholder)
 
 #### 3. **Database Module** (`src/arb/database/`)
+
 SeaORM-based data persistence layer:
 
 - **Core** (`database/core/`): Database connection management, transactions
-- **Entities** (`database/entity/`): 
-  - `mint_record`: Token metadata and information
-  - `pool_record`: Pool configurations with snapshots
+- **Entities** (`database/entity/`):
+    - `mint_record`: Token metadata and information
+    - `pool_record`: Pool configurations with snapshots
 - **Repositories** (`database/repositories/`): Data access patterns
 - **Custom Types**: `PubkeyType` for Solana address storage
 
 #### 4. **Global State** (`src/arb/global/`)
+
 Shared state and utilities:
 
 - **State Management** (`global/state/`):
-  - `blockhash`: Dedicated thread for blockhash refresh (200ms intervals)
-  - `rpc`: Global RPC client management
-  - `mem_pool`: Memory pool for transaction management
+    - `blockhash`: Dedicated thread for blockhash refresh (200ms intervals)
+    - `rpc`: Global RPC client management
+    - `mem_pool`: Memory pool for transaction management
 
 - **Constants** (`global/constant/`):
-  - MEV bot configuration
-  - Well-known mint addresses
-  - DEX program IDs
+    - MEV bot configuration
+    - Well-known mint addresses
+    - DEX program IDs
 
 - **Enums** (`global/enums/`): Type-safe DEX type definitions
 
 #### 5. **Program Module** (`src/arb/program/`)
+
 Onchain program interaction:
 
 - **MEV Bot** (`program/mev_bot/`):
-  - Instruction building and serialization
-  - Onchain monitoring with producer/consumer pattern
-  - Fire module for transaction construction
+    - Instruction building and serialization
+    - Onchain monitoring with producer/consumer pattern
+    - Fire module for transaction construction
 
 #### 6. **Utility Module** (`src/arb/util/`)
+
 Common utilities and traits:
 
 - **Traits** (`util/traits/`):
-  - `pubkey`: Extension methods for Pubkey (`.to_pubkey()`)
-  - `orm`: SeaORM conversion traits
-  - `signature`: Signature handling
+    - `pubkey`: Extension methods for Pubkey (`.to_pubkey()`)
+    - `orm`: SeaORM conversion traits
+    - `signature`: Signature handling
 
 - **Workers** (`util/worker/`): PubSub worker implementations
 
@@ -160,12 +175,14 @@ Common utilities and traits:
 ### DEX Modules (`src/dex/`)
 
 Each DEX has its own module with:
+
 - Configuration structures
 - Constants (program IDs, fees)
 - Pool information structures
 - Swap instruction builders
 
 Supported DEXes:
+
 - **Raydium**: AMM V4, CPMM, CLMM
 - **Meteora**: DLMM, DAMM, DAMM V2
 - **Orca**: Whirlpool
@@ -210,6 +227,7 @@ enabled = false
 ### Tables
 
 #### `pools`
+
 - `address` (PubkeyType, PRIMARY KEY): Pool address
 - `name` (String): Pool name
 - `dex_type` (DexType): DEX protocol type
@@ -223,6 +241,7 @@ enabled = false
 - `updated_at` (DateTime, optional)
 
 #### `mint_records`
+
 - `address` (PubkeyType, PRIMARY KEY): Mint address
 - `symbol` (String): Token symbol
 - `decimals` (i16): Token decimals
@@ -257,10 +276,11 @@ sqlx database drop
 ```
 
 ## Coding Principles
-I am an experienced engineer with typescript, java, kotlin but not familiar with rust, I need you advise on best practice and help me code.
+
 This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
 
 ### General
+
 - **ABSOLUTELY NO `///` DOC COMMENTS** - They clutter the code. Never use them.
 - **NO COMMENTS** - Write self-documenting code. Only use `//` when absolutely critical for understanding.
 - Think carefully and only action the specific task I have given you with the most concise and elegant solution that
@@ -270,12 +290,13 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 
 ### Functional Programming Style
 
-- **Prefer functional chaining over imperative loops** - Use iterator methods and method chaining for data transformations
+- **Prefer functional chaining over imperative loops** - Use iterator methods and method chaining for data
+  transformations
 - **Examples of preferred patterns**:
-  - Use `filter_map` instead of `for` loops with `if let`
-  - Use `fold` for accumulating values instead of mutable variables
-  - Use `then_some` for conditional inclusion instead of if/else with push
-  - Chain methods like `.entry().or_insert_with().and_modify()` for map operations
+    - Use `filter_map` instead of `for` loops with `if let`
+    - Use `fold` for accumulating values instead of mutable variables
+    - Use `then_some` for conditional inclusion instead of if/else with push
+    - Chain methods like `.entry().or_insert_with().and_modify()` for map operations
 - **Benefits**: More expressive, eliminates mutable state, reduces boilerplate, creates composable transformations
 - **Example transformation**:
   ```rust

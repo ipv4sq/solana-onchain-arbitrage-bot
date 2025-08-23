@@ -3,9 +3,10 @@ use crate::arb::convention::pool::meteora_damm_v2::pool_data_type::{
     PoolFeesStruct, PoolMetrics, RewardInfo,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::Serialize;
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]
 pub struct MeteoraDammV2PoolData {
     pub pool_fees: PoolFeesStruct,
