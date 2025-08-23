@@ -62,6 +62,14 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Solana MEV Bot Listener");
     info!("Logs are being written to: {}", log_file_path);
 
+    // Initialize database connection
+    if let Err(e) = global::db::init_db().await {
+        tracing::warn!("Failed to initialize database connection: {}", e);
+        tracing::warn!("Database features will be unavailable");
+    } else {
+        info!("Database connection initialized");
+    }
+
     // Initialize blockhash holder with fresh blockhash
     info!("Initializing blockhash holder...");
     global::state::blockhash::initialize().await?;

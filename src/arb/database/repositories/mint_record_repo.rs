@@ -2,19 +2,19 @@ use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::mint_record::{self, Entity as MintRecord, Model};
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{ActiveValue::{NotSet, Set}, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ActiveValue::{NotSet, Set}, ColumnTrait, EntityTrait, QueryFilter};
 use solana_program::pubkey::Pubkey;
+use crate::arb::global::db::get_db;
 
-pub struct MintRecordRepository {
-    db: DatabaseConnection,
-}
+pub struct MintRecordRepository;
 
 impl MintRecordRepository {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new() -> Self {
+        Self
     }
 
-    pub async fn upsert_mint(&self, mut mint: Model) -> Result<Model> {
+    pub async fn upsert_mint(&self, mint: Model) -> Result<Model> {
+        let db = get_db();
         let active_model = mint_record::ActiveModel {
             address: Set(mint.address.clone()),
             symbol: Set(mint.symbol.clone()),
@@ -31,7 +31,7 @@ impl MintRecordRepository {
                     .do_nothing()
                     .to_owned(),
             )
-            .exec(&self.db)
+            .exec(db)
             .await;
 
         match result {
@@ -46,9 +46,10 @@ impl MintRecordRepository {
     }
 
     pub async fn find_by_address(&self, address: Pubkey) -> Result<Option<Model>> {
+        let db = get_db();
         Ok(MintRecord::find()
             .filter(mint_record::Column::Address.eq(PubkeyType::from(address)))
-            .one(&self.db)
+            .one(db)
             .await?)
     }
 }

@@ -121,7 +121,7 @@ The bot supports multiple ways to monitor the blockchain:
 
 ### Important Constants
 
-- **WSOL Mint**: `So11111111111111111111111111111111111112`
+- **WSOL Mint**: `So11111111111111111111111111111111111111112`
 - **Token Programs**: Supports both SPL Token and Token 2022
 - **Max Compute Units**: Configurable via `compute_unit_limit`
 

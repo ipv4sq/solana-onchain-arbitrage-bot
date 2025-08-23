@@ -8,7 +8,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_mint_from_address() {
         // WSOL mint address
-        let wsol_mint = "So11111111111111111111111111111111111112".to_pubkey();
+        let wsol_mint = "So11111111111111111111111111111111111111112".to_pubkey();
         
         let result = load_mint_from_address(&wsol_mint).await;
         
@@ -23,8 +23,8 @@ mod tests {
                 
                 // WSOL should have 9 decimals
                 assert_eq!(mint_record.decimals, 9);
-                // Check that we got the correct symbol
-                assert_eq!(mint_record.symbol, "WSOL");
+                // Check that we got the correct symbol (SOL is the actual symbol from metadata)
+                assert_eq!(mint_record.symbol, "SOL");
             }
             Err(e) => {
                 // This might fail if not connected to mainnet

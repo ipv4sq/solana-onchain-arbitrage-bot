@@ -1,25 +1,39 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
 use crate::arb::convention::pool::register::AnyPoolConfig;
-use crate::arb::database::columns::PubkeyType;
+use crate::arb::database::entity::mint_record::Entity as MintEntity;
 use crate::arb::database::entity::mint_record::Model as MintRecord;
 use crate::arb::database::entity::pool_record::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::arb::database::repositories::MintRecordRepository;
+use crate::arb::global::db::get_db;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::traits::orm::ToOrm;
 use anyhow::Result;
-use chrono::Utc;
 use mpl_token_metadata::accounts::Metadata;
 use mpl_token_metadata::ID as METADATA_PROGRAM_ID;
+use sea_orm::EntityTrait;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use spl_token::state::Mint;
-use std::cmp::min;
 
 pub async fn ensure_mint_record_exist(mint: &Pubkey) -> Result<()> {
-    let existed = MintRecordRepository::find_by_address(mint);
-    let _record = load_mint_from_address(mint).await?;
+    let db = get_db();
 
-    todo!()
+    // Check if mint already exists in database
+    if MintEntity::find_by_id(mint.to_orm())
+        .one(db)
+        .await?
+        .is_some()
+    {
+        return Ok(());
+    }
+
+    // Load mint data from chain and insert
+    let record = load_mint_from_address(mint).await?;
+    let repo = MintRecordRepository::new();
+    repo.upsert_mint(record).await?;
+
+    Ok(())
 }
 
 pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
@@ -39,10 +53,10 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
     };
 
     Ok(MintRecord {
-        address: PubkeyType(*mint),
+        address: mint.to_orm(),
         symbol,
         decimals: mint_state.decimals as i16,
-        program: PubkeyType(account.owner),
+        program: account.owner.to_orm(),
         created_at: None,
         updated_at: None,
     })
@@ -94,13 +108,13 @@ pub async fn upsert_pool(pool: &Pubkey, dex_type: DexType, name: Option<String>)
         name: Option<String>,
     ) -> PoolRecord {
         PoolRecord {
-            address: (*pool).into(),
+            address: pool.to_orm(),
             name: name.unwrap_or("Unknown Pool".into()),
             dex_type,
-            base_mint: PubkeyType(data.base_mint()),
-            quote_mint: PubkeyType(data.quote_mint()),
-            base_vault: PubkeyType(data.base_vault()),
-            quote_vault: PubkeyType(data.quote_vault()),
+            base_mint: data.base_mint().to_orm(),
+            quote_mint: data.quote_mint().to_orm(),
+            base_vault: data.base_vault().to_orm(),
+            quote_vault: data.quote_vault().to_orm(),
             description: PoolRecordDescriptor {
                 base_symbol: "BASE".to_string(),
                 quote_symbol: "QUOTE".to_string(),
