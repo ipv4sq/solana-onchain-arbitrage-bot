@@ -1,5 +1,5 @@
 use crate::arb::constant::dex_type::DexType;
-use crate::arb::repository::types::pubkey_type::PubkeyWrapper;
+use crate::arb::repository::types::PubkeyType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,15 +9,15 @@ use solana_program::pubkey::Pubkey;
 #[sea_orm(table_name = "pools")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub address: PubkeyWrapper,
+    pub address: PubkeyType,
     pub name: String,
     pub dex_type: DexType,
-    pub base_mint: PubkeyWrapper,
-    pub quote_mint: PubkeyWrapper,
-    pub base_vault: PubkeyWrapper,
-    pub quote_vault: PubkeyWrapper,
+    pub base_mint: PubkeyType,
+    pub quote_mint: PubkeyType,
+    pub base_vault: PubkeyType,
+    pub quote_vault: PubkeyType,
     #[sea_orm(column_type = "JsonBinary")]
-    pub description: Json,
+    pub description: PoolRecordDescriptor,
     #[sea_orm(column_type = "JsonBinary")]
     pub data_snapshot: Json,
     pub created_at: DateTime<Utc>,

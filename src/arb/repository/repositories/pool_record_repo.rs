@@ -2,7 +2,7 @@ use anyhow::Result;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use crate::arb::repository::entity::pool_record::{self, Entity as PoolRecord, Model, PoolRecordDescriptor};
 use crate::arb::constant::dex_type::DexType;
-use crate::arb::repository::types::pubkey_type::PubkeyWrapper;
+use crate::arb::repository::types::PubkeyType;
 use chrono::Utc;
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
@@ -38,7 +38,7 @@ impl PoolRecordRepository {
             quote_mint: Set(quote_mint.into()),
             base_vault: Set(base_vault.into()),
             quote_vault: Set(quote_vault.into()),
-            description: Set(serde_json::to_value(description)?),
+            description: Set(description),
             data_snapshot: Set(data_snapshot),
             created_at: Set(now),
             updated_at: Set(now),
@@ -54,11 +54,11 @@ impl PoolRecordRepository {
     ) -> Result<Vec<Model>> {
         let pools = PoolRecord::find()
             .filter(
-                pool_record::Column::BaseMint.eq(PubkeyWrapper::from(*mint1))
-                    .and(pool_record::Column::QuoteMint.eq(PubkeyWrapper::from(*mint2)))
+                pool_record::Column::BaseMint.eq(PubkeyType::from(*mint1))
+                    .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
                     .or(
-                        pool_record::Column::BaseMint.eq(PubkeyWrapper::from(*mint2))
-                            .and(pool_record::Column::QuoteMint.eq(PubkeyWrapper::from(*mint1)))
+                        pool_record::Column::BaseMint.eq(PubkeyType::from(*mint2))
+                            .and(pool_record::Column::QuoteMint.eq(PubkeyType::from(*mint1)))
                     )
             )
             .all(&self.db)
@@ -69,7 +69,7 @@ impl PoolRecordRepository {
 
     pub async fn find_by_base_mint(&self, base_mint: &Pubkey) -> Result<Vec<Model>> {
         let pools = PoolRecord::find()
-            .filter(pool_record::Column::BaseMint.eq(PubkeyWrapper::from(*base_mint)))
+            .filter(pool_record::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
             .all(&self.db)
             .await?;
 
@@ -78,7 +78,7 @@ impl PoolRecordRepository {
 
     pub async fn find_by_quote_mint(&self, quote_mint: &Pubkey) -> Result<Vec<Model>> {
         let pools = PoolRecord::find()
-            .filter(pool_record::Column::QuoteMint.eq(PubkeyWrapper::from(*quote_mint)))
+            .filter(pool_record::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
             .all(&self.db)
             .await?;
 
@@ -86,7 +86,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_address(&self, address: &Pubkey) -> Result<Option<Model>> {
-        let pool = PoolRecord::find_by_id(PubkeyWrapper::from(*address))
+        let pool = PoolRecord::find_by_id(PubkeyType::from(*address))
             .one(&self.db)
             .await?;
 
@@ -115,12 +115,12 @@ mod tests {
             quote_mint: usdc.into(),
             base_vault: vault1.into(),
             quote_vault: vault2.into(),
-            description: json!({
-                "base_symbol": "SOL",
-                "quote_symbol": "USDC",
-                "base": wsol.to_string(),
-                "quote": usdc.to_string()
-            }),
+            description: PoolRecordDescriptor {
+                base_symbol: "SOL".to_string(),
+                quote_symbol: "USDC".to_string(),
+                base: wsol,
+                quote: usdc,
+            },
             data_snapshot: json!({"test": "data"}),
             created_at: Utc::now(),
             updated_at: Utc::now(),
