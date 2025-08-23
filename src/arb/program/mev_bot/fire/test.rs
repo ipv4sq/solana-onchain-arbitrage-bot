@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::constant::dex_type::DexType;
-    use crate::arb::constant::mint::Mints;
-    use crate::arb::global::rpc::{ensure_mint_account_exists, fetch_tx};
-    use crate::arb::pool::register::AnyPoolConfig;
+    use crate::arb::global::enums::dex_type::DexType;
+    use crate::arb::global::constant::mint::Mints;
+    use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
+    use crate::arb::convention::pool::register::AnyPoolConfig;
     use crate::arb::program::mev_bot::fire::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::strategy::unmarshal::read_from_database;

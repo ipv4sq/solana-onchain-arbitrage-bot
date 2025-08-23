@@ -6,7 +6,7 @@ use crate::arb::repository::core::error::RepositoryResult;
 use crate::arb::repository::core::traits::WithConnection;
 use crate::arb::repository::entity::PoolMints;
 use super::super::entity::{pool_mints};
-use crate::arb::constant::dex_type::DexType;
+use crate::arb::global::enums::dex_type::DexType;
 
 pub struct PoolRepository<'a> {
     db: &'a DatabaseConnection,

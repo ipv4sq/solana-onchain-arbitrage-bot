@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use crate::arb::repository::entity::pool_record::{self, Entity as PoolRecord, Model, PoolRecordDescriptor};
-use crate::arb::constant::dex_type::DexType;
+use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::repository::types::PubkeyType;
 use chrono::Utc;
 use solana_program::pubkey::Pubkey;

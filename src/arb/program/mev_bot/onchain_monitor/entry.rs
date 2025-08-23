@@ -1,7 +1,7 @@
-use crate::arb::chain::types::LitePool;
-use crate::arb::chain::Transaction;
+use crate::arb::convention::chain::types::LitePool;
+use crate::arb::convention::chain::Transaction;
 use crate::arb::repository::get_repository_manager;
-use crate::arb::global::mem_pool::mem_pool;
+use crate::arb::global::state::mem_pool::mem_pool;
 use crate::arb::program::mev_bot::ix;
 use crate::constants::addresses::TokenMint;
 use anyhow::Result;
@@ -85,7 +85,7 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 }
 
 fn log_token_changes(
-    balance_changes: &std::collections::HashMap<String, std::collections::HashMap<String, crate::arb::chain::util::transaction::TokenBalanceChange>>,
+    balance_changes: &std::collections::HashMap<String, std::collections::HashMap<String, crate::arb::convention::chain::util::transaction::TokenBalanceChange>>,
     token_mint: &str,
     token_name: &str,
 ) {
@@ -95,7 +95,7 @@ fn log_token_changes(
 }
 
 fn log_token_changes_for_mint(
-    token_changes: &std::collections::HashMap<String, crate::arb::chain::util::transaction::TokenBalanceChange>,
+    token_changes: &std::collections::HashMap<String, crate::arb::convention::chain::util::transaction::TokenBalanceChange>,
     token_mint: &str,
     token_name: &str,
 ) {

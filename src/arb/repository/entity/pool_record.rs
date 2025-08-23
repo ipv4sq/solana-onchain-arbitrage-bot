@@ -1,4 +1,4 @@
-use crate::arb::constant::dex_type::DexType;
+use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::repository::types::PubkeyType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;

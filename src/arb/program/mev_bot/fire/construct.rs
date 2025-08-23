@@ -1,13 +1,13 @@
-use crate::arb::chain::util::alt::fetch_address_lookup_tables;
-use crate::arb::chain::util::simulation::SimulationResult;
-use crate::arb::constant::mev_bot::{SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID};
-use crate::arb::constant::mint::{Mints, WSOL_KEY};
-use crate::arb::global::rpc::{rpc_client, simulate_tx_with_retry};
-use crate::arb::pool::interface::{InputAccountUtil, PoolDataLoader};
-use crate::arb::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::pool::register::AnyPoolConfig;
-use crate::arb::pool::util::{ata, ata_sol_token};
+use crate::arb::convention::chain::util::alt::fetch_address_lookup_tables;
+use crate::arb::convention::chain::util::simulation::SimulationResult;
+use crate::arb::global::constant::mev_bot::MevBot;
+use crate::arb::global::constant::mint::{Mints, WSOL_KEY};
+use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
+use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
+use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
+use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+use crate::arb::convention::pool::register::AnyPoolConfig;
+use crate::arb::convention::pool::util::{ata, ata_sol_token};
 use crate::constants::addresses::{TokenProgram, SPL_TOKEN_KEY};
 use crate::constants::helpers::{ToAccountMeta, ToPubkey};
 use crate::util::random_select;
@@ -114,9 +114,9 @@ pub fn create_invoke_mev_instruction(
 
     if use_flashloan {
         accounts.extend([
-            FLASHLOAN_ACCOUNT_ID.to_readonly(),
+            MevBot::FLASHLOAN_ACCOUNT.to_readonly(),
             derive_vault_token_account(
-                &EMV_BOT_PROGRAM_ID.to_pubkey(),
+                &MevBot::EMV_BOT_PROGRAM,
                 &Mints::WSOL.to_pubkey(), // default to wsol mint base for flashloan
             )
             .0
@@ -188,7 +188,7 @@ pub fn create_invoke_mev_instruction(
     info!("finished printing our all the accounts");
 
     Ok(Instruction {
-        program_id: EMV_BOT_PROGRAM_ID.to_pubkey(),
+        program_id: MevBot::EMV_BOT_PROGRAM,
         accounts,
         data,
     })
@@ -201,12 +201,12 @@ pub fn derive_vault_token_account(program_id: &Pubkey, mint: &Pubkey) -> (Pubkey
 
 fn fee_collector(use_flashloan: bool) -> Pubkey {
     if use_flashloan {
-        SmbFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
+        MevBot::FLASHLOAN_FEE_ACCOUNT
     } else {
         let fee_accounts = [
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
+            MevBot::NON_FLASHLOAN_ACCOUNT_1,
+            MevBot::NON_FLASHLOAN_ACCOUNT_2,
+            MevBot::NON_FLASHLOAN_ACCOUNT_3,
         ];
         *random_select(&fee_accounts).expect("fee_accounts should not be empty")
     }

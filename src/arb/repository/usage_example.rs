@@ -1,4 +1,4 @@
-use crate::arb::constant::dex_type::DexType;
+use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::repository::{get_repository_manager, RepositoryManager, RepositoryResult};
 use solana_sdk::pubkey::Pubkey;
 

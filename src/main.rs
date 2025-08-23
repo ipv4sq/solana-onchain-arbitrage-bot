@@ -15,7 +15,7 @@ pub mod util;
 use clap::{App, Arg};
 use tracing::{info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use arb::program;
+use arb::{global, program};
 use std::fs;
 use std::path::Path;
 
@@ -66,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize blockhash holder with fresh blockhash
     info!("Initializing blockhash holder...");
-    arb::global::blockhash::initialize().await?;
+    global::state::blockhash::initialize().await?;
     info!("Blockhash holder initialized");
 
     // 1. Trigger lazy initialization of MEV_TX_CONSUMER (just access it)

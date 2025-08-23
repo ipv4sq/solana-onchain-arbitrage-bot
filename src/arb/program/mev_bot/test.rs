@@ -1,13 +1,13 @@
-use crate::arb::chain::util::transaction::inner_to_filtered_map;
-use crate::arb::constant::dex_type::DexType;
-use crate::arb::constant::pool_owner::PoolOwnerPrograms;
-use crate::arb::global::rpc::fetch_tx_sync;
-use crate::arb::pool::register::AnyPoolConfig;
+use crate::arb::convention::chain::util::transaction::inner_to_filtered_map;
+use crate::arb::global::enums::dex_type::DexType;
+use crate::arb::global::constant::pool_owner::PoolOwnerPrograms;
+use crate::arb::global::state::rpc::fetch_tx_sync;
+use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::program::mev_bot::ix::{convert_to_smb_ix, extract_mev_instruction};
 use crate::test::test_utils::get_test_rpc_client;
 
 mod test {
-    use crate::arb::global::rpc::fetch_tx_sync;
+    use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::program::mev_bot::onchain_monitor::entry::entry;
     use crate::test::test_utils::get_test_rpc_client;

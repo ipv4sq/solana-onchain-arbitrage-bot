@@ -1,6 +1,6 @@
-use crate::arb::chain::instruction::{InnerInstructions, Instruction};
-use crate::arb::chain::Transaction;
-use crate::arb::constant::mev_bot::EMV_BOT_PROGRAM_ID;
+use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
+use crate::arb::convention::chain::Transaction;
+use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
 use crate::constants::addresses::{TokenMint, TOKEN_2022_KEY};
 use crate::constants::helpers::ToPubkey;
@@ -21,7 +21,7 @@ pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
 }
 
 pub fn extract_mev_instruction(tx: &Transaction) -> Option<(&Instruction, &InnerInstructions)> {
-    tx.extract_ix_and_inners(|program_id| *program_id == EMV_BOT_PROGRAM_ID.to_pubkey())
+    tx.extract_ix_and_inners(|program_id| *program_id == MevBot::EMV_BOT_PROGRAM)
 }
 
 #[derive(Debug, Clone)]
@@ -134,7 +134,7 @@ fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> O
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::rpc::fetch_tx;
+    use crate::arb::global::state::rpc::fetch_tx;
     use crate::arb::program::mev_bot::ix::{extract_mev_instruction, is_mev_box_ix_profitable};
     use crate::constants::addresses::TokenMint;
     use crate::constants::helpers::ToPubkey;

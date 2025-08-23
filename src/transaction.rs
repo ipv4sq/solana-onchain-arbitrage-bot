@@ -17,9 +17,7 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
-use crate::arb::constant::mev_bot::{
-    SmbFeeCollector, EMV_BOT_PROGRAM_ID, FLASHLOAN_ACCOUNT_ID,
-};
+use crate::arb::global::constant::mev_bot::MevBot;
 use crate::constants::{addresses::TokenMint, helpers::ToPubkey};
 use crate::dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
@@ -37,7 +35,7 @@ use solana_program::system_program;
 use spl_associated_token_account::ID as associated_token_program_id;
 use spl_token::ID as token_program_id;
 use std::str::FromStr;
-use crate::arb::global::rpc;
+use crate::arb::global::state::rpc;
 
 pub async fn build_and_send_transaction(
     wallet_kp: &Keypair,
@@ -166,15 +164,15 @@ fn create_swap_instruction(
 ) -> anyhow::Result<Instruction> {
     debug!("Creating swap instruction for all DEX types");
 
-    let executor_program_id = EMV_BOT_PROGRAM_ID.to_pubkey();
+    let executor_program_id = MevBot::EMV_BOT_PROGRAM;
 
     let fee_collector = if use_flashloan {
-        SmbFeeCollector::FLASHLOAN_FEE_ID.to_pubkey()
+        MevBot::FLASHLOAN_FEE_ACCOUNT
     } else {
         let fee_accounts = [
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_1.to_pubkey(),
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_2.to_pubkey(),
-            SmbFeeCollector::NON_FLASHLOAN_FEE_ID_3.to_pubkey(),
+            MevBot::NON_FLASHLOAN_ACCOUNT_1,
+            MevBot::NON_FLASHLOAN_ACCOUNT_2,
+            MevBot::NON_FLASHLOAN_ACCOUNT_3,
         ];
         *random_select(&fee_accounts).expect("fee_accounts should not be empty")
     };
@@ -239,11 +237,11 @@ fn create_swap_instruction(
 
     if use_flashloan {
         accounts.push(AccountMeta::new_readonly(
-            FLASHLOAN_ACCOUNT_ID.to_pubkey(),
+            MevBot::FLASHLOAN_ACCOUNT,
             false,
         ));
         let token_pda = derive_vault_token_account(
-            &EMV_BOT_PROGRAM_ID.to_pubkey(),
+            &MevBot::EMV_BOT_PROGRAM,
             &flashloan_base_mint,
         );
         accounts.push(AccountMeta::new(token_pda.0, false));
