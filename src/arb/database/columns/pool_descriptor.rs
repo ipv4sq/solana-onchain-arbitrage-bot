@@ -1,4 +1,4 @@
-use crate::arb::repository::entity::pool_record::PoolRecordDescriptor;
+use crate::arb::database::entity::pool_record::PoolRecordDescriptor;
 use sea_orm::sea_query::{ArrayType, ColumnType, Nullable, ValueType, ValueTypeErr};
 use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
 

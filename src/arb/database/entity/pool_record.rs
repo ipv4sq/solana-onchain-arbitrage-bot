@@ -1,5 +1,5 @@
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::repository::types::PubkeyType;
+use crate::arb::database::columns::PubkeyType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};

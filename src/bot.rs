@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::constants;
 use crate::refresh::initialize_pool_data;
 use crate::service::assemble_create_ata_account_ix;
 use crate::transaction::build_and_send_transaction;

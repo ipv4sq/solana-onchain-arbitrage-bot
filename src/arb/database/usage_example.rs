@@ -1,5 +1,5 @@
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::repository::{get_repository_manager, RepositoryManager, RepositoryResult};
+use crate::arb::database::{get_repository_manager, RepositoryManager, RepositoryResult};
 use solana_sdk::pubkey::Pubkey;
 
 /// Example of using the repository pattern with dependency injection
@@ -26,7 +26,7 @@ impl ArbitrageService {
             .with_transaction(|txn| {
                 Box::pin(async move {
                     // 1. Create or update pool
-                    let pool_repo = crate::arb::repository::repositories::PoolRepository::new(txn);
+                    let pool_repo = crate::arb::database::repositories::PoolRepository::new(txn);
                     pool_repo
                         .upsert(
                             pool_id.to_string(),
@@ -97,8 +97,8 @@ impl ArbitrageService {
         &self,
         pools: Vec<(String, String, String, DexType)>,
     ) -> RepositoryResult<()> {
-        use crate::arb::repository::core::traits::BatchOperations;
-        use crate::arb::repository::entity::pool_mints;
+        use crate::arb::database::core::traits::BatchOperations;
+        use crate::arb::database::entity::pool_mints;
         use chrono::Utc;
         use sea_orm::ActiveValue::Set;
 
@@ -127,7 +127,7 @@ impl ArbitrageService {
         page: u64,
         per_page: u64,
     ) -> RepositoryResult<PaginatedResult> {
-        use crate::arb::repository::core::traits::{Paginate, Search};
+        use crate::arb::database::core::traits::{Paginate, Search};
 
         let pool_repo = self.repo_manager.pools();
 
@@ -155,15 +155,15 @@ pub struct ArbitrageOpportunity {
 
 #[derive(Debug)]
 pub struct DashboardData {
-    pub top_pools: Vec<crate::arb::repository::entity::pool_metrics::Model>,
+    pub top_pools: Vec<crate::arb::database::entity::pool_metrics::Model>,
     pub recent_swap_count: usize,
-    pub profitable_arbitrages: Vec<crate::arb::repository::entity::arbitrage_results::Model>,
-    pub dex_summaries: Vec<crate::arb::repository::repositories::metrics_repository::DexSummary>,
+    pub profitable_arbitrages: Vec<crate::arb::database::entity::arbitrage_results::Model>,
+    pub dex_summaries: Vec<crate::arb::database::repositories::metrics_repository::DexSummary>,
 }
 
 #[derive(Debug)]
 pub struct PaginatedResult {
-    pub items: Vec<crate::arb::repository::entity::pool_mints::Model>,
+    pub items: Vec<crate::arb::database::entity::pool_mints::Model>,
     pub total_pages: u64,
     pub current_page: u64,
     pub total_items: usize,

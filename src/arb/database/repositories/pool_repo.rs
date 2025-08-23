@@ -1,9 +1,10 @@
 use super::super::entity::pool_mints;
+use crate::arb::database::core::error::RepositoryResult;
+use crate::arb::database::core::traits::WithConnection;
+use crate::arb::database::entity::PoolMints;
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::repository::core::error::RepositoryResult;
-use crate::arb::repository::core::traits::WithConnection;
-use crate::arb::repository::entity::PoolMints;
 use chrono::Utc;
+use pool_mints::Model;
 use sea_orm::ActiveValue::Set;
 use sea_orm::*;
 use solana_sdk::pubkey::Pubkey;
@@ -17,21 +18,14 @@ impl<'a> PoolRepository<'a> {
         Self { db }
     }
 
-    pub async fn find_by_pool_id(
-        &self,
-        pool_id: &str,
-    ) -> RepositoryResult<Option<pool_mints::Model>> {
+    pub async fn find_by_pool_id(&self, pool_id: &str) -> RepositoryResult<Option<Model>> {
         Ok(PoolMints::find()
             .filter(pool_mints::Column::PoolId.eq(pool_id))
             .one(self.db)
             .await?)
     }
 
-    pub async fn find_by_mints(
-        &self,
-        mint1: &str,
-        mint2: &str,
-    ) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_by_mints(&self, mint1: &str, mint2: &str) -> RepositoryResult<Vec<Model>> {
         Ok(PoolMints::find()
             .filter(
                 Condition::any()
@@ -51,10 +45,7 @@ impl<'a> PoolRepository<'a> {
             .await?)
     }
 
-    pub async fn find_by_dex_types(
-        &self,
-        dex_types: Vec<DexType>,
-    ) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_by_dex_types(&self, dex_types: Vec<DexType>) -> RepositoryResult<Vec<Model>> {
         Ok(PoolMints::find()
             .filter(pool_mints::Column::DexType.is_in(dex_types))
             .order_by_desc(pool_mints::Column::CreatedAt)
@@ -83,19 +74,16 @@ impl<'a> PoolRepository<'a> {
         &self,
         desired_mint: &Pubkey,
         the_other_mint: &Pubkey,
-    ) -> RepositoryResult<Vec<pool_mints::Model>> {
+    ) -> RepositoryResult<Vec<Model>> {
         self.find_by_mints(&desired_mint.to_string(), &the_other_mint.to_string())
             .await
     }
 
-    pub async fn list_pool_mints(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn list_pool_mints(&self) -> RepositoryResult<Vec<Model>> {
         self.find_all().await
     }
 
-    pub async fn list_pool_mints_by_dex(
-        &self,
-        dex_type: DexType,
-    ) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn list_pool_mints_by_dex(&self, dex_type: DexType) -> RepositoryResult<Vec<Model>> {
         self.find_by_dex_types(vec![dex_type]).await
     }
 
@@ -105,7 +93,7 @@ impl<'a> PoolRepository<'a> {
         desired_mint: String,
         the_other_mint: String,
         dex_type: DexType,
-    ) -> RepositoryResult<pool_mints::Model> {
+    ) -> RepositoryResult<Model> {
         let existing = self.find_by_pool_id(&pool_id).await?;
 
         if let Some(model) = existing {
@@ -131,28 +119,22 @@ impl<'a> PoolRepository<'a> {
 
     // Repository methods
 
-    pub async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<pool_mints::Model>> {
+    pub async fn find_by_id(&self, id: i32) -> RepositoryResult<Option<Model>> {
         Ok(PoolMints::find_by_id(id).one(self.db).await?)
     }
 
-    pub async fn find_all(&self) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn find_all(&self) -> RepositoryResult<Vec<Model>> {
         Ok(PoolMints::find()
             .order_by_desc(pool_mints::Column::CreatedAt)
             .all(self.db)
             .await?)
     }
 
-    pub async fn create(
-        &self,
-        model: pool_mints::ActiveModel,
-    ) -> RepositoryResult<pool_mints::Model> {
+    pub async fn create(&self, model: pool_mints::ActiveModel) -> RepositoryResult<Model> {
         Ok(model.insert(self.db).await?)
     }
 
-    pub async fn update(
-        &self,
-        model: pool_mints::ActiveModel,
-    ) -> RepositoryResult<pool_mints::Model> {
+    pub async fn update(&self, model: pool_mints::ActiveModel) -> RepositoryResult<Model> {
         Ok(model.update(self.db).await?)
     }
 
@@ -165,11 +147,7 @@ impl<'a> PoolRepository<'a> {
         Ok(PoolMints::find().count(self.db).await?)
     }
 
-    pub async fn paginate(
-        &self,
-        page: u64,
-        per_page: u64,
-    ) -> RepositoryResult<(Vec<pool_mints::Model>, u64)> {
+    pub async fn paginate(&self, page: u64, per_page: u64) -> RepositoryResult<(Vec<Model>, u64)> {
         let paginator = PoolMints::find()
             .order_by_desc(pool_mints::Column::CreatedAt)
             .paginate(self.db, per_page);
@@ -180,7 +158,7 @@ impl<'a> PoolRepository<'a> {
         Ok((items, total_pages))
     }
 
-    pub async fn search(&self, query: &str) -> RepositoryResult<Vec<pool_mints::Model>> {
+    pub async fn search(&self, query: &str) -> RepositoryResult<Vec<Model>> {
         Ok(PoolMints::find()
             .filter(
                 Condition::any()

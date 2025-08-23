@@ -1,8 +1,8 @@
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::repository::entity::pool_record::{
+use crate::arb::database::entity::pool_record::{
     self, Entity as PoolRecord, Model, PoolRecordDescriptor,
 };
-use crate::arb::repository::types::PubkeyType;
+use crate::arb::database::columns::PubkeyType;
 use anyhow::Result;
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};

@@ -1,7 +1,7 @@
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
-use crate::arb::repository::repositories::*;
+use crate::arb::database::repositories::*;
 
 /// Central repository manager that provides access to all repositories
 pub struct RepositoryManager {
@@ -12,7 +12,7 @@ impl RepositoryManager {
     /// Create a new repository manager from a database manager
     pub async fn new() -> RepositoryResult<Self> {
         let manager = DatabaseManager::new().await.map_err(|e| {
-            crate::arb::repository::core::error::RepositoryError::Connection(e.to_string())
+            crate::arb::database::core::error::RepositoryError::Connection(e.to_string())
         })?;
 
         Ok(Self {
@@ -56,15 +56,15 @@ impl RepositoryManager {
             .await
             .map(|_| true)
             .map_err(|e| {
-                crate::arb::repository::core::error::RepositoryError::Connection(e.to_string())
+                crate::arb::database::core::error::RepositoryError::Connection(e.to_string())
             })
     }
 }
 
 // Singleton instance for global access
-use crate::arb::repository::core::database::DatabaseManager;
-use crate::arb::repository::core::error::RepositoryResult;
-use crate::arb::repository::core::transaction::TransactionManager;
+use crate::arb::database::core::database::DatabaseManager;
+use crate::arb::database::core::error::RepositoryResult;
+use crate::arb::database::core::transaction::TransactionManager;
 use tokio::sync::OnceCell;
 
 static REPOSITORY_MANAGER: OnceCell<Arc<RepositoryManager>> = OnceCell::const_new();
@@ -83,7 +83,7 @@ pub async fn get_repository_manager() -> RepositoryResult<Arc<RepositoryManager>
         .clone()
         .try_into()
         .map_err(|_| {
-            crate::arb::repository::core::error::RepositoryError::Connection(
+            crate::arb::database::core::error::RepositoryError::Connection(
                 "Failed to get repository manager instance".to_string(),
             )
         })
