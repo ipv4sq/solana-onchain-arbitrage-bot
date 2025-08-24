@@ -1,5 +1,6 @@
 use anyhow::Result;
 use once_cell::sync::Lazy;
+use std::ops::Deref;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
@@ -120,7 +121,6 @@ impl<T: Send + 'static> PubSubProcessor<T> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +157,4 @@ mod tests {
 
         processor.shutdown().await;
     }
-
 }
