@@ -2,15 +2,14 @@ use crate::arb::convention::chain::AccountState;
 use crate::arb::pipeline::swap_changes::account_monitor::consumer::{
     publish_vault_update, VaultUpdate,
 };
+use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_vault::list_all_vaults;
-use crate::arb::pipeline::swap_changes::account_monitor::{consumer, entry};
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
 use crate::arb::util::types::cache::LazyCache;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
-use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 static VAULT_ACCOUNT_CACHE: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
