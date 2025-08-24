@@ -11,7 +11,7 @@ pub mod test;
 mod transaction;
 pub mod util;
 
-use crate::arb::pipeline::pool_indexer::registrar::bootstrap;
+use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
 use arb::pipeline::pool_indexer;
 use arb::{global, pipeline, program};
 use clap::{App, Arg};
@@ -79,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = tokio::spawn(async move {
-        if let Err(e) = bootstrap().await {
+        if let Err(e) = bootstrap_indexer().await {
             tracing::error!("MEV bot subscriber error: {}", e);
         }
     });
