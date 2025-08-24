@@ -1,41 +1,44 @@
 use crate::arb::convention::chain::AccountState;
-use crate::arb::util::worker::pubsub::SingletonPubSub;
+use crate::arb::pipeline::swap_changes::account_monitor::entry;
+use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
+use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
+use std::ops::Deref;
 use std::sync::Arc;
+use tracing::info;
 
-#[derive(Clone, Debug)]
-pub struct VaultUpdate {
-    pub previous: AccountState,
-    pub current: AccountState,
-}
+pub static VAULT_UPDATE_CONSUMER: Lazy<Arc<VaultUpdateConsumerPool>> =
+    Lazy::new(|| Arc::new(VaultUpdateConsumerPool::new()));
 
-impl VaultUpdate {
-    pub fn vault(&self) -> &Pubkey {
-        &self.current.pubkey
-    }
-    
-    pub fn lamport_change(&self) -> i64 {
-        self.current.calculate_lamport_change(&self.previous)
-    }
-    
-    pub fn data_changed(&self) -> bool {
-        self.current.data_changed(&self.previous)
-    }
-    
-    pub fn owner_changed(&self) -> bool {
-        self.current.owner_changed(&self.previous)
-    }
-    
-    pub fn slot_delta(&self) -> u64 {
-        self.current.slot - self.previous.slot
+impl VaultUpdateConsumerPool {
+    fn new() -> Self {
+        let config = PubSubConfig {
+            worker_pool_size: 4,
+            channel_buffer_size: 500,
+            name: "VaultUpdateProcessor".to_string(),
+        };
+
+        let processor = PubSubProcessor::new(config, |update: VaultUpdate| {
+            Box::pin(async move {
+                entry::process_vault_update(update).await?;
+                Ok(())
+            })
+        });
+
+        info!("Vault update processor auto-initialized");
+
+        Self(processor)
     }
 }
 
-pub static VAULT_UPDATE_PROCESSOR: Lazy<Arc<SingletonPubSub<VaultUpdate>>> =
-    Lazy::new(|| Arc::new(SingletonPubSub::new("VaultUpdateProcessor".to_string())));
+pub struct VaultUpdateConsumerPool(PubSubProcessor<VaultUpdate>);
 
-pub async fn publish_vault_update(update: VaultUpdate) -> Result<()> {
-    VAULT_UPDATE_PROCESSOR.publish(update).await
+impl Deref for VaultUpdateConsumerPool {
+    type Target = PubSubProcessor<VaultUpdate>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

@@ -1,9 +1,8 @@
 use crate::arb::convention::chain::AccountState;
-use crate::arb::pipeline::swap_changes::account_monitor::consumer::{
-    publish_vault_update, VaultUpdate,
-};
+use crate::arb::pipeline::swap_changes::account_monitor::consumer::VAULT_UPDATE_CONSUMER;
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_vault::list_all_vaults;
+use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
 use crate::arb::util::types::cache::LazyCache;
 use anyhow::Result;
@@ -66,7 +65,7 @@ impl VaultAccountMonitor {
                     current: account_state.clone(),
                 };
 
-                if let Err(e) = publish_vault_update(vault_update).await {
+                if let Err(e) = VAULT_UPDATE_CONSUMER.publish(vault_update).await {
                     error!("Failed to publish vault update: {}", e);
                 }
             }

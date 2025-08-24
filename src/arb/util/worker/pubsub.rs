@@ -1,9 +1,9 @@
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 // Configuration for the pub/sub system
 pub struct PubSubConfig {
@@ -120,62 +120,6 @@ impl<T: Send + 'static> PubSubProcessor<T> {
     }
 }
 
-// Singleton wrapper for global instances
-pub struct SingletonPubSub<T: Send + 'static> {
-    inner: Arc<RwLock<Option<PubSubProcessor<T>>>>,
-    name: String,
-}
-
-impl<T: Send + 'static> SingletonPubSub<T> {
-    pub fn new(name: String) -> Self {
-        Self {
-            inner: Arc::new(RwLock::new(None)),
-            name,
-        }
-    }
-
-    pub async fn initialize<F>(&self, config: PubSubConfig, processor: F) -> Result<()>
-    where
-        F: Fn(T) -> futures::future::BoxFuture<'static, Result<()>> + Send + Sync + 'static + Clone,
-    {
-        let mut inner = self.inner.write().await;
-
-        if inner.is_some() {
-            warn!("[{}] Processor already initialized", self.name);
-            return Ok(());
-        }
-
-        *inner = Some(PubSubProcessor::new(config, processor));
-        Ok(())
-    }
-
-    pub async fn publish(&self, message: T) -> Result<()> {
-        let inner = self.inner.read().await;
-
-        let processor = inner
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("[{}] Processor not initialized", self.name))?;
-
-        processor.publish(message).await
-    }
-
-    pub async fn is_initialized(&self) -> bool {
-        let inner = self.inner.read().await;
-        inner.is_some()
-    }
-
-    pub async fn shutdown(&self) -> Result<()> {
-        let mut inner = self.inner.write().await;
-
-        if let Some(processor) = inner.take() {
-            processor.shutdown().await;
-        } else {
-            warn!("[{}] Processor was not initialized", self.name);
-        }
-
-        Ok(())
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -214,33 +158,4 @@ mod tests {
         processor.shutdown().await;
     }
 
-    #[tokio::test]
-    async fn test_singleton_pubsub() {
-        let singleton = SingletonPubSub::<String>::new("TestSingleton".to_string());
-
-        let config = PubSubConfig {
-            worker_pool_size: 2,
-            channel_buffer_size: 10,
-            name: "TestSingleton".to_string(),
-        };
-
-        singleton
-            .initialize(config, |msg: String| {
-                Box::pin(async move {
-                    info!("Processing: {}", msg);
-                    Ok(())
-                })
-            })
-            .await
-            .unwrap();
-
-        assert!(singleton.is_initialized().await);
-
-        singleton.publish("Hello".to_string()).await.unwrap();
-        singleton.publish("World".to_string()).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        singleton.shutdown().await.unwrap();
-    }
 }
