@@ -49,23 +49,6 @@ impl RateLimiter {
         Self { inner, config }
     }
 
-    pub fn lazy_arc(
-        max_requests: u32,
-        window_duration: Duration,
-        burst_capacity: u32,
-        name: String,
-    ) -> Arc<Self> {
-        Arc::new(Self::new(
-            max_requests,
-            window_duration,
-            burst_capacity,
-            name,
-        ))
-    }
-
-    pub fn arc_from_config(config: RateLimiterConfig) -> Arc<Self> {
-        Arc::new(Self::from_config(config))
-    }
 
     pub fn try_acquire(&self) -> bool {
         self.try_acquire_n(1)
@@ -296,17 +279,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lazy_arc_constructor() {
-        let limiter = RateLimiter::lazy_arc(10, Duration::from_secs(1), 15, "lazy_test".to_string());
-
-        assert!(limiter.try_acquire());
-        let metrics = limiter.metrics();
-        assert_eq!(metrics.name, "lazy_test");
-    }
-
-    #[tokio::test]
-    async fn test_arc_from_config() {
-        let limiter = RateLimiter::arc_from_config(RateLimiterConfig {
+    async fn test_from_config() {
+        let limiter = RateLimiter::from_config(RateLimiterConfig {
             max_requests: 20,
             window_duration: Duration::from_secs(2),
             burst_capacity: 25,

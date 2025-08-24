@@ -12,7 +12,6 @@ use futures::future::join_all;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
-use std::io::empty;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -22,19 +21,20 @@ pub struct MevBotFire {
 }
 
 pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc!({
-    let config = PubSubConfig {
-        worker_pool_size: 4,
-        channel_buffer_size: 500,
-        name: "VaultUpdateProcessor".to_string(),
-    };
-
-    PubSubProcessor::new(config, |event: MevBotFire| {
-        Box::pin(async move { fire_mev_bot(&event.minor_mint, &event.pools).await })
-    })
+    PubSubProcessor::new(
+        PubSubConfig {
+            worker_pool_size: 4,
+            channel_buffer_size: 500,
+            name: "VaultUpdateProcessor".to_string(),
+        },
+        |event: MevBotFire| {
+            Box::pin(async move { fire_mev_bot(&event.minor_mint, &event.pools).await })
+        },
+    )
 });
 
-pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = Lazy::new(|| {
-    RateLimiter::lazy_arc(
+pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
+    RateLimiter::new(
         5,
         Duration::from_secs(1),
         8,
