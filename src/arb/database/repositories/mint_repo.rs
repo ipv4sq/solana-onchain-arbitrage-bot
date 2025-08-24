@@ -1,12 +1,9 @@
 use crate::arb::database::columns::PubkeyType;
-use crate::arb::database::entity::mint_do::{self, Entity as MintEntity, Model};
-use crate::arb::database::entity::pool_do;
-use crate::arb::database::entity::MintRecord;
+use crate::arb::database::entity::{mint_do, pool_do, MintRecord, MintRecordTable};
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::db::get_db;
 use anyhow::Result;
 use futures::future::try_join_all;
-use itertools::Itertools;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveValue::{NotSet, Set},
@@ -18,7 +15,7 @@ use std::collections::HashMap;
 pub struct MintRecordRepository;
 
 impl MintRecordRepository {
-    pub async fn upsert_mint(mint: Model) -> Result<Model> {
+    pub async fn upsert_mint(mint: MintRecord) -> Result<MintRecord> {
         let db = get_db();
         let active_model = mint_do::ActiveModel {
             address: Set(mint.address.clone()),
@@ -30,7 +27,7 @@ impl MintRecordRepository {
         };
 
         // Try insert with on_conflict do nothing
-        let result = MintRecord::insert(active_model)
+        let result = MintRecordTable::insert(active_model)
             .on_conflict(
                 OnConflict::column(mint_do::Column::Address)
                     .do_nothing()
@@ -50,9 +47,9 @@ impl MintRecordRepository {
         }
     }
 
-    pub async fn find_by_address(address: Pubkey) -> Result<Option<Model>> {
+    pub async fn find_by_address(address: Pubkey) -> Result<Option<MintRecord>> {
         let db = get_db();
-        Ok(MintRecord::find()
+        Ok(MintRecordTable::find()
             .filter(mint_do::Column::Address.eq(PubkeyType::from(address)))
             .one(db)
             .await?)
@@ -60,7 +57,7 @@ impl MintRecordRepository {
 
     pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<pool_do::Model>>> {
         let result = try_join_all(
-            MintRecord::find()
+            MintRecordTable::find()
                 .all(get_db())
                 .await?
                 .into_iter() //

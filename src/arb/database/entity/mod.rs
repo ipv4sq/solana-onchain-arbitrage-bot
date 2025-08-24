@@ -1,5 +1,10 @@
 pub mod mint_do;
 pub mod pool_do;
 
-pub use mint_do::Entity as MintRecord;
-pub use pool_do::Entity as PoolRecord;
+// mint
+pub use mint_do::Entity as MintRecordTable;
+pub use mint_do::Model as MintRecord;
+
+// pool record
+pub use pool_do::Entity as PoolRecordTable;
+pub use pool_do::Model as PoolRecord;
