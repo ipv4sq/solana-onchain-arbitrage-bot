@@ -1,11 +1,30 @@
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mev_bot::MevBot;
-use crate::arb::pipeline::pool_indexer::mev_bot::consumer::MEV_TX_CONSUMER;
+use crate::arb::pipeline::pool_indexer::mev_bot::entry;
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
+use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
+use crate::lazy_arc;
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use solana_sdk::pubkey::Pubkey;
+use std::sync::Arc;
 use tracing::info;
+
+static MEV_TX_CONSUMER: Lazy<Arc<PubSubProcessor<Transaction>>> = lazy_arc!({
+    let config = PubSubConfig {
+        worker_pool_size: 8,
+        channel_buffer_size: 1000,
+        name: "SolanaMevBotTransactionDetector".to_string(),
+    };
+
+    PubSubProcessor::new(config, |tx: Transaction| {
+        Box::pin(async move {
+            entry::entry(&tx).await?;
+            Ok(())
+        })
+    })
+});
 
 pub struct SolanaMevBotOnchainListener {
     client: SolanaGrpcClient,

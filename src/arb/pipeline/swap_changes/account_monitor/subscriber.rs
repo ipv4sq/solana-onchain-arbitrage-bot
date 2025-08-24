@@ -1,16 +1,35 @@
 use crate::arb::convention::chain::AccountState;
-use crate::arb::pipeline::swap_changes::account_monitor::consumer::VAULT_UPDATE_CONSUMER;
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_vault::list_all_vaults;
 use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
 use crate::arb::util::types::cache::LazyCache;
+use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
+use crate::{empty_ok, lazy_arc};
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
+use std::sync::Arc;
+use std::thread::current;
 use tracing::{error, info};
 
 static VAULT_ACCOUNT_CACHE: LazyCache<Pubkey, AccountState> = LazyCache::new();
+
+static VAULT_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<VaultUpdate>>> = lazy_arc!({
+    let config = PubSubConfig {
+        worker_pool_size: 4,
+        channel_buffer_size: 500,
+        name: "VaultUpdateProcessor".to_string(),
+    };
+
+    PubSubProcessor::new(config, |update: VaultUpdate| {
+        Box::pin(async move {
+            entry::process_vault_update(update).await?;
+            Ok(())
+        })
+    })
+});
 
 pub struct VaultAccountMonitor {
     client: SolanaGrpcClient,
@@ -46,32 +65,16 @@ impl VaultAccountMonitor {
     }
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
-        let account_state = AccountState::from_grpc_update(&update);
-
-        let previous = VAULT_ACCOUNT_CACHE.insert(update.account, account_state.clone());
-
-        if let Some(prev_state) = previous {
-            let lamport_change = account_state.calculate_lamport_change(&prev_state);
-            if lamport_change != 0 {
-                info!(
-                    "Vault {} balance changed by {} lamports (slot {} -> {})",
-                    update.account, lamport_change, prev_state.slot, account_state.slot
-                );
-
-                entry::process_balance_change(&account_state, &prev_state, lamport_change).await?;
-
-                let vault_update = VaultUpdate {
-                    previous: prev_state,
-                    current: account_state.clone(),
-                };
-
-                if let Err(e) = VAULT_UPDATE_CONSUMER.publish(vault_update).await {
-                    error!("Failed to publish vault update: {}", e);
-                }
-            }
+        let updated = AccountState::from_grpc_update(&update);
+        let previous = VAULT_ACCOUNT_CACHE.insert(update.account, updated.clone());
+        let vault_update = VaultUpdate {
+            previous,
+            current: updated,
+        };
+        if let Err(e) = VAULT_UPDATE_CONSUMER.publish(vault_update).await {
+            error!("Failed to publish vault update: {}", e);
         }
-
-        Ok(())
+        empty_ok!()
     }
 }
 
