@@ -76,6 +76,18 @@ impl PoolRecordRepository {
             .await?)
     }
 
+    pub async fn find_by_any_mint(mint: &Pubkey) -> Result<Vec<Model>> {
+        let db = get_db();
+        Ok(PoolRecord::find()
+            .filter(
+                pool_do::Column::BaseMint
+                    .eq(PubkeyType::from(*mint))
+                    .or(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint))),
+            )
+            .all(db)
+            .await?)
+    }
+
     pub async fn find_by_address(address: &Pubkey) -> Result<Option<Model>> {
         let db = get_db();
         Ok(PoolRecord::find_by_id(PubkeyType::from(*address))

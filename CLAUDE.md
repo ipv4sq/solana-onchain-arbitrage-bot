@@ -300,30 +300,36 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 
 ### Functional Programming Style
 
-- **Prefer functional chaining over imperative loops** - Use iterator methods and method chaining for data
-  transformations
-- **Examples of preferred patterns**:
-    - Use `filter_map` instead of `for` loops with `if let`
-    - Use `fold` for accumulating values instead of mutable variables
-    - Use `then_some` for conditional inclusion instead of if/else with push
-    - Chain methods like `.entry().or_insert_with().and_modify()` for map operations
-- **Benefits**: More expressive, eliminates mutable state, reduces boilerplate, creates composable transformations
-- **Example transformation**:
-  ```rust
-  // Instead of:
-  let mut result = HashMap::new();
-  for item in items {
-      if let Some(value) = process(item) {
-          result.insert(item.key, value);
-      }
-  }
-  
-  // Prefer:
-  let result: HashMap<_, _> = items
-      .into_iter()
-      .filter_map(|item| process(item).map(|value| (item.key, value)))
-      .collect();
-  ``` 
+**STRONGLY PREFER functional chaining** - Transform data through clear pipeline steps.
+
+#### Core Principles
+- **Each line = one transformation** - Complex logic becomes a readable sequence
+- **No mutable state** - Use `filter_map`, `fold`, `collect()` instead of loops and mutations
+- **Chain everything** - `.map()`, `.filter()`, `.collect()` create self-documenting pipelines
+
+#### Example: Good vs Bad
+```rust
+// GOOD: Clear transformation pipeline
+let result = items
+    .into_iter()
+    .filter_map(|item| process(item).map(|v| (item.key, v)))
+    .collect();
+
+// BAD: Imperative with mutable state
+let mut result = HashMap::new();
+for item in items {
+    if let Some(value) = process(item) {
+        result.insert(item.key, value);
+    }
+}
+```
+
+#### Key Patterns
+- `filter_map` > `for` loops with `if let`
+- `fold`/`reduce` > mutable accumulator variables
+- `collect()` > manual HashMap/Vec construction
+- `try_join_all` for parallel async operations
+- Chain `.entry().or_insert().and_modify()` for map updates 
 
 ### Pubkey Creation
 

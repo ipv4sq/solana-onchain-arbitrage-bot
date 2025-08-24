@@ -1,13 +1,19 @@
 use crate::arb::database::columns::PubkeyType;
-use crate::arb::database::entity::mint_do::{self, Entity as MintRecord, Model};
+use crate::arb::database::entity::mint_do::{self, Entity as MintEntity, Model};
+use crate::arb::database::entity::pool_do::{self, Model as PoolRecord};
+use crate::arb::database::entity::MintRecord;
+use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::db::get_db;
 use anyhow::Result;
+use futures::future::try_join_all;
+use itertools::Itertools;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveValue::{NotSet, Set},
     ColumnTrait, EntityTrait, QueryFilter,
 };
 use solana_program::pubkey::Pubkey;
+use std::collections::HashMap;
 
 pub struct MintRecordRepository;
 
@@ -50,5 +56,25 @@ impl MintRecordRepository {
             .filter(mint_do::Column::Address.eq(PubkeyType::from(address)))
             .one(db)
             .await?)
+    }
+
+    pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<PoolRecord>>> {
+        let result = try_join_all(
+            MintRecord::find()
+                .all(get_db())
+                .await?
+                .into_iter() //
+                .map(|mint| async move {
+                    let pubkey: Pubkey = mint.address.into();
+                    PoolRecordRepository::find_by_any_mint(&pubkey)
+                        .await
+                        .map(|pools| (pubkey, pools))
+                }),
+        )
+        .await?
+        .into_iter()
+        .filter(|(_, pools)| !pools.is_empty())
+        .collect();
+        Ok(result)
     }
 }
