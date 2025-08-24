@@ -19,11 +19,11 @@ pub async fn init_db() -> Result<()> {
         .sqlx_logging(false);
 
     let connection = Database::connect(opt).await?;
-    
+
     DB_CONNECTION
         .set(connection)
         .map_err(|_| anyhow::anyhow!("Database already initialized"))?;
-    
+
     Ok(())
 }
 
@@ -41,12 +41,12 @@ pub fn is_db_initialized() -> bool {
 mod test_init {
     use super::*;
     use ctor::ctor;
-    
+
     #[ctor]
     fn init_test_db() {
         // Initialize tokio runtime for test database setup
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        
+
         // Only initialize if not already done
         if !is_db_initialized() {
             runtime.block_on(async {

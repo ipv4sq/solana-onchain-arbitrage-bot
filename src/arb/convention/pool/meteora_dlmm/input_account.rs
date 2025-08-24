@@ -256,11 +256,11 @@ mod tests {
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
+    use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
-    use crate::arb::util::traits::pubkey::ToPubkey;
 
     static PAYER: &str = "4UX2dsCbqCm475cM2VvbEs6CmgoAhwP9CnwRT6WxmYA5";
     fn expected_result() -> MeteoraDlmmInputAccounts {

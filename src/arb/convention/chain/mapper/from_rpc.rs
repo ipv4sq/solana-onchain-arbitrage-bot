@@ -2,9 +2,9 @@ use anyhow::{bail, Result};
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::pubkey::Pubkey;
 use solana_transaction_status::{
-    option_serializer::OptionSerializer,
-    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiInstruction, UiMessage,
-    UiParsedInstruction, UiParsedMessage, UiRawMessage,
+    option_serializer::OptionSerializer, EncodedConfirmedTransactionWithStatusMeta,
+    EncodedTransaction, UiInstruction, UiMessage, UiParsedInstruction, UiParsedMessage,
+    UiRawMessage,
 };
 use std::str::FromStr;
 

@@ -1,5 +1,5 @@
-use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::database::columns::PubkeyType;
+use crate::arb::global::enums::dex_type::DexType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -63,8 +63,11 @@ mod tests {
     #[test]
     fn test_pool_record_descriptor_from_json_with_byte_array() {
         let json_with_bytes = r#"{"base": [3, 0, 123, 71, 65, 72, 195, 12, 199, 132, 151, 245, 245, 38, 215, 124, 207, 130, 45, 35, 107, 31, 13, 167, 164, 111, 148, 103, 30, 148, 249, 191], "quote": [6, 155, 136, 87, 254, 171, 129, 132, 251, 104, 127, 99, 70, 24, 192, 53, 218, 196, 57, 220, 26, 235, 59, 85, 152, 160, 240, 0, 0, 0, 0, 1], "base_symbol": "TNS", "quote_symbol": "SOL"}"#;
-        
+
         let result = serde_json::from_str::<PoolRecordDescriptor>(json_with_bytes);
-        assert!(result.is_err(), "Should fail to deserialize byte arrays as strings");
+        assert!(
+            result.is_err(),
+            "Should fail to deserialize byte arrays as strings"
+        );
     }
 }

@@ -1,6 +1,6 @@
-use solana_program::pubkey::Pubkey;
-use solana_program::instruction::AccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
+use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
 
 pub trait ToAccountMeta {
     fn to_signer(&self) -> AccountMeta;

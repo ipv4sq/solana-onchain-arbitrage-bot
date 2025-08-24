@@ -189,8 +189,8 @@ mod tests {
     use crate::arb::global::constant::token_program::TokenProgram;
     use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
-    use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
+    use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::test::test_utils::get_test_rpc_client;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP

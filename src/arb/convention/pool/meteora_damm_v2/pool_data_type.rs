@@ -1,7 +1,7 @@
+use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
-use crate::arb::util::serde_helpers;
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
 #[repr(C)]

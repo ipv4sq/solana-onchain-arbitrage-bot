@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use solana_sdk::signature::Signature;
+use std::str::FromStr;
 
 pub trait ToSignature {
     fn to_sig(&self) -> Signature;

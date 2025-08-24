@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use solana_program::pubkey::Pubkey;
+use std::str::FromStr;
 
 pub trait ToPubkey {
     fn to_pubkey(&self) -> Pubkey;

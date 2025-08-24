@@ -29,7 +29,6 @@ pub trait PoolDataLoader: Sized {
     fn pair(&self) -> MintPair {
         return MintPair(self.base_mint(), self.quote_mint());
     }
-    
 }
 
 #[derive(Debug, Clone)]

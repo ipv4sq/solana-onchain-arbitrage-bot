@@ -1,5 +1,5 @@
-use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::database::{get_repository_manager, RepositoryManager, RepositoryResult};
+use crate::arb::global::enums::dex_type::DexType;
 use solana_sdk::pubkey::Pubkey;
 
 /// Example of using the repository pattern with dependency injection
