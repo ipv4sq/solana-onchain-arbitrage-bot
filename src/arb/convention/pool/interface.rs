@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::state::rpc::rpc_client;
-use crate::arb::util::types::mint_pair::MintPair;
+use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;

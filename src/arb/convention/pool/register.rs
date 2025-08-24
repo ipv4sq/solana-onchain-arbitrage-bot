@@ -9,7 +9,8 @@ use crate::arb::convention::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConf
 use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
 use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::util::types::mint_pair::MintPair;
+use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
@@ -31,6 +32,12 @@ pub enum AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
+    pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
+        let account = rpc_client().get_account(pool_address).await?;
+        let dex_type = DexType::determine_from(&account.owner);
+        Self::from_address(pool_address, dex_type).await
+    }
+
     pub async fn from_address(pool: &Pubkey, dex_type: DexType) -> Result<AnyPoolConfig> {
         match dex_type {
             DexType::MeteoraDlmm => {

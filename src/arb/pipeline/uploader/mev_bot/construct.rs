@@ -8,7 +8,9 @@ use crate::arb::convention::pool::util::{ata, ata_sol_token};
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
-use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
+use crate::arb::global::state::rpc::{
+    ensure_mint_account_exists, rpc_client, simulate_tx_with_retry,
+};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::util::random_select;
@@ -22,6 +24,7 @@ use solana_program::system_program;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
+use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 use tracing::info;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
@@ -34,6 +37,7 @@ pub async fn build_and_send(
     unit_price: u64,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
+    include_create_token_account_ix: bool,
 ) -> Result<SimulationResult> {
     let blockhash = rpc_client().get_latest_blockhash().await?;
 
@@ -56,6 +60,7 @@ pub async fn build_and_send(
         blockhash,
         &alts,
         minimum_profit,
+        include_create_token_account_ix,
     )
     .await?;
 
@@ -74,9 +79,18 @@ pub async fn build_tx(
     blockhash: Hash,
     alts: &[AddressLookupTableAccount],
     minimum_profit: u64,
+    include_create_token_account_ix: bool,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
-    let x = pools.first().unwrap();
+    let wallet_pub = wallet.pubkey();
+    if include_create_token_account_ix {
+        instructions.push(create_associated_token_account_idempotent(
+            &wallet_pub,
+            &wallet_pub,
+            minor_mint,
+            &TokenProgram::SPL_TOKEN,
+        ))
+    }
     let swap_ix = create_invoke_mev_instruction(
         &wallet.pubkey(),
         minor_mint,
@@ -220,4 +234,12 @@ fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u
     let unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
 
     (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
+}
+
+fn ensure_token_account_exists(
+    belong_to: &Pubkey,
+    mint: &Pubkey,
+    mint_program: &Pubkey,
+) -> Instruction {
+    create_associated_token_account_idempotent(belong_to, belong_to, mint, &mint_program)
 }

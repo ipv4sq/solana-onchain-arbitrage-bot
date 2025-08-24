@@ -2,8 +2,9 @@ use crate::arb::convention::chain::AccountState;
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_vault::list_all_vaults;
 use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
+use crate::arb::pipeline::swap_changes::cache::VaultAccountCache;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
-use crate::arb::util::types::cache::LazyCache;
+use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{empty_ok, lazy_arc};
 use anyhow::Result;
@@ -12,9 +13,6 @@ use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
-
-#[allow(unused)]
-static VAULT_ACCOUNT_CACHE: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 #[allow(unused)]
 static VAULT_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<VaultUpdate>>> = lazy_arc!({
@@ -68,7 +66,7 @@ impl VaultAccountMonitor {
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
         let updated = AccountState::from_grpc_update(&update);
-        let previous = VAULT_ACCOUNT_CACHE.insert(update.account, updated.clone());
+        let previous = VaultAccountCache.insert(update.account, updated.clone());
         let vault_update = VaultUpdate {
             previous,
             current: updated,

@@ -2,6 +2,7 @@ use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::hash::Hash;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -10,9 +11,11 @@ struct CacheEntry<V> {
     last_accessed: Instant,
 }
 
-pub struct LoadingCache<K, V, F> {
+type LoaderFn<K, V> = Arc<dyn Fn(&K) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync>;
+
+pub struct LoadingCache<K, V> {
     inner: Arc<RwLock<CacheInner<K, V>>>,
-    loader: F,
+    loader: LoaderFn<K, V>,
     max_entries: usize,
 }
 
@@ -21,15 +24,21 @@ struct CacheInner<K, V> {
     access_order: VecDeque<K>,
 }
 
-impl<K, V, F, Fut> LoadingCache<K, V, F>
+impl<K, V> LoadingCache<K, V>
 where
     K: Clone + Hash + Eq + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
-    F: Fn(&K) -> Fut + Clone + Send + Sync + 'static,
-    Fut: Future<Output = Option<V>> + Send,
 {
-    pub fn new(max_entries: usize, loader: F) -> Self {
+    pub fn new<F, Fut>(max_entries: usize, loader: F) -> Self
+    where
+        F: Fn(&K) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Option<V>> + Send + 'static,
+    {
         assert!(max_entries > 0, "max_entries must be greater than 0");
+        
+        let loader = Arc::new(move |key: &K| -> Pin<Box<dyn Future<Output = Option<V>> + Send>> {
+            Box::pin(loader(key))
+        });
         
         Self {
             inner: Arc::new(RwLock::new(CacheInner {
@@ -127,8 +136,8 @@ where
     }
 }
 
-unsafe impl<K: Send, V: Send, F: Send> Send for LoadingCache<K, V, F> {}
-unsafe impl<K: Send, V: Send, F: Send> Sync for LoadingCache<K, V, F> {}
+unsafe impl<K: Send, V: Send> Send for LoadingCache<K, V> {}
+unsafe impl<K: Send, V: Send> Sync for LoadingCache<K, V> {}
 
 #[cfg(test)]
 mod tests {
