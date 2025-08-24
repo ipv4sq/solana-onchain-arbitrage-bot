@@ -1,2 +1,2 @@
-mod account_monitor;
-mod registrar;
+pub mod account_monitor;
+pub mod registrar;

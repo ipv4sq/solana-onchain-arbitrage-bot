@@ -1,4 +1,4 @@
-mod entry;
+pub mod entry;
 pub mod pool_vault;
 pub mod subscriber;
-mod vault_update;
+pub mod vault_update;

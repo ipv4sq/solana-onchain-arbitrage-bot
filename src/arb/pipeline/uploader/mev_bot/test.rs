@@ -4,7 +4,7 @@ mod tests {
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::enums::dex_type::DexType;
     use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
-    use crate::arb::program::mev_bot::fire::construct::*;
+    use crate::arb::pipeline::uploader::mev_bot::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
