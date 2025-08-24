@@ -298,44 +298,61 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 - Change as little code as possible
 - Avoid unnecessary indents, be careful of using if Some() or match expressions
 
+### Early Returns
+
+**Use early returns** to avoid deep nesting:
+
+- Handle edge cases first, main logic last
+
 ### Functional Programming Style
 
 **STRONGLY PREFER functional chaining** - Transform data through clear pipeline steps.
 
 #### Core Principles
+
 - **Each line = one transformation** - Complex logic becomes a readable sequence
 - **No mutable state** - Use `filter_map`, `fold`, `collect()` instead of loops and mutations
 - **Chain everything** - `.map()`, `.filter()`, `.collect()` create self-documenting pipelines
 
 #### Example: Good vs Bad
+
 ```rust
 // GOOD: Clear transformation pipeline
 let result = items
-    .into_iter()
-    .filter_map(|item| process(item).map(|v| (item.key, v)))
-    .collect();
+.into_iter()
+.filter_map( | item| process(item).map( | v| (item.key, v)))
+.collect();
 
 // BAD: Imperative with mutable state
 let mut result = HashMap::new();
 for item in items {
-    if let Some(value) = process(item) {
-        result.insert(item.key, value);
-    }
+if let Some(value) = process(item) {
+result.insert(item.key, value);
+}
 }
 ```
 
 #### Key Patterns
+
 - `filter_map` > `for` loops with `if let`
 - `fold`/`reduce` > mutable accumulator variables
 - `collect()` > manual HashMap/Vec construction
 - `try_join_all` for parallel async operations
-- Chain `.entry().or_insert().and_modify()` for map updates 
+- Chain `.entry().or_insert().and_modify()` for map updates
 
 ### Pubkey Creation
 
 - **Always use `.to_pubkey()` helper method** instead of `Pubkey::from_str().unwrap()`
 - This provides cleaner, more readable code and consistent error handling
 - Example: `"So11111111111111111111111111111111111111112".to_pubkey()`
+
+### Using Constants
+
+**Never hardcode addresses** - use provided constants:
+
+- `Mints::WSOL`, `Mints::USDC` - token mints
+- `DexPrograms::RAYDIUM_AMM`, etc - DEX program IDs
+- `MevBot::PROGRAM_ID` - MEV bot constants
 
 ### Pump.fun Specific Notes
 

@@ -11,7 +11,8 @@ struct CacheEntry<V> {
     last_accessed: Instant,
 }
 
-type LoaderFn<K, V> = Arc<dyn Fn(&K) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync>;
+type LoaderFn<K, V> =
+    Arc<dyn Fn(&K) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync>;
 
 pub struct LoadingCache<K, V> {
     inner: Arc<RwLock<CacheInner<K, V>>>,
@@ -35,11 +36,13 @@ where
         Fut: Future<Output = Option<V>> + Send + 'static,
     {
         assert!(max_entries > 0, "max_entries must be greater than 0");
-        
-        let loader = Arc::new(move |key: &K| -> Pin<Box<dyn Future<Output = Option<V>> + Send>> {
-            Box::pin(loader(key))
-        });
-        
+
+        let loader = Arc::new(
+            move |key: &K| -> Pin<Box<dyn Future<Output = Option<V>> + Send>> {
+                Box::pin(loader(key))
+            },
+        );
+
         Self {
             inner: Arc::new(RwLock::new(CacheInner {
                 entries: HashMap::with_capacity(max_entries),
@@ -67,7 +70,31 @@ where
         Some(value)
     }
 
-    pub async fn get_if_present(&self, key: &K) -> Option<V> {
+    pub fn get_sync(&self, key: &K) -> Option<V> {
+        {
+            let mut cache = self.inner.write();
+            if cache.entries.contains_key(key) {
+                let entry = cache.entries.get_mut(key).unwrap();
+                entry.last_accessed = Instant::now();
+                let value = entry.value.as_ref().clone();
+                Self::move_to_front(&mut cache.access_order, key);
+                return Some(value);
+            }
+        }
+
+        let handle = tokio::runtime::Handle::try_current()
+            .expect("get_sync must be called within a tokio runtime");
+
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let value = (self.loader)(key).await?;
+                self.store_value(key.clone(), value.clone()).await;
+                Some(value)
+            })
+        })
+    }
+
+    pub fn get_if_present(&self, key: &K) -> Option<V> {
         let mut cache = self.inner.write();
         if cache.entries.contains_key(key) {
             let entry = cache.entries.get_mut(key).unwrap();
@@ -103,7 +130,7 @@ where
 
     async fn store_value(&self, key: K, value: V) {
         let mut cache = self.inner.write();
-        
+
         if cache.entries.contains_key(&key) {
             let entry = cache.entries.get_mut(&key).unwrap();
             entry.value = Arc::new(value);
@@ -150,7 +177,7 @@ mod tests {
     async fn test_basic_operations() {
         let load_count = Arc::new(AtomicUsize::new(0));
         let count_clone = load_count.clone();
-        
+
         let cache = LoadingCache::new(3, move |key: &String| {
             let count = count_clone.clone();
             let key = key.clone();
@@ -171,7 +198,7 @@ mod tests {
         assert_eq!(val, Some("value_key1".to_string()));
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
 
-        let val = cache.get_if_present(&"key2".to_string()).await;
+        let val = cache.get_if_present(&"key2".to_string());
         assert_eq!(val, None);
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
     }
@@ -191,10 +218,10 @@ mod tests {
         cache.get(&4).await;
         assert_eq!(cache.size().await, 3);
 
-        assert_eq!(cache.get_if_present(&1).await, None);
-        assert_eq!(cache.get_if_present(&2).await, Some("value_2".to_string()));
-        assert_eq!(cache.get_if_present(&3).await, Some("value_3".to_string()));
-        assert_eq!(cache.get_if_present(&4).await, Some("value_4".to_string()));
+        assert_eq!(cache.get_if_present(&1), None);
+        assert_eq!(cache.get_if_present(&2), Some("value_2".to_string()));
+        assert_eq!(cache.get_if_present(&3), Some("value_3".to_string()));
+        assert_eq!(cache.get_if_present(&4), Some("value_4".to_string()));
     }
 
     #[tokio::test]
@@ -207,28 +234,38 @@ mod tests {
         cache.get(&1).await;
         cache.get(&2).await;
         cache.get(&3).await;
-        
+
         cache.get(&1).await;
-        
+
         cache.get(&4).await;
-        
-        assert_eq!(cache.get_if_present(&1).await, Some("value_1".to_string()));
-        assert_eq!(cache.get_if_present(&2).await, None);
-        assert_eq!(cache.get_if_present(&3).await, Some("value_3".to_string()));
-        assert_eq!(cache.get_if_present(&4).await, Some("value_4".to_string()));
+
+        assert_eq!(cache.get_if_present(&1), Some("value_1".to_string()));
+        assert_eq!(cache.get_if_present(&2), None);
+        assert_eq!(cache.get_if_present(&3), Some("value_3".to_string()));
+        assert_eq!(cache.get_if_present(&4), Some("value_4".to_string()));
     }
 
     #[tokio::test]
     async fn test_explicit_put() {
-        let cache = LoadingCache::new(2, |_key: &String| {
-            async move { Some("loaded_value".to_string()) }
+        let cache = LoadingCache::new(2, |_key: &String| async move {
+            Some("loaded_value".to_string())
         });
 
-        cache.put("key1".to_string(), "manual_value".to_string()).await;
-        assert_eq!(cache.get(&"key1".to_string()).await, Some("manual_value".to_string()));
+        cache
+            .put("key1".to_string(), "manual_value".to_string())
+            .await;
+        assert_eq!(
+            cache.get(&"key1".to_string()).await,
+            Some("manual_value".to_string())
+        );
 
-        cache.put("key1".to_string(), "updated_value".to_string()).await;
-        assert_eq!(cache.get(&"key1".to_string()).await, Some("updated_value".to_string()));
+        cache
+            .put("key1".to_string(), "updated_value".to_string())
+            .await;
+        assert_eq!(
+            cache.get(&"key1".to_string()).await,
+            Some("updated_value".to_string())
+        );
     }
 
     #[tokio::test]
@@ -245,7 +282,7 @@ mod tests {
 
         cache.invalidate(&2).await;
         assert_eq!(cache.size().await, 2);
-        assert_eq!(cache.get_if_present(&2).await, None);
+        assert_eq!(cache.get_if_present(&2), None);
 
         cache.invalidate_all().await;
         assert_eq!(cache.size().await, 0);
@@ -268,7 +305,7 @@ mod tests {
         assert_eq!(cache.get(&2).await, Some("value_2".to_string()));
         assert_eq!(cache.get(&3).await, None);
         assert_eq!(cache.get(&4).await, Some("value_4".to_string()));
-        
+
         assert_eq!(cache.size().await, 2);
     }
 
@@ -285,7 +322,7 @@ mod tests {
         }));
 
         let mut handles = vec![];
-        
+
         for i in 0..20 {
             let cache_clone = cache.clone();
             handles.push(task::spawn(async move {
@@ -311,11 +348,11 @@ mod tests {
 
         cache.get(&1).await;
         assert_eq!(cache.size().await, 1);
-        
+
         cache.get(&2).await;
         assert_eq!(cache.size().await, 1);
-        assert_eq!(cache.get_if_present(&1).await, None);
-        assert_eq!(cache.get_if_present(&2).await, Some("value_2".to_string()));
+        assert_eq!(cache.get_if_present(&1), None);
+        assert_eq!(cache.get_if_present(&2), Some("value_2".to_string()));
     }
 
     #[tokio::test]
