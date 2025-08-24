@@ -1,4 +1,3 @@
-use crate::arb::convention::chain::AccountState;
 use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
 use anyhow::Result;
 use tracing::info;

@@ -11,11 +11,12 @@ use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::thread::current;
 use tracing::{error, info};
 
+#[allow(unused)]
 static VAULT_ACCOUNT_CACHE: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
+#[allow(unused)]
 static VAULT_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<VaultUpdate>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 4,
@@ -31,6 +32,7 @@ static VAULT_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<VaultUpdate>>> = lazy_arc
     })
 });
 
+#[allow(unused)]
 pub struct VaultAccountMonitor {
     client: SolanaGrpcClient,
     vaults: HashSet<Pubkey>,
@@ -40,7 +42,7 @@ impl VaultAccountMonitor {
     pub async fn new() -> Result<Self> {
         Ok(Self {
             client: SolanaGrpcClient::from_env()?,
-            vaults: list_all_vaults().await?.into_iter().collect(),
+            vaults: list_all_vaults().await?,
         })
     }
 
