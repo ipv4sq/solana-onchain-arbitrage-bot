@@ -21,59 +21,33 @@ pub struct VaultAccountMonitor {
 
 impl VaultAccountMonitor {
     pub async fn new() -> Result<Self> {
-        let vaults = list_all_vaults().await?;
-        let vault_set = vaults.into_iter().collect::<HashSet<_>>();
-
-        info!("Initialized vault monitor with {} vaults", vault_set.len());
-
         Ok(Self {
             client: SolanaGrpcClient::from_env()?,
-            vaults: vault_set,
+            vaults: list_all_vaults().await?.into_iter().collect(),
         })
     }
 
-    pub async fn start(self, auto_retry: bool) -> Result<()> {
+    pub async fn start(self) -> Result<()> {
         info!(
-            "Starting vault account subscription for {} vaults (auto_retry: {})",
+            "Starting vault account subscription for {} vaults",
             self.vaults.len(),
-            auto_retry
         );
 
-        let vault_vec: Vec<Pubkey> = self.vaults.iter().cloned().collect();
-
+        let vault_vec: Vec<Pubkey> = self.vaults.into_iter().collect();
         let filter = AccountFilter::new("vault_monitor").with_accounts(&vault_vec);
-
-        let vaults_arc = Arc::new(self.vaults);
 
         self.client
             .subscribe_accounts(
                 filter,
                 move |account_update| {
-                    let vaults = vaults_arc.clone();
-                    async move { Self::handle_account_update(account_update, vaults).await }
+                    async move { Self::handle_account_update(account_update).await }
                 },
-                auto_retry,
+                true,
             )
             .await
     }
 
-    async fn handle_account_update(
-        update: GrpcAccountUpdate,
-        vaults: Arc<HashSet<Pubkey>>,
-    ) -> Result<()> {
-        if !vaults.contains(&update.account) {
-            warn!("Received update for non-vault account: {}", update.account);
-            return Ok(());
-        }
-
-        info!(
-            "Vault account update: {} at slot {} (lamports: {}, data_len: {})",
-            update.account,
-            update.slot,
-            update.lamports,
-            update.data.len()
-        );
-
+    async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
         let account_state = AccountState::from_grpc_update(&update);
 
         let previous = VAULT_ACCOUNT_CACHE.insert(update.account, account_state.clone());
@@ -89,13 +63,8 @@ impl VaultAccountMonitor {
                 entry::process_balance_change(&account_state, &prev_state, lamport_change).await?;
 
                 let vault_update = VaultUpdate {
-                    vault: update.account,
-                    slot: update.slot,
-                    lamports: update.lamports,
-                    lamport_change,
-                    data: update.data,
-                    owner: update.owner,
-                    timestamp: std::time::Instant::now(),
+                    previous: prev_state,
+                    current: account_state.clone(),
                 };
 
                 if let Err(e) = publish_vault_update(vault_update).await {
@@ -106,17 +75,9 @@ impl VaultAccountMonitor {
 
         Ok(())
     }
-
-    pub fn get_cached_state(vault: &Pubkey) -> Option<AccountState> {
-        VAULT_ACCOUNT_CACHE.get(vault)
-    }
-
-    pub fn get_all_cached_states() -> Vec<AccountState> {
-        VAULT_ACCOUNT_CACHE.values()
-    }
 }
 
 pub async fn start_vault_monitor() -> Result<()> {
     let monitor = VaultAccountMonitor::new().await?;
-    monitor.start(true).await
+    monitor.start().await
 }
