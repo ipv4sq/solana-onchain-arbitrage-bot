@@ -14,8 +14,8 @@ use std::io::empty;
 use std::sync::Arc;
 
 pub struct MevBotFire {
-    minor_mint: MintAddress,
-    pools: Vec<PoolAddress>,
+    pub minor_mint: MintAddress,
+    pub pools: Vec<PoolAddress>,
 }
 
 #[allow(non_upper_case_globals)]
@@ -31,7 +31,7 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
     })
 });
 
-pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
+async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
     let wallet = get_wallet();
     let configs: Vec<_> = join_all(
         pools
@@ -44,9 +44,9 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<(
     .collect();
 
     let wallet_pubkey = wallet.pubkey();
-    let _ = build_and_send(&wallet, minor_mint, 700_000, 1_000, &configs, 0, true)
-        .await?
-        .map(|result| log(result, &wallet_pubkey));
+    build_and_send(&wallet, minor_mint, 700_000, 1_000, &configs, 0, true)
+        .await
+        .map(|result| log(result, &wallet_pubkey))?;
     empty_ok!()
 }
 
