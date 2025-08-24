@@ -11,6 +11,8 @@ use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{
     ensure_mint_account_exists, rpc_client, simulate_tx_with_retry,
 };
+use crate::arb::pipeline::swap_changes::cache::MintCache;
+use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::util::random_select;
@@ -83,17 +85,25 @@ pub async fn build_tx(
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
     let wallet_pub = wallet.pubkey();
+    let mint_token_program = MintCache
+        .get(minor_mint)
+        .await
+        .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
+        .program
+        .0;
+
     if include_create_token_account_ix {
         instructions.push(create_associated_token_account_idempotent(
             &wallet_pub,
             &wallet_pub,
             minor_mint,
-            &TokenProgram::SPL_TOKEN,
+            &mint_token_program,
         ))
     }
     let swap_ix = create_invoke_mev_instruction(
         &wallet.pubkey(),
         minor_mint,
+        &mint_token_program,
         compute_unit_limit,
         pools,
         minimum_profit,
@@ -110,7 +120,8 @@ pub async fn build_tx(
 
 pub fn create_invoke_mev_instruction(
     signer: &Pubkey,
-    minor_mint: &Pubkey,
+    minor_mint: &MintAddress,
+    token_program: &TokenProgramAddress,
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
@@ -130,7 +141,7 @@ pub fn create_invoke_mev_instruction(
     if use_flashloan {
         accounts.extend([
             MevBot::FLASHLOAN_ACCOUNT.to_readonly(),
-            derive_vault_token_account(
+            derive_vault_token_account_mev_bot(
                 &MevBot::EMV_BOT_PROGRAM,
                 &Mints::WSOL, // default to wsol mint base for flashloan
             )
@@ -138,11 +149,11 @@ pub fn create_invoke_mev_instruction(
             .to_writable(),
         ]);
     }
+
     accounts.extend([
         minor_mint.to_readonly(),
-        //TODO  below both will be updated to the real token program
-        TokenProgram::SPL_TOKEN.to_program(),
-        ata(signer, minor_mint, &TokenProgram::SPL_TOKEN).to_writable(),
+        token_program.to_program(),
+        ata(signer, minor_mint, token_program).to_writable(),
     ]);
 
     // let the_other_mint_account = ata(&signer(), )
@@ -209,8 +220,7 @@ pub fn create_invoke_mev_instruction(
     })
 }
 
-/// I am not sure whether this would work
-pub fn derive_vault_token_account(program_id: &Pubkey, mint: &Pubkey) -> (Pubkey, u8) {
+pub fn derive_vault_token_account_mev_bot(program_id: &Pubkey, mint: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[b"vault_token_account", mint.as_ref()], program_id)
 }
 

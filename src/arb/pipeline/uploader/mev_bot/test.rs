@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::convention::pool::register::AnyPoolConfig;
-    use crate::arb::global::constant::mint::Mints;
+
     use crate::arb::global::enums::dex_type::DexType;
     use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};
     use crate::arb::pipeline::uploader::mev_bot::construct::*;
@@ -11,6 +11,7 @@ mod tests {
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
 
+    use crate::arb::global::constant::token_program::TokenProgram;
     use std::io::{self, Write};
     use tracing::info;
 
@@ -90,6 +91,7 @@ mod tests {
         let ix = create_invoke_mev_instruction(
             &"DvLTm5iR43m7u2Rh5rwNmwrKDtD9X8iHpaoLhaUnEKEq".to_pubkey(),
             &minor_mint(),
+            &TokenProgram::SPL_TOKEN,
             1,
             &pools,
             1000,
