@@ -1,6 +1,6 @@
 mod consumer;
 mod entry;
-pub mod grpc_registrar;
 mod pool_vault;
+pub mod subscriber;
 
 use anyhow::Result;

@@ -1,4 +1,4 @@
-use crate::arb::pipeline::swap_changes::account_monitor::grpc_registrar::start_vault_monitor;
+use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_vault_monitor;
 use crate::empty_ok;
 use anyhow::Result;
 use tracing::error;
