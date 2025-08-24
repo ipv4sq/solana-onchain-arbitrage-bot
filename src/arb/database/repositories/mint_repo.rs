@@ -1,6 +1,6 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::mint_do::{self, Entity as MintEntity, Model};
-use crate::arb::database::entity::pool_do::{self, Model as PoolRecord};
+use crate::arb::database::entity::pool_do;
 use crate::arb::database::entity::MintRecord;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::db::get_db;
@@ -58,7 +58,7 @@ impl MintRecordRepository {
             .await?)
     }
 
-    pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<PoolRecord>>> {
+    pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<pool_do::Model>>> {
         let result = try_join_all(
             MintRecord::find()
                 .all(get_db())

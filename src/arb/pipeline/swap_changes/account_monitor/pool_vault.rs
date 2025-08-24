@@ -1,4 +1,4 @@
-use crate::arb::database::entity::MintRecord;
+use crate::arb::database::entity::pool_do::Model as PoolDo;
 use crate::arb::database::repositories::MintRecordRepository;
 use crate::arb::util::types::cache::LazyCache;
 use anyhow::Result;
@@ -11,7 +11,9 @@ type MintAddress = Pubkey;
 type PoolAddress = Pubkey;
 
 #[allow(non_upper_case_globals)]
-static cache: LazyCache<VaultAddress, (MintAddress, PoolAddress)> = LazyCache::new();
+static VAULT_TO_POOL: LazyCache<VaultAddress, (MintAddress, PoolAddress)> = LazyCache::new();
+
+pub static MINT_WITH_POOLS: LazyCache<MintAddress, Vec<PoolDo>> = LazyCache::new();
 
 pub async fn list_all_vaults() -> Result<HashSet<Pubkey>> {
     let mint_with_pools = MintRecordRepository::find_all_with_pools().await?;
@@ -19,9 +21,10 @@ pub async fn list_all_vaults() -> Result<HashSet<Pubkey>> {
     let all_vaults: HashSet<VaultAddress> = mint_with_pools
         .iter()
         .flat_map(|(mint, pools)| {
+            MINT_WITH_POOLS.insert(*mint, pools.iter().map(|pool| pool.clone()).collect());
             for pool in pools {
-                cache.insert(pool.base_vault.into(), (*mint, pool.address.into()));
-                cache.insert(pool.quote_vault.into(), (*mint, pool.address.into()));
+                VAULT_TO_POOL.insert(pool.base_vault.into(), (*mint, pool.address.into()));
+                VAULT_TO_POOL.insert(pool.quote_vault.into(), (*mint, pool.address.into()));
             }
             pools
         })
@@ -32,5 +35,5 @@ pub async fn list_all_vaults() -> Result<HashSet<Pubkey>> {
 }
 
 pub fn get_mint_and_pool_of_vault(vault: &VaultAddress) -> Option<(MintAddress, PoolAddress)> {
-    cache.get(vault)
+    VAULT_TO_POOL.get(vault)
 }
