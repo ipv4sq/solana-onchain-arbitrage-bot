@@ -1,9 +1,11 @@
+#![allow(non_upper_case_globals)]
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::pipeline::swap_changes::cache::PoolConfigCache;
 use crate::arb::pipeline::uploader::mev_bot::construct::build_and_send;
 use crate::arb::pipeline::uploader::wallet::get_wallet;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
+use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{empty_ok, lazy_arc};
 use futures::future::join_all;
@@ -12,13 +14,13 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 use std::io::empty;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub struct MevBotFire {
     pub minor_mint: MintAddress,
     pub pools: Vec<PoolAddress>,
 }
 
-#[allow(non_upper_case_globals)]
 pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 4,
@@ -31,7 +33,20 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
     })
 });
 
+pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = Lazy::new(|| {
+    RateLimiter::lazy_arc(
+        5,
+        Duration::from_secs(1),
+        8,
+        "MevBotRateLimiter".to_string(),
+    )
+});
+
 async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
+    if !MevBotRateLimiter.try_acquire() {
+        tracing::warn!("MEV bot rate limit exceeded, skipping execution");
+        return Ok(());
+    }
     let wallet = get_wallet();
     let configs: Vec<_> = join_all(
         pools
