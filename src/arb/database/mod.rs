@@ -6,9 +6,3 @@ pub mod columns;
 
 // Repository Implementations
 pub mod repositories; // Repository implementations
-
-// Core components
-pub mod core;
-
-pub use core::error::RepositoryResult;
-pub use core::traits::*;
