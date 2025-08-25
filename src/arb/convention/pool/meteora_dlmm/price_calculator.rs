@@ -1,15 +1,10 @@
+use crate::arb::convention::pool::interface::Direction;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::database::repositories::mint_repo::MintRecordRepository;
 use crate::arb::util::alias::MintAddress;
 use anyhow::{anyhow, Result};
 use rust_decimal::Decimal;
 use rust_decimal::MathematicalOps;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Direction {
-    XtoY,
-    YtoX,
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct DlmmQuote {
@@ -43,7 +38,7 @@ impl MeteoraDlmmPoolData {
         let from_dec: u8 = MintRecordRepository::get_decimal_from_cache(from)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", from))?;
-        
+
         let to_dec: u8 = MintRecordRepository::get_decimal_from_cache(to)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", to))?;

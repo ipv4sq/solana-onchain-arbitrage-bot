@@ -392,6 +392,43 @@ result.insert(item.key, value);
 5. **Monitor logs**: Use dual console/file logging for debugging
 6. **Database migrations**: Always use SeaORM CLI for schema changes
 
+## Creating Database Tables
+
+When creating a new database table, follow this pattern:
+
+### 1. Create Migration
+```bash
+sqlx migrate add create_<table_name>_table
+```
+- Include indexes for frequently queried columns
+- Add `created_at` and `updated_at` with default timestamps
+- Create update trigger for `updated_at`
+
+### 2. Create Entity
+In `src/arb/database/entity/<table_name>.rs`:
+- Define `Model` with `#[derive(DeriveEntityModel)]`
+- Add `#[sea_orm(primary_key)]` to ID field
+- Use `PubkeyType` for Solana addresses
+- Use `FromJsonQueryResult` for JSON fields
+- Create param structs in same file (not separate files)
+- Omit `id`, `created_at`, `updated_at` from param structs
+
+### 3. Create Repository
+In `src/arb/database/repositories/<table_name>_repo.rs`:
+- Use param structs for methods with many parameters
+- Use `get_db()` directly (not `await`)
+- For pagination: use `.paginate(db, limit).fetch_page(0).await`
+- Set `NotSet` for auto fields in ActiveModel
+
+### 4. Register Components
+- Export entity in `entity/mod.rs`
+- Export repository in `repositories/mod.rs`
+
+### 5. Run Migration
+```bash
+sqlx migrate run
+```
+
 ## Important Constants
 
 - **WSOL Mint**: `So11111111111111111111111111111111111111112`

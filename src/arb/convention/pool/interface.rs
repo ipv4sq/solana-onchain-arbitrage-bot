@@ -93,3 +93,13 @@ pub trait InputAccountUtil<Account, Data>: Sized {
         self.to_list().into_iter().cloned().collect()
     }
 }
+
+pub trait PriceCalculation {
+    fn calculate_price(&self, tx: &Transaction) -> Result<u64>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    XtoY,
+    YtoX,
+}
