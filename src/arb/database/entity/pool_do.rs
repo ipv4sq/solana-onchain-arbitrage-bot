@@ -29,6 +29,8 @@ pub struct PoolRecordDescriptor {
     pub quote_symbol: String,
     pub base: String,
     pub quote: String,
+    #[serde(default)]
+    pub pool_address: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -48,12 +50,13 @@ mod tests {
             quote_symbol: "SOL".to_string(),
             base: "5pUcnWSU8yN5d9RbEaWRPvDpHt9t5SHwjDpkrkFCnJi".to_string(),
             quote: "So11111111111111111111111111111111111111112".to_string(),
+            pool_address: "8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj".to_string(),
         };
 
         let json = serde_json::to_string(&descriptor).unwrap();
         println!("Serialized JSON: {}", json);
 
-        let expected = r#"{"base_symbol":"TNS","quote_symbol":"SOL","base":"5pUcnWSU8yN5d9RbEaWRPvDpHt9t5SHwjDpkrkFCnJi","quote":"So11111111111111111111111111111111111111112"}"#;
+        let expected = r#"{"base_symbol":"TNS","quote_symbol":"SOL","base":"5pUcnWSU8yN5d9RbEaWRPvDpHt9t5SHwjDpkrkFCnJi","quote":"So11111111111111111111111111111111111111112","pool_address":"8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj"}"#;
         assert_eq!(json, expected);
 
         let deserialized: PoolRecordDescriptor = serde_json::from_str(&json).unwrap();

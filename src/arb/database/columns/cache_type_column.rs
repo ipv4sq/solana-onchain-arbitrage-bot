@@ -29,13 +29,9 @@ impl TryGetable for CacheTypeColumn {
         let column = format!("{}{}", pre, col);
         let value = res.try_get::<String>("", &column).map_err(TryGetError::DbErr)?;
         let cache_type = match value.as_str() {
-            "pool_metadata" => CacheType::PoolMetadata,
-            "mint_info" => CacheType::MintInfo,
-            "price_data" => CacheType::PriceData,
-            "account_data" => CacheType::AccountData,
-            "transaction_data" => CacheType::TransactionData,
-            "market_data" => CacheType::MarketData,
-            "routing_data" => CacheType::RoutingData,
+            "mint_record" => CacheType::MintRecord,
+            // Support legacy values for backward compatibility
+            "mint_info" => CacheType::MintRecord,
             custom => CacheType::Custom(custom.to_string()),
         };
         Ok(CacheTypeColumn(cache_type))
@@ -61,13 +57,9 @@ impl sea_orm::sea_query::ValueType for CacheTypeColumn {
         match v {
             Value::String(Some(s)) => {
                 let cache_type = match s.as_str() {
-                    "pool_metadata" => CacheType::PoolMetadata,
-                    "mint_info" => CacheType::MintInfo,
-                    "price_data" => CacheType::PriceData,
-                    "account_data" => CacheType::AccountData,
-                    "transaction_data" => CacheType::TransactionData,
-                    "market_data" => CacheType::MarketData,
-                    "routing_data" => CacheType::RoutingData,
+                    "mint_record" => CacheType::MintRecord,
+                    // Support legacy values for backward compatibility
+                    "mint_info" => CacheType::MintRecord,
                     custom => CacheType::Custom(custom.to_string()),
                 };
                 Ok(CacheTypeColumn(cache_type))

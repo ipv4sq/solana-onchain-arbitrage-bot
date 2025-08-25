@@ -7,26 +7,14 @@ mod tests;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CacheType {
-    PoolMetadata,
-    MintInfo,
-    PriceData,
-    AccountData,
-    TransactionData,
-    MarketData,
-    RoutingData,
+    MintRecord,
     Custom(String),
 }
 
 impl CacheType {
     pub fn as_str(&self) -> &str {
         match self {
-            CacheType::PoolMetadata => "pool_metadata",
-            CacheType::MintInfo => "mint_info",
-            CacheType::PriceData => "price_data",
-            CacheType::AccountData => "account_data",
-            CacheType::TransactionData => "transaction_data",
-            CacheType::MarketData => "market_data",
-            CacheType::RoutingData => "routing_data",
+            CacheType::MintRecord => "mint_record",
             CacheType::Custom(name) => name.as_str(),
         }
     }

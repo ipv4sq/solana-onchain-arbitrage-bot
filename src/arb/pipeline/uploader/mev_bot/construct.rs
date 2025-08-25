@@ -5,11 +5,11 @@ use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2I
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
+use crate::arb::database::repositories::mint_repo::MintRecordRepository;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
-use crate::arb::pipeline::swap_changes::cache::MintCache;
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::debug::log_account_metas;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
@@ -81,9 +81,8 @@ pub async fn build_tx(
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
     let wallet_pub = wallet.pubkey();
-    let mint_token_program = MintCache
-        .get(minor_mint)
-        .await
+    let mint_token_program = MintRecordRepository::get_mint_from_cache(minor_mint)
+        .await?
         .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
         .program
         .0;

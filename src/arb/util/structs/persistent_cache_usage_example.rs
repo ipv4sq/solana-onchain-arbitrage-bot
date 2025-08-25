@@ -12,7 +12,7 @@ pub struct CacheManager {
 impl CacheManager {
     pub fn new() -> Self {
         let pool_cache = PersistentCache::new(
-            CacheType::PoolMetadata,
+            CacheType::Custom("pool_metadata".to_string()),
             1000,
             Duration::from_secs(300),
             |pool_address: &Pubkey| {
@@ -28,7 +28,7 @@ impl CacheManager {
         );
         
         let mint_cache = PersistentCache::new(
-            CacheType::MintInfo,
+            CacheType::MintRecord,
             500,
             Duration::from_secs(3600),
             |mint: &Pubkey| {
@@ -45,7 +45,7 @@ impl CacheManager {
         );
         
         let price_cache = PersistentCache::new(
-            CacheType::PriceData,
+            CacheType::Custom("price_data".to_string()),
             100,
             Duration::from_secs(30),
             |pair: &String| {

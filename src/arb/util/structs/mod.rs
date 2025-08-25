@@ -4,5 +4,7 @@ pub mod lazy_cache;
 pub mod loading_cache;
 pub mod mint_pair;
 pub mod persistent_cache;
+mod persistent_cache_custom_example;
+mod persistent_cache_example;
 pub mod rate_limiter;
 pub mod ttl_loading_cache;

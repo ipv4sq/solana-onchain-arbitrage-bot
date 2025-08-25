@@ -51,6 +51,7 @@ async fn build_model<T: PoolDataLoader + Serialize>(
             quote_symbol: quote.symbol,
             base: data.base_mint().to_string(),
             quote: data.quote_mint().to_string(),
+            pool_address: pool.to_string(),
         },
         data_snapshot: serde_json::json!(data),
         created_at: None,

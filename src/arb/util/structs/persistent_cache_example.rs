@@ -4,21 +4,24 @@ use std::time::Duration;
 
 pub async fn example_usage() {
     let cache: PersistentCache<String, serde_json::Value> = PersistentCache::new(
-        CacheType::PoolMetadata,
+        CacheType::Custom("pool_metadata".to_string()),
         1000,
         Duration::from_secs(3600),
-        |pool_address: &String| async move {
-            println!("Fetching pool metadata for: {}", pool_address);
-            
-            let metadata = serde_json::json!({
-                "address": pool_address,
-                "base_mint": "So11111111111111111111111111111111111111112",
-                "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                "liquidity": 1000000000u64,
-                "timestamp": chrono::Utc::now().timestamp(),
-            });
-            
-            Some(metadata)
+        |pool_address: &String| {
+            let pool_address = pool_address.clone();
+            async move {
+                println!("Fetching pool metadata for: {}", pool_address);
+                
+                let metadata = serde_json::json!({
+                    "address": pool_address,
+                    "base_mint": "So11111111111111111111111111111111111111112",
+                    "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                    "liquidity": 1000000000u64,
+                    "timestamp": chrono::Utc::now().timestamp(),
+                });
+                
+                Some(metadata)
+            }
         },
     );
     
