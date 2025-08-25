@@ -1,7 +1,6 @@
 // Core Components (at root level)
 pub mod database;
 // Custom error types
-pub mod manager;
 pub mod traits;
 // Connection management
 pub mod error;
