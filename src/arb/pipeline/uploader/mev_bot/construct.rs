@@ -44,7 +44,6 @@ pub async fn build_and_send(
     let alt_keys = vec![
         // this seems to be legit
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-        "7Y77q5Ym5VNsAjY1amGfYGjXUSLjFcgmF6WxeeemiR8T".to_pubkey(),
         // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
     ];
 

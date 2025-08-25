@@ -2,15 +2,64 @@ use anyhow::Result;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use tracing::info;
-use tracing_subscriber::{fmt::time::FormatTime, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing::{info, Event, Subscriber};
+use tracing_subscriber::{
+    fmt::{
+        format::{self, FormatEvent, FormatFields},
+        time::FormatTime,
+        FmtContext,
+    },
+    layer::SubscriberExt,
+    registry::LookupSpan,
+    util::SubscriberInitExt,
+};
 
 struct CustomTimer;
 
 impl FormatTime for CustomTimer {
-    fn format_time(&self, w: &mut tracing_subscriber::fmt::format::Writer<'_>) -> std::fmt::Result {
+    fn format_time(&self, w: &mut format::Writer<'_>) -> std::fmt::Result {
         let now = chrono::Utc::now();
         write!(w, "{}", now.format("%Y-%m-%dT%H:%M:%S%.3f"))
+    }
+}
+
+struct CustomFormatter;
+
+impl<S, N> FormatEvent<S, N> for CustomFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> std::fmt::Result {
+        let meta = event.metadata();
+        
+        CustomTimer.format_time(&mut writer)?;
+        
+        let level = meta.level();
+        write!(writer, "  {}", level)?;
+        
+        if let Some(target) = meta.target().strip_prefix("solana_onchain_arbitrage_bot::") {
+            let formatted_target = target.replace("::", ":");
+            write!(writer, " {}", formatted_target)?;
+        } else {
+            let formatted_target = meta.target().replace("::", ":");
+            write!(writer, " {}", formatted_target)?;
+        }
+        
+        if let Some(line) = meta.line() {
+            write!(writer, ":{}", line)?;
+        }
+        
+        write!(writer, ": ")?;
+        
+        ctx.field_format().format_fields(writer.by_ref(), event)?;
+        
+        writeln!(writer)
     }
 }
 
@@ -33,18 +82,12 @@ pub fn init() -> Result<String> {
     let file_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::sync::Arc::new(file))
         .with_ansi(false)
-        .with_line_number(false)
-        .with_file(false)
-        .with_target(false)
-        .with_timer(CustomTimer);
+        .event_format(CustomFormatter);
 
     let console_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::io::stdout)
         .with_ansi(true)
-        .with_target(true)
-        .with_line_number(true)
-        .with_timer(CustomTimer)
-        .compact();
+        .event_format(CustomFormatter);
 
     let filter = tracing_subscriber::EnvFilter::new(
         std::env::var("RUST_LOG").unwrap_or_else(|_| "info,sqlx=warn".to_string()),

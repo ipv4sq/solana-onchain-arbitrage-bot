@@ -24,10 +24,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize database connection
     if let Err(e) = global::db::init_db().await {
-        tracing::warn!("Failed to initialize database connection: {}", e);
-        if e.backtrace().to_string() != "disabled backtrace" {
-            tracing::warn!("Backtrace:\n{}", e.backtrace());
-        }
+        log_error_with_backtrace!(warn, "Failed to initialize database connection", e);
         tracing::warn!("Database features will be unavailable");
     } else {
         info!("Database connection initialized");
@@ -39,23 +36,9 @@ async fn main() -> anyhow::Result<()> {
     info!("Blockhash holder initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
-    let listener_handle = tokio::spawn(async move {
-        if let Err(e) = bootstrap_indexer().await {
-            tracing::error!("MEV bot subscriber error: {}", e);
-            if e.backtrace().to_string() != "disabled backtrace" {
-                tracing::error!("Backtrace:\n{}", e.backtrace());
-            }
-        }
-    });
+    let listener_handle = spawn_with_error_handling!("MEV bot subscriber", bootstrap_indexer());
 
-    let handle = tokio::spawn(async move {
-        if let Err(e) = start_vault_monitor().await {
-            tracing::error!("Account subscriber error: {}", e);
-            if e.backtrace().to_string() != "disabled backtrace" {
-                tracing::error!("Backtrace:\n{}", e.backtrace());
-            }
-        }
-    });
+    let handle = spawn_with_error_handling!("Account subscriber", start_vault_monitor());
 
     // 3. Block until Ctrl+C
     info!("Press Ctrl+C to shutdown");

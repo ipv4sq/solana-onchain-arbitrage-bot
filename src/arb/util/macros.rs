@@ -23,3 +23,27 @@ macro_rules! empty_ok {
         Ok(())
     };
 }
+
+#[macro_export]
+macro_rules! spawn_with_error_handling {
+    ($name:expr, $future:expr) => {
+        tokio::spawn(async move {
+            if let Err(e) = $future.await {
+                tracing::error!("{} error: {}", $name, e);
+                if e.backtrace().to_string() != "disabled backtrace" {
+                    tracing::error!("Backtrace:\n{}", e.backtrace());
+                }
+            }
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! log_error_with_backtrace {
+    ($level:ident, $msg:expr, $err:expr) => {
+        tracing::$level!("{}: {}", $msg, $err);
+        if $err.backtrace().to_string() != "disabled backtrace" {
+            tracing::$level!("Backtrace:\n{}", $err.backtrace());
+        }
+    };
+}
