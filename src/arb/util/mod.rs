@@ -1,5 +1,7 @@
 pub mod alias;
 pub mod cron;
+pub mod debug;
+pub mod logging;
 pub mod macros;
 pub mod serde_helpers;
 pub mod structs;

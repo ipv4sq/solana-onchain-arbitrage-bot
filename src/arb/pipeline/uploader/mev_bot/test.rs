@@ -12,8 +12,7 @@ mod tests {
     use solana_sdk::signature::{read_keypair_file, Keypair};
 
     use crate::arb::global::constant::token_program::TokenProgram;
-    use std::io::{self, Write};
-    use tracing::info;
+    use crate::arb::util::debug::log_account_metas;
 
     fn get_wallet() -> Keypair {
         let wallet_json_path = "/Users/l/Downloads/test_jz.json";
@@ -66,14 +65,7 @@ mod tests {
         let transaction = fetch_tx(&tx).await.unwrap();
         let (ix, _) =
             extract_mev_instruction(&transaction).expect("Failed to extract MEV instruction");
-        info!("printing our all the accounts");
-        ix.accounts.iter().for_each(|account| {
-            println!(
-                "account: {}, signer: {}, writable: {}",
-                account.pubkey, account.is_signer, account.is_writable
-            )
-        });
-        info!("finished printing our all the accounts");
+        log_account_metas(&ix.accounts, "in test");
     }
 
     #[tokio::test]

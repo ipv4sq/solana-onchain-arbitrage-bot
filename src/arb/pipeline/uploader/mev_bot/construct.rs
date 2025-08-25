@@ -11,13 +11,14 @@ use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::pipeline::swap_changes::cache::MintCache;
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
+use crate::arb::util::debug::log_account_metas;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
 use solana_program::hash::Hash;
-use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::instruction::Instruction;
 use solana_program::message::v0::Message;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
@@ -25,7 +26,6 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
-use tracing::info;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -45,7 +45,6 @@ pub async fn build_and_send(
         // this seems to be legit
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
         "7Y77q5Ym5VNsAjY1amGfYGjXUSLjFcgmF6WxeeemiR8T".to_pubkey(),
-        "EyFCXwfjTjYAZz7pz1fwiQfRq8YPUKotSNyCeihHMWgZ".to_pubkey(),
         // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
     ];
 
@@ -201,15 +200,6 @@ pub fn create_invoke_mev_instruction(
     data.extend_from_slice(if no_failure_mode { &[1] } else { &[0] });
     data.extend_from_slice(&0u16.to_le_bytes()); // reserved
     data.extend_from_slice(if use_flashloan { &[1] } else { &[0] });
-
-    info!("printing our all the accounts");
-    accounts.iter().for_each(|account| {
-        println!(
-            "account: {}, signer: {}, writable: {}",
-            account.pubkey, account.is_signer, account.is_writable
-        )
-    });
-    info!("finished printing our all the accounts");
 
     Ok(Instruction {
         program_id: MevBot::EMV_BOT_PROGRAM,
