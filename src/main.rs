@@ -12,6 +12,7 @@ mod transaction;
 pub mod util;
 
 use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
+use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_vault_monitor;
 use arb::pipeline::pool_indexer;
 use arb::{global, pipeline, program};
 use clap::{App, Arg};
@@ -81,6 +82,12 @@ async fn main() -> anyhow::Result<()> {
     let listener_handle = tokio::spawn(async move {
         if let Err(e) = bootstrap_indexer().await {
             tracing::error!("MEV bot subscriber error: {}", e);
+        }
+    });
+
+    let handle = tokio::spawn(async move {
+        if let Err(e) = start_vault_monitor().await {
+            tracing::error!("Account subscriber error: {}", e);
         }
     });
 

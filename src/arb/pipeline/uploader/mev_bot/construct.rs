@@ -8,9 +8,7 @@ use crate::arb::convention::pool::util::{ata, ata_sol_token};
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
-use crate::arb::global::state::rpc::{
-    ensure_mint_account_exists, rpc_client, simulate_tx_with_retry,
-};
+use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::pipeline::swap_changes::cache::MintCache;
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
@@ -93,13 +91,13 @@ pub async fn build_tx(
         .0;
 
     if include_create_token_account_ix {
-        instructions.push(create_associated_token_account_idempotent(
-            &wallet_pub,
+        instructions.push(ensure_token_account_exists(
             &wallet_pub,
             minor_mint,
             &mint_token_program,
         ))
     }
+
     let swap_ix = create_invoke_mev_instruction(
         &wallet.pubkey(),
         minor_mint,
