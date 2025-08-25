@@ -26,7 +26,7 @@ pub struct TtlLoadingCache<K, V> {
     inner: Arc<RwLock<CacheInner<K, V>>>,
     loader: LoaderFn<K, V>,
     max_entries: usize,
-    default_ttl: Option<Duration>,
+    default_ttl: Duration,
 }
 
 struct CacheInner<K, V> {
@@ -39,7 +39,7 @@ where
     K: Clone + Hash + Eq + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
 {
-    pub fn new<F, Fut>(max_entries: usize, default_ttl: Option<Duration>, loader: F) -> Self
+    pub fn new<F, Fut>(max_entries: usize, default_ttl: Duration, loader: F) -> Self
     where
         F: Fn(&K) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Option<V>> + Send + 'static,
@@ -80,9 +80,7 @@ where
         }
 
         let value = (self.loader)(key).await?;
-        if let Some(ttl) = self.default_ttl {
-            self.store_value(key.clone(), value.clone(), ttl).await;
-        }
+        self.store_value(key.clone(), value.clone(), self.default_ttl).await;
         Some(value)
     }
 
@@ -108,9 +106,7 @@ where
         tokio::task::block_in_place(|| {
             handle.block_on(async {
                 let value = (self.loader)(key).await?;
-                if let Some(ttl) = self.default_ttl {
-                    self.store_value(key.clone(), value.clone(), ttl).await;
-                }
+                self.store_value(key.clone(), value.clone(), self.default_ttl).await;
                 Some(value)
             })
         })
@@ -135,9 +131,7 @@ where
     }
 
     pub async fn put(&self, key: K, value: V) {
-        if let Some(ttl) = self.default_ttl {
-            self.put_with_ttl(key, value, ttl).await;
-        }
+        self.put_with_ttl(key, value, self.default_ttl).await;
     }
 
     pub async fn put_with_ttl(&self, key: K, value: V, ttl: Duration) {
@@ -272,7 +266,7 @@ mod tests {
 
         let cache = TtlLoadingCache::new(
             3,
-            Some(Duration::from_secs(1)),
+            Duration::from_secs(1),
             move |key: &String| {
                 let count = count_clone.clone();
                 let key = key.clone();
@@ -305,7 +299,7 @@ mod tests {
     async fn test_different_ttls() {
         let cache = TtlLoadingCache::new(
             10,
-            None,
+            Duration::from_secs(10),
             |key: &u32| {
                 let key = *key;
                 async move { Some(format!("value_{}", key)) }
@@ -328,7 +322,7 @@ mod tests {
     async fn test_eviction_prefers_expired() {
         let cache = TtlLoadingCache::new(
             3,
-            None,
+            Duration::from_secs(10),
             |key: &u32| {
                 let key = *key;
                 async move { Some(format!("value_{}", key)) }
@@ -354,7 +348,7 @@ mod tests {
     async fn test_cleanup_expired() {
         let cache = TtlLoadingCache::new(
             10,
-            None,
+            Duration::from_secs(10),
             |key: &u32| {
                 let key = *key;
                 async move { Some(format!("value_{}", key)) }
@@ -384,7 +378,7 @@ mod tests {
     async fn test_lru_with_ttl() {
         let cache = TtlLoadingCache::new(
             3,
-            Some(Duration::from_secs(10)),
+            Duration::from_secs(10),
             |key: &u32| {
                 let key = *key;
                 async move { Some(format!("value_{}", key)) }
@@ -408,27 +402,27 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_no_default_ttl() {
+    async fn test_with_default_ttl() {
         let cache = TtlLoadingCache::new(
             3,
-            None,
+            Duration::from_secs(1),
             |_key: &u32| async move { Some("loaded".to_string()) }
         );
 
         let val = cache.get(&1).await;
         assert_eq!(val, Some("loaded".to_string()));
-        assert_eq!(cache.size().await, 0);
+        assert_eq!(cache.size().await, 1);
 
         cache.put_with_ttl(2, "manual".to_string(), Duration::from_secs(1)).await;
         assert_eq!(cache.get_if_present(&2), Some("manual".to_string()));
-        assert_eq!(cache.size().await, 1);
+        assert_eq!(cache.size().await, 2);
     }
 
     #[tokio::test]
     async fn test_background_cleanup() {
         let cache = Arc::new(TtlLoadingCache::new(
             10,
-            None,
+            Duration::from_secs(10),
             |key: &u32| {
                 let key = *key;
                 async move { Some(format!("value_{}", key)) }
@@ -455,7 +449,7 @@ mod tests {
 
         let cache = Arc::new(TtlLoadingCache::new(
             10,
-            Some(Duration::from_secs(1)),
+            Duration::from_secs(1),
             |key: &u32| {
                 let key = *key;
                 async move {
@@ -487,7 +481,7 @@ mod tests {
     async fn test_update_ttl() {
         let cache = TtlLoadingCache::new(
             5,
-            None,
+            Duration::from_secs(10),
             |_key: &u32| async move { None }
         );
 

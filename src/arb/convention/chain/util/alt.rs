@@ -1,9 +1,38 @@
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use solana_sdk::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::pubkey::Pubkey;
+use std::time::Duration;
 use tracing::{debug, warn};
+
+pub static ALT_CACHE: Lazy<TtlLoadingCache<Pubkey, AddressLookupTableAccount>> = Lazy::new(|| {
+    TtlLoadingCache::new(1000, Duration::from_secs(300), |key: &Pubkey| {
+        let key = *key;
+        async move { fetch_single_alt_internal(&key).await.ok() }
+    })
+});
+
+pub async fn get_alt_by_key(key: &Pubkey) -> Result<AddressLookupTableAccount> {
+    ALT_CACHE
+        .get(key)
+        .await
+        .ok_or_else(|| anyhow::anyhow!("Failed to fetch ALT {}", key))
+}
+
+pub fn get_alt_by_key_cached(key: &Pubkey) -> Option<AddressLookupTableAccount> {
+    ALT_CACHE.get_if_present(key)
+}
+
+pub async fn invalidate_alt_cache(key: &Pubkey) {
+    ALT_CACHE.invalidate(key).await;
+}
+
+pub async fn invalidate_all_alt_cache() {
+    ALT_CACHE.invalidate_all().await;
+}
 
 pub async fn fetch_address_lookup_tables(
     alt_keys: &[Pubkey],
@@ -37,6 +66,10 @@ pub async fn fetch_address_lookup_tables(
 }
 
 async fn fetch_single_alt(key: &Pubkey) -> Result<AddressLookupTableAccount> {
+    get_alt_by_key(key).await
+}
+
+async fn fetch_single_alt_internal(key: &Pubkey) -> Result<AddressLookupTableAccount> {
     let account = rpc_client()
         .get_account(key)
         .await
@@ -105,14 +138,8 @@ mod tests {
 
         match alts {
             Ok(tables) => {
-                assert!(
-                    tables.len() < alt_keys.len(),
-                    "Should skip invalid ALTs"
-                );
-                assert!(
-                    !tables.is_empty(),
-                    "Should still fetch valid ALTs"
-                );
+                assert!(tables.len() < alt_keys.len(), "Should skip invalid ALTs");
+                assert!(!tables.is_empty(), "Should still fetch valid ALTs");
             }
             Err(e) => {
                 println!("Note: ALT test requires mainnet RPC connection: {}", e);
@@ -171,7 +198,10 @@ mod tests {
                 assert!(!alt.addresses.is_empty(), "ALT should have addresses");
             }
             Err(e) => {
-                println!("Note: Single ALT test requires mainnet RPC connection: {}", e);
+                println!(
+                    "Note: Single ALT test requires mainnet RPC connection: {}",
+                    e
+                );
             }
         }
     }
@@ -179,7 +209,7 @@ mod tests {
     #[tokio::test]
     async fn test_problematic_alt() {
         let problematic_alt = "7Y77q5Ym5VNsAjY1amGfYGjXUSLjFcgmF6WxeeemiR8T".to_pubkey();
-        
+
         match fetch_single_alt(&problematic_alt).await {
             Ok(alt) => {
                 println!("Successfully fetched problematic ALT: {}", alt.key);
@@ -188,11 +218,87 @@ mod tests {
             Err(e) => {
                 println!("Expected error for problematic ALT: {}", e);
                 assert!(
-                    e.to_string().contains("AccountNotFound") 
-                    || e.to_string().contains("Failed to fetch ALT"),
+                    e.to_string().contains("AccountNotFound")
+                        || e.to_string().contains("Failed to fetch ALT"),
                     "Should properly handle non-existent ALT"
                 );
             }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_alt_by_key_with_cache() {
+        let alt_key = "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey();
+
+        match get_alt_by_key(&alt_key).await {
+            Ok(alt) => {
+                assert_eq!(alt.key, alt_key);
+                assert!(!alt.addresses.is_empty(), "ALT should have addresses");
+
+                let cached = get_alt_by_key_cached(&alt_key);
+                assert!(cached.is_some(), "Should be cached after first fetch");
+                assert_eq!(cached.unwrap().key, alt_key);
+            }
+            Err(e) => {
+                println!("Note: Cache test requires mainnet RPC connection: {}", e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidation() {
+        let alt_key = "EyFCXwfjTjYAZz7pz1fwiQfRq8YPUKotSNyCeihHMWgZ".to_pubkey();
+
+        match get_alt_by_key(&alt_key).await {
+            Ok(alt) => {
+                assert_eq!(alt.key, alt_key);
+
+                let cached = get_alt_by_key_cached(&alt_key);
+                assert!(cached.is_some(), "Should be cached");
+
+                invalidate_alt_cache(&alt_key).await;
+
+                let cached_after = get_alt_by_key_cached(&alt_key);
+                assert!(cached_after.is_none(), "Should be invalidated");
+
+                let refetched = get_alt_by_key(&alt_key).await.unwrap();
+                assert_eq!(refetched.key, alt_key);
+
+                let cached_again = get_alt_by_key_cached(&alt_key);
+                assert!(cached_again.is_some(), "Should be cached again");
+            }
+            Err(e) => {
+                println!(
+                    "Note: Cache invalidation test requires mainnet RPC connection: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cache_all_invalidation() {
+        let alt_keys = vec![
+            "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
+            "EyFCXwfjTjYAZz7pz1fwiQfRq8YPUKotSNyCeihHMWgZ".to_pubkey(),
+        ];
+
+        for key in &alt_keys {
+            let _ = get_alt_by_key(key).await;
+        }
+
+        for key in &alt_keys {
+            let cached = get_alt_by_key_cached(key);
+            if cached.is_some() {
+                assert_eq!(cached.unwrap().key, *key);
+            }
+        }
+
+        invalidate_all_alt_cache().await;
+
+        for key in &alt_keys {
+            let cached = get_alt_by_key_cached(key);
+            assert!(cached.is_none(), "All entries should be invalidated");
         }
     }
 }
