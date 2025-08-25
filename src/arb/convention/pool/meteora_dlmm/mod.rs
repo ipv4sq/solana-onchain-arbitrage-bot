@@ -4,7 +4,7 @@ pub mod input_data;
 pub mod pool_config;
 pub mod pool_data;
 pub mod pool_data_type;
-mod price_calculator;
+pub mod price_calculator;
 #[cfg(test)]
 mod test;
 pub mod verified;

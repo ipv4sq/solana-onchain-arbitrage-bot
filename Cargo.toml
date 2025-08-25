@@ -42,7 +42,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 rand = "0.8"
 async-trait = "0.1"
-rust_decimal = { version = "1.35", features = ["serde"] }
+rust_decimal = { version = "1.35", features = ["serde", "maths"] }
 bs58 = "0.4"
 base64 = "0.21"
 hex = "0.4"
