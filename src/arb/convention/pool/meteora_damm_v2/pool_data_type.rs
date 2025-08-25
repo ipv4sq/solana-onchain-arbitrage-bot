@@ -1,9 +1,9 @@
 use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct BaseFeeStruct {
     pub cliff_fee_numerator: u64,
@@ -15,7 +15,7 @@ pub struct BaseFeeStruct {
     // Removed padding_1 as it's not in the actual data
 }
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct DynamicFeeStruct {
     pub initialized: u8,
@@ -35,7 +35,7 @@ pub struct DynamicFeeStruct {
     pub volatility_reference: u64,
 }
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct PoolFeesStruct {
     pub base_fee: BaseFeeStruct,
@@ -48,7 +48,7 @@ pub struct PoolFeesStruct {
     pub _extra_padding: [u8; 12], // 12 bytes to reach exactly 160 bytes total
 }
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct PoolMetrics {
     #[serde(with = "serde_helpers::u128_as_string")]
@@ -63,7 +63,7 @@ pub struct PoolMetrics {
     pub padding: u64,
 }
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct RewardInfo {
     pub initialized: u8,

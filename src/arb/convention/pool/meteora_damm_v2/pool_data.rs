@@ -4,10 +4,10 @@ use crate::arb::convention::pool::meteora_damm_v2::pool_data_type::{
 };
 use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct MeteoraDammV2PoolData {
     pub pool_fees: PoolFeesStruct,
@@ -60,8 +60,8 @@ impl PoolDataLoader for MeteoraDammV2PoolData {
         // Skip the 8-byte discriminator
         let mut data_slice = &data[8..];
 
-        // Use deserialize which doesn't require all bytes to be consumed
-        MeteoraDammV2PoolData::deserialize(&mut data_slice)
+        // Use Borsh deserialize which doesn't require all bytes to be consumed
+        <MeteoraDammV2PoolData as BorshDeserialize>::deserialize(&mut data_slice)
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 

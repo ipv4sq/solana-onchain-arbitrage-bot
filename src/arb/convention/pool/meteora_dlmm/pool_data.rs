@@ -3,9 +3,9 @@ use crate::arb::convention::pool::meteora_dlmm::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct MeteoraDlmmPoolData {
     pub parameters: StaticParameters,

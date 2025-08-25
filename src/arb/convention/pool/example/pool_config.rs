@@ -1,9 +1,10 @@
 use crate::arb::convention::pool::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct ExampleAccountData {}
 

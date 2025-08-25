@@ -1,9 +1,11 @@
 use crate::arb::convention::pool::interface::{PoolConfig, PoolDataLoader};
 use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct PumpAmmPoolData {
     pub pool_bump: u8,
@@ -16,6 +18,7 @@ pub struct PumpAmmPoolData {
     pub pool_quote_token_account: Pubkey,
     pub lp_supply: u64,
     pub coin_creator: Pubkey,
+    #[serde(with = "serde_helpers::byte_array_57")]
     pub _padding: [u8; 57],
 }
 

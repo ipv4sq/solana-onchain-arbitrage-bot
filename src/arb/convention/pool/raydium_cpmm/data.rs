@@ -1,8 +1,9 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct RaydiumCpmmAPoolData {
     pub amm_config: Pubkey,

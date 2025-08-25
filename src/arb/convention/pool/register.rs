@@ -12,10 +12,11 @@ use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
+use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 
-lazy_static::lazy_static! {
+lazy_static! {
     pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {
         let mut set = HashSet::new();
         set.insert(PoolPrograms::METEORA_DLMM);
@@ -24,7 +25,7 @@ lazy_static::lazy_static! {
     };
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub enum AnyPoolConfig {
     MeteoraDlmm(MeteoraDlmmPoolConfig),
     MeteoraDammV2(MeteoraDammV2Config),

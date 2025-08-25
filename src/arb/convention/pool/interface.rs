@@ -3,10 +3,11 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-pub trait PoolDataLoader: Sized {
+pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
     fn load_data(data: &[u8]) -> Result<Self>;
 
     // mints
@@ -31,7 +32,8 @@ pub trait PoolDataLoader: Sized {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(bound = "Data: serde::Serialize + for<'a> serde::Deserialize<'a>")]
 pub struct PoolConfig<Data: PoolDataLoader> {
     pub pool: Pubkey,
     pub data: Data,

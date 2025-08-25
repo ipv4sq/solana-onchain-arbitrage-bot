@@ -8,6 +8,7 @@ mod tests;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CacheType {
     MintRecord,
+    PoolConfig,
     Custom(String),
 }
 
@@ -15,6 +16,7 @@ impl CacheType {
     pub fn as_str(&self) -> &str {
         match self {
             CacheType::MintRecord => "mint_record",
+            CacheType::PoolConfig => "pool_config",
             CacheType::Custom(name) => name.as_str(),
         }
     }

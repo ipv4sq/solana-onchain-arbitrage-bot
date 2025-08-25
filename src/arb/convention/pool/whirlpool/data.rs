@@ -1,9 +1,10 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
 use crate::arb::global::constant::pool_program::PoolPrograms;
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct WhirlpoolPoolData {
     pub whirlpools_config: Pubkey,
@@ -98,7 +99,7 @@ impl WhirlpoolPoolData {
     }
 }
 
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct WhirlpoolRewardInfo {
     pub mint: Pubkey,
