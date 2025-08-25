@@ -3,11 +3,10 @@ use crate::arb::database::entity::{mint_do, pool_do, MintRecord, MintRecordTable
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::db::get_db;
 use anyhow::Result;
-use futures::future::try_join_all;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveValue::{NotSet, Set},
-    ColumnTrait, EntityTrait, QueryFilter,
+    ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter,
 };
 use solana_program::pubkey::Pubkey;
 use std::collections::HashMap;
@@ -56,22 +55,32 @@ impl MintRecordRepository {
     }
 
     pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<pool_do::Model>>> {
-        let result = try_join_all(
-            MintRecordTable::find()
-                .all(get_db())
-                .await?
-                .into_iter() //
-                .map(|mint| async move {
-                    let pubkey: Pubkey = mint.address.into();
-                    PoolRecordRepository::find_by_any_mint(&pubkey)
-                        .await
-                        .map(|pools| (pubkey, pools))
-                }),
-        )
-        .await?
-        .into_iter()
-        .filter(|(_, pools)| !pools.is_empty())
-        .collect();
+        const PAGE_SIZE: u64 = 50;
+        let db = get_db();
+        let mut result = HashMap::new();
+        let mut page = 0u64;
+        
+        loop {
+            let mints = MintRecordTable::find()
+                .paginate(db, PAGE_SIZE)
+                .fetch_page(page)
+                .await?;
+            
+            if mints.is_empty() {
+                break;
+            }
+            
+            for mint in mints {
+                let pubkey: Pubkey = mint.address.into();
+                let pools = PoolRecordRepository::find_by_any_mint(&pubkey).await?;
+                if !pools.is_empty() {
+                    result.insert(pubkey, pools);
+                }
+            }
+            
+            page += 1;
+        }
+        
         Ok(result)
     }
 }

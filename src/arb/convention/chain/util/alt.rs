@@ -3,6 +3,7 @@ use anyhow::Result;
 use solana_sdk::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::pubkey::Pubkey;
+use tracing::{debug, warn};
 
 pub async fn fetch_address_lookup_tables(
     alt_keys: &[Pubkey],
@@ -10,23 +11,46 @@ pub async fn fetch_address_lookup_tables(
     let mut alts = Vec::new();
 
     for key in alt_keys {
-        let account = rpc_client()
-            .get_account(key)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to fetch ALT {}: {}", key, e))?;
-
-        let lookup_table = AddressLookupTable::deserialize(&account.data)
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize ALT {}: {}", key, e))?;
-
-        let alt_account = AddressLookupTableAccount {
-            key: *key,
-            addresses: lookup_table.addresses.to_vec(),
-        };
-
-        alts.push(alt_account);
+        match fetch_single_alt(key).await {
+            Ok(alt) => alts.push(alt),
+            Err(e) => {
+                warn!("Skipping ALT {}: {}", key, e);
+                continue;
+            }
+        }
     }
 
+    if alts.is_empty() && !alt_keys.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Failed to fetch any ALTs from {} provided keys",
+            alt_keys.len()
+        ));
+    }
+
+    debug!(
+        "Successfully fetched {}/{} ALTs",
+        alts.len(),
+        alt_keys.len()
+    );
+
     Ok(alts)
+}
+
+async fn fetch_single_alt(key: &Pubkey) -> Result<AddressLookupTableAccount> {
+    let account = rpc_client()
+        .get_account(key)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to fetch ALT {}: {}", key, e))?;
+
+    let lookup_table = AddressLookupTable::deserialize(&account.data)
+        .map_err(|e| anyhow::anyhow!("Failed to deserialize ALT {}: {}", key, e))?;
+
+    let alt_account = AddressLookupTableAccount {
+        key: *key,
+        addresses: lookup_table.addresses.to_vec(),
+    };
+
+    Ok(alt_account)
 }
 
 #[cfg(test)]

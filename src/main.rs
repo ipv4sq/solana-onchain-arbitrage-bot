@@ -18,11 +18,15 @@ use arb::{global, pipeline, program};
 use clap::{App, Arg};
 use std::fs;
 use std::path::Path;
+use std::io::Write;
 use tracing::{info, Level};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, fmt::time::FormatTime};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Enable anyhow backtrace capture
+    std::env::set_var("RUST_BACKTRACE", "1");
+    
     // Create logs directory if it doesn't exist
     let logs_dir = Path::new("logs");
     if !logs_dir.exists() {
@@ -38,17 +42,30 @@ async fn main() -> anyhow::Result<()> {
         .append(true)
         .open(&log_file_path)?;
 
+    // Custom timestamp formatter
+    struct CustomTimer;
+    impl FormatTime for CustomTimer {
+        fn format_time(&self, w: &mut tracing_subscriber::fmt::format::Writer<'_>) -> std::fmt::Result {
+            let now = chrono::Utc::now();
+            write!(w, "{}", now.format("%Y-%m-%dT%H:%M:%S%.3f"))
+        }
+    }
+    
     // Create file layer for logging to file
     let file_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::sync::Arc::new(file))
         .with_ansi(false) // No color codes in file
         .with_line_number(true)
-        .with_file(true);
+        .with_file(true)
+        .with_target(false) // Remove long module paths
+        .with_timer(CustomTimer);
 
     // Create console layer for logging to stdout
     let console_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::io::stdout)
-        .with_ansi(true); // Color codes for console
+        .with_ansi(true) // Color codes for console
+        .with_target(false) // Remove long module paths
+        .with_timer(CustomTimer);
 
     // Combine both layers with filtering
     // Default to info level, but exclude sqlx debug/trace logs
@@ -68,6 +85,9 @@ async fn main() -> anyhow::Result<()> {
     // Initialize database connection
     if let Err(e) = global::db::init_db().await {
         tracing::warn!("Failed to initialize database connection: {}", e);
+        if e.backtrace().to_string() != "disabled backtrace" {
+            tracing::warn!("Backtrace:\n{}", e.backtrace());
+        }
         tracing::warn!("Database features will be unavailable");
     } else {
         info!("Database connection initialized");
@@ -82,12 +102,18 @@ async fn main() -> anyhow::Result<()> {
     let listener_handle = tokio::spawn(async move {
         if let Err(e) = bootstrap_indexer().await {
             tracing::error!("MEV bot subscriber error: {}", e);
+            if e.backtrace().to_string() != "disabled backtrace" {
+                tracing::error!("Backtrace:\n{}", e.backtrace());
+            }
         }
     });
 
     let handle = tokio::spawn(async move {
         if let Err(e) = start_vault_monitor().await {
             tracing::error!("Account subscriber error: {}", e);
+            if e.backtrace().to_string() != "disabled backtrace" {
+                tracing::error!("Backtrace:\n{}", e.backtrace());
+            }
         }
     });
 
