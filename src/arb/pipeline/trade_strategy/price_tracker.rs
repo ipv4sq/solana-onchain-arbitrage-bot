@@ -49,7 +49,7 @@ impl MintPriceTracker {
                 },
             );
         }
-        
+
         {
             let sell_key = format!("{:.18}_{}", sell_price, pool_address);
             let mut sell_prices = self.sell_prices.write().unwrap();
@@ -66,7 +66,7 @@ impl MintPriceTracker {
     pub fn detect_arbitrage(&self) -> Option<ArbitrageOpportunity> {
         let buy_prices = self.buy_prices.read().unwrap();
         let sell_prices = self.sell_prices.read().unwrap();
-        
+
         if buy_prices.is_empty() || sell_prices.is_empty() {
             return None;
         }
@@ -159,23 +159,8 @@ pub fn detect_arbitrage(token_mint: MintAddress) -> Option<ArbitrageOpportunity>
     PRICE_TRACKERS.get(&token_mint)?.detect_arbitrage()
 }
 
-pub fn detect_all_arbitrages() -> Vec<ArbitrageOpportunity> {
-    PRICE_TRACKERS
-        .iter()
-        .filter_map(|entry| entry.value().detect_arbitrage())
-        .collect()
-}
-
 pub fn clear_prices_for_token(token_mint: MintAddress) {
     if let Some(tracker) = PRICE_TRACKERS.get(&token_mint) {
         tracker.clear();
     }
-}
-
-pub fn clear_all_prices() {
-    PRICE_TRACKERS.clear();
-}
-
-pub fn get_tracker_count() -> usize {
-    PRICE_TRACKERS.len()
 }
