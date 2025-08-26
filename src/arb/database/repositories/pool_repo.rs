@@ -87,6 +87,10 @@ impl PoolRecordRepository {
         VAULT_TO_POOL.get(vault).await
     }
 
+    pub async fn get_pools(mint: &MintAddress) -> Option<HashSet<PoolRecord>> {
+        MINT_TO_POOLS.get(mint).await
+    }
+
     pub async fn ensure_exists(vault: &VaultAddress) {
         VAULT_TO_POOL.ensure_exists(vault).await
     }
