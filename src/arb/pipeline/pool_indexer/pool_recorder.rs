@@ -27,7 +27,8 @@ pub async fn ensure_pool_record_exists(pool: &Pubkey, dex_type: DexType) -> Resu
         AnyPoolConfig::Unsupported => todo!(),
     };
 
-    PoolRecordRepository::upsert_pool(dto).await
+    // PoolRecordRepository::upsert_pool(dto).await
+    todo!()
 }
 
 pub async fn build_model<T: PoolDataLoader + Serialize>(

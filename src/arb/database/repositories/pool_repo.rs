@@ -62,8 +62,15 @@ static VAULT_TO_POOL: Lazy<PersistentCache<VaultAddress, PoolRecord>> = Lazy::ne
     )
 });
 
+// cache related
 impl PoolRecordRepository {
-    pub async fn upsert_pool(pool: PoolRecord) -> Result<PoolRecord> {
+    pub async fn get_record_by_any_vault(vault: &VaultAddress) -> Option<PoolRecord> {
+        VAULT_TO_POOL.get(vault).await
+    }
+}
+
+impl PoolRecordRepository {
+    async fn upsert_pool(pool: PoolRecord) -> Result<PoolRecord> {
         let db = get_db();
         let active_model = pool_do::ActiveModel {
             address: Set(pool.address.clone()),
