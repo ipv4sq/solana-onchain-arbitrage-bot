@@ -17,6 +17,13 @@ pub struct Model {
     pub profitable: bool,
     pub details: MevSimulationLogDetails,
     pub profitability: Option<i64>,
+    pub tx_size: Option<i32>,
+    pub simulation_status: Option<String>,
+    pub compute_units_consumed: Option<i64>,
+    pub error_message: Option<String>,
+    pub logs: Option<Vec<String>>,
+    pub return_data: Option<ReturnData>,
+    pub units_per_byte: Option<i64>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -24,11 +31,6 @@ pub struct Model {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct MevSimulationLogDetails {
     pub accounts: Vec<SimulationAccount>,
-    pub input_mint: Pubkey,
-    pub output_mint: Pubkey,
-    pub input_amount: u64,
-    pub output_amount: u64,
-    pub simulation_error: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -36,6 +38,12 @@ pub struct SimulationAccount {
     pub pubkey: Pubkey,
     pub is_signer: bool,
     pub is_writable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromJsonQueryResult)]
+pub struct ReturnData {
+    pub program_id: String,
+    pub data: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -48,6 +56,13 @@ pub struct MevSimulationLogParams {
     pub profitable: bool,
     pub profitability: Option<i64>,
     pub details: MevSimulationLogDetails,
+    pub tx_size: Option<i32>,
+    pub simulation_status: Option<String>,
+    pub compute_units_consumed: Option<i64>,
+    pub error_message: Option<String>,
+    pub logs: Option<Vec<String>>,
+    pub return_data: Option<ReturnData>,
+    pub units_per_byte: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

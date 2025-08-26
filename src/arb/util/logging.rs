@@ -37,12 +37,12 @@ where
         event: &Event<'_>,
     ) -> std::fmt::Result {
         let meta = event.metadata();
-        
+
         CustomTimer.format_time(&mut writer)?;
-        
+
         let level = meta.level();
         write!(writer, "  {}", level)?;
-        
+
         if let Some(target) = meta.target().strip_prefix("solana_onchain_arbitrage_bot::") {
             let formatted_target = target.replace("::", ":");
             write!(writer, " {}", formatted_target)?;
@@ -50,21 +50,21 @@ where
             let formatted_target = meta.target().replace("::", ":");
             write!(writer, " {}", formatted_target)?;
         }
-        
+
         if let Some(line) = meta.line() {
             write!(writer, ":{}", line)?;
         }
-        
+
         write!(writer, ": ")?;
-        
+
         ctx.field_format().format_fields(writer.by_ref(), event)?;
-        
+
         writeln!(writer)
     }
 }
 
 pub fn init() -> Result<String> {
-    std::env::set_var("RUST_BACKTRACE", "1");
+    std::env::set_var("RUST_BACKTRACE", "full");
 
     let logs_dir = Path::new("logs");
     if !logs_dir.exists() {

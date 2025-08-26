@@ -5,20 +5,21 @@ use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2I
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
+use crate::arb::database::entity::mev_simulation_log::{MevSimulationLogDetails, MevSimulationLogParams, ReturnData, SimulationAccount};
 use crate::arb::database::repositories::mint_repo::MintRecordRepository;
+use crate::arb::database::repositories::MevSimulationLogRepository;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
-use crate::arb::util::debug::log_account_metas;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::address_lookup_table::AddressLookupTableAccount;
 use solana_program::hash::Hash;
-use solana_program::instruction::Instruction;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::message::v0::Message;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
@@ -26,6 +27,7 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use tracing::error;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -62,10 +64,15 @@ pub async fn build_and_send(
     )
     .await?;
 
-    // let signature = send_tx_with_retry(&tx, 3).await?;
-    // println!("Transaction sent: {}", signature);
+    let simulation_result = simulate_and_log_mev(
+        &tx,
+        minor_mint,
+        &Mints::WSOL,
+        pools,
+        minimum_profit,
+    ).await?;
 
-    Ok(simulate_tx_with_retry(&tx, 3).await?)
+    Ok(simulation_result)
 }
 
 pub async fn build_tx(
@@ -238,4 +245,74 @@ fn ensure_token_account_exists(
     mint_program: &Pubkey,
 ) -> Instruction {
     create_associated_token_account_idempotent(belong_to, belong_to, mint, &mint_program)
+}
+
+async fn simulate_and_log_mev(
+    tx: &VersionedTransaction,
+    minor_mint: &Pubkey,
+    desired_mint: &Pubkey,
+    pools: &[AnyPoolConfig],
+    minimum_profit: u64,
+) -> Result<SimulationResult> {
+    let tx_bytes = bincode::serialize(tx)?;
+    let tx_size = tx_bytes.len();
+    
+    let response = rpc_client().simulate_transaction(tx).await?;
+    let result = SimulationResult::from(&response.value);
+    
+    let simulation_status = if response.value.err.is_some() {
+        "failed"
+    } else {
+        "success"
+    };
+    
+    let error_message = response.value.err.as_ref().map(|e| format!("{:?}", e));
+    let logs = response.value.logs.clone();
+    let compute_units_consumed = response.value.units_consumed.map(|u| u as i64);
+    
+    let return_data = response.value.return_data.as_ref().map(|rd| {
+        use base64::Engine;
+        ReturnData {
+            program_id: rd.program_id.clone(),
+            data: base64::engine::general_purpose::STANDARD.decode(&rd.data.0).unwrap_or_default(),
+        }
+    });
+    
+    let pool_addresses: Vec<String> = pools.iter().map(|p| match p {
+        AnyPoolConfig::MeteoraDlmm(c) => c.pool.to_string(),
+        AnyPoolConfig::MeteoraDammV2(c) => c.pool.to_string(),
+        AnyPoolConfig::Unsupported => "unsupported".to_string(),
+    }).collect();
+    
+    let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint).await?.ok_or_else(|| anyhow!("Minor mint not found"))?;
+    let desired_mint_record = MintRecordRepository::get_mint_from_cache(desired_mint).await?.ok_or_else(|| anyhow!("Desired mint not found"))?;
+    
+    let profitable = simulation_status == "success" && compute_units_consumed.is_some();
+    let profitability = if profitable { Some(minimum_profit as i64) } else { None };
+    
+    let accounts: Vec<SimulationAccount> = vec![];
+    
+    let params = MevSimulationLogParams {
+        minor_mint: *minor_mint,
+        desired_mint: *desired_mint,
+        minor_mint_sym: minor_mint_record.symbol,
+        desired_mint_sym: desired_mint_record.symbol,
+        pools: pool_addresses,
+        profitable,
+        profitability,
+        details: MevSimulationLogDetails { accounts },
+        tx_size: Some(tx_size as i32),
+        simulation_status: Some(simulation_status.to_string()),
+        compute_units_consumed,
+        error_message,
+        logs,
+        return_data,
+        units_per_byte: None,
+    };
+    
+    if let Err(e) = MevSimulationLogRepository::insert(params).await {
+        error!("Failed to log MEV simulation: {}", e);
+    }
+    
+    Ok(result)
 }

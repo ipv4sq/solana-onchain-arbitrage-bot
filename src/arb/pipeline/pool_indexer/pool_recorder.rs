@@ -14,23 +14,6 @@ use sea_orm::EntityTrait;
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
 
-pub async fn ensure_pool_record_exists(pool: &Pubkey, dex_type: DexType) -> Result<PoolRecord> {
-    let existed = PoolRecordEntity::find_by_id(pool.to_orm())
-        .one(get_db())
-        .await?;
-    return_ok_if_some!(existed);
-
-    let any_config = AnyPoolConfig::from_address(pool, dex_type).await?;
-    let dto = match any_config {
-        AnyPoolConfig::MeteoraDlmm(c) => build_model(pool, &c.data, dex_type).await?,
-        AnyPoolConfig::MeteoraDammV2(c) => build_model(pool, &c.data, dex_type).await?,
-        AnyPoolConfig::Unsupported => todo!(),
-    };
-
-    // PoolRecordRepository::upsert_pool(dto).await
-    todo!()
-}
-
 pub async fn build_model<T: PoolDataLoader + Serialize>(
     pool: &Pubkey,
     data: &T,

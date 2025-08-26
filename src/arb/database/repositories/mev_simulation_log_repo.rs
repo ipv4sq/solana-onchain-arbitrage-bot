@@ -1,6 +1,6 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::{mev_simulation_log, MevSimulationLog, MevSimulationLogTable};
-use crate::arb::database::entity::mev_simulation_log::{MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount};
+use crate::arb::database::entity::mev_simulation_log::{MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount, ReturnData};
 use crate::arb::global::db::get_db;
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
@@ -41,6 +41,13 @@ impl MevSimulationLogRepository {
             profitable: Set(params.profitable),
             details: Set(params.details),
             profitability: Set(params.profitability),
+            tx_size: Set(params.tx_size),
+            simulation_status: Set(params.simulation_status),
+            compute_units_consumed: Set(params.compute_units_consumed),
+            error_message: Set(params.error_message),
+            logs: Set(params.logs),
+            return_data: Set(params.return_data),
+            units_per_byte: Set(params.units_per_byte),
             created_at: NotSet,
             updated_at: NotSet,
         };
@@ -106,6 +113,15 @@ impl MevSimulationLogRepository {
             .await?)
     }
 
+    pub async fn find_failed_simulations(limit: u64) -> Result<Vec<MevSimulationLog>> {
+        let db = get_db();
+        let paginator = MevSimulationLogTable::find()
+            .filter(mev_simulation_log::Column::SimulationStatus.eq("failed"))
+            .order_by_desc(mev_simulation_log::Column::CreatedAt)
+            .paginate(db, limit);
+        Ok(paginator.fetch_page(0).await?)
+    }
+
     pub async fn update_profitability(id: i32, profitability: i64) -> Result<()> {
         let db = get_db();
         
@@ -119,6 +135,13 @@ impl MevSimulationLogRepository {
             pools: NotSet,
             profitable: NotSet,
             details: NotSet,
+            tx_size: NotSet,
+            simulation_status: NotSet,
+            compute_units_consumed: NotSet,
+            error_message: NotSet,
+            logs: NotSet,
+            return_data: NotSet,
+            units_per_byte: NotSet,
             created_at: NotSet,
             updated_at: NotSet,
         };

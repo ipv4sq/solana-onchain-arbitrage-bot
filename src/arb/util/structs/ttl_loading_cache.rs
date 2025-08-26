@@ -15,7 +15,8 @@ struct CacheEntry<V> {
 
 impl<V> CacheEntry<V> {
     fn is_expired(&self) -> bool {
-        Instant::now() > self.inserted_at + self.ttl
+        self.inserted_at.checked_add(self.ttl)
+            .map_or(false, |expiry| Instant::now() > expiry)
     }
 }
 

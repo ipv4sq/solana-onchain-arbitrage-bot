@@ -3,7 +3,6 @@ use crate::arb::convention::chain::transaction::Transaction;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::convention::pool::util::ata;
 use crate::arb::global::constant::token_program::TokenProgram;
-use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::arb::util::traits::signature::ToSignature;
 use anyhow::Result;
 use instruction::create_associated_token_account_idempotent;
@@ -18,7 +17,6 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction;
-use std::cmp::min;
 use std::sync::Arc;
 use tracing::info;
 

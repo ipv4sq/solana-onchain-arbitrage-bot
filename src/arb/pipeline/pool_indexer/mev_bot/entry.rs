@@ -1,9 +1,9 @@
 use crate::arb::convention::chain::types::LitePool;
 use crate::arb::convention::chain::Transaction;
+use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 pub use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::mem_pool::mem_pool;
 use crate::arb::pipeline::pool_indexer::mev_bot::logging::log_token_balances_of;
-use crate::arb::pipeline::pool_indexer::pool_recorder::ensure_pool_record_exists;
 use crate::arb::pipeline::pool_indexer::token_recorder::ensure_mint_record_exist;
 use crate::arb::program::mev_bot::ix;
 use crate::empty_ok;
@@ -40,6 +40,6 @@ pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
         ensure_mint_record_exist(&lite_pool.mints.1)
     )?;
 
-    ensure_pool_record_exists(&lite_pool.pool_address, lite_pool.dex_type).await?;
+    PoolRecordRepository::ensure_exists(&lite_pool.pool_address).await;
     empty_ok!()
 }
