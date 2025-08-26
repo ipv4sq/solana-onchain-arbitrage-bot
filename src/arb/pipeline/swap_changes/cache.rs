@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::time::Duration;
 
-pub static VaultAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
+pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 pub static MintWithPools: LazyCache<MintAddress, Vec<PoolRecord>> = LazyCache::new();
 

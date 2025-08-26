@@ -12,7 +12,7 @@ mod transaction;
 pub mod util;
 
 use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
-use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_vault_monitor;
+use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
 use arb::pipeline::pool_indexer;
 use arb::{global, pipeline, program};
 use clap::{App, Arg};
@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     // 2. Start the SolanaMevBotOnchainListener
     let listener_handle = spawn_with_error_handling!("MEV bot subscriber", bootstrap_indexer());
 
-    let handle = spawn_with_error_handling!("Account subscriber", start_vault_monitor());
+    let handle = spawn_with_error_handling!("Pool account subscriber", start_pool_monitor());
 
     // 3. Block until Ctrl+C
     info!("Press Ctrl+C to shutdown");

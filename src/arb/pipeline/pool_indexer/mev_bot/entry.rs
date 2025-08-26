@@ -39,7 +39,6 @@ pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
         ensure_mint_record_exist(&lite_pool.mints.0),
         ensure_mint_record_exist(&lite_pool.mints.1)
     )?;
-
-    PoolRecordRepository::ensure_exists(&lite_pool.pool_address).await;
+    todo!();
     empty_ok!()
 }

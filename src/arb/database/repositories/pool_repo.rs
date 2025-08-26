@@ -7,7 +7,7 @@ use crate::arb::database::entity::pool_do::{
 };
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
-use crate::arb::util::alias::{MintAddress, VaultAddress};
+use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -21,47 +21,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 pub struct PoolRecordRepository;
-
-static VAULT_TO_POOL: Lazy<PersistentCache<VaultAddress, PoolRecord>> = Lazy::new(|| {
-    PersistentCache::new_with_custom_db(
-        100_000,
-        Duration::MAX,
-        |addr: &VaultAddress| {
-            let addr = *addr;
-            async move {
-                let config = AnyPoolConfig::from(&addr).await.ok()?;
-                let dex_type = config.dex_type();
-                match config {
-                    AnyPoolConfig::MeteoraDlmm(c) => {
-                        build_model(&addr, &c.data, dex_type).await.ok()
-                    }
-                    AnyPoolConfig::MeteoraDammV2(c) => {
-                        build_model(&addr, &c.data, dex_type).await.ok()
-                    }
-                    AnyPoolConfig::Unsupported => None,
-                }
-            }
-        },
-        |_addr: VaultAddress, record: PoolRecord, _d: Duration| async move {
-            let _ = PoolRecordRepository::upsert_pool(record).await;
-        },
-        |addr: &VaultAddress| {
-            let addr = *addr;
-            async move {
-                PoolRecordEntity::find()
-                    .filter(
-                        pool_do::Column::BaseVault
-                            .eq(PubkeyType::from(addr))
-                            .or(pool_do::Column::QuoteVault.eq(PubkeyType::from(addr))),
-                    )
-                    .one(get_db())
-                    .await
-                    .ok()
-                    .flatten()
-            }
-        },
-    )
-});
 
 static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
@@ -81,18 +40,56 @@ static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = 
     )
 });
 
+static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(|| {
+    PersistentCache::new_with_custom_db(
+        100_000,
+        Duration::MAX,
+        |addr| {
+            let addr = *addr;
+            async move {
+                let config = AnyPoolConfig::from(&addr).await.ok()?;
+                let dex_type = config.dex_type();
+                match config {
+                    AnyPoolConfig::MeteoraDlmm(c) => {
+                        build_model(&addr, &c.data, dex_type).await.ok()
+                    }
+                    AnyPoolConfig::MeteoraDammV2(c) => {
+                        build_model(&addr, &c.data, dex_type).await.ok()
+                    }
+                    AnyPoolConfig::Unsupported => None,
+                }
+            }
+        },
+        |_mint, record, _duration| async move {
+            //
+            let _ = PoolRecordRepository::upsert_pool(record).await;
+        },
+        |addr| {
+            let addr = *addr;
+            async move {
+                PoolRecordEntity::find()
+                    .filter(pool_do::Column::Address.eq(PubkeyType::from(addr)))
+                    .one(get_db())
+                    .await
+                    .ok()
+                    .flatten()
+            }
+        },
+    )
+});
+
 // cache related
 impl PoolRecordRepository {
-    pub async fn get_record_by_any_vault(vault: &VaultAddress) -> Option<PoolRecord> {
-        VAULT_TO_POOL.get(vault).await
-    }
-
-    pub async fn get_pools(mint: &MintAddress) -> Option<HashSet<PoolRecord>> {
+    pub async fn get_pools_contains_mint(mint: &MintAddress) -> Option<HashSet<PoolRecord>> {
         MINT_TO_POOLS.get(mint).await
     }
 
-    pub async fn ensure_exists(vault: &VaultAddress) {
-        VAULT_TO_POOL.ensure_exists(vault).await
+    pub async fn get_pool_by_address(pool: &PoolAddress) -> Option<PoolRecord> {
+        POOL_CACHE.get(pool).await
+    }
+
+    pub async fn ensure_exists(pool: &PoolAddress) {
+        POOL_CACHE.ensure_exists(pool).await
     }
 }
 
@@ -121,8 +118,11 @@ impl PoolRecordRepository {
             )
             .exec(db)
             .await;
+
+        // update corresponding cache
         MINT_TO_POOLS.evict(&pool.address).await;
         MINT_TO_POOLS.ensure_exists(&pool.address).await;
+
         match result {
             Ok(_) => Ok(pool),
             Err(_) => Self::find_by_address(&pool.address.0)

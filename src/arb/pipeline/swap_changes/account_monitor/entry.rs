@@ -1,13 +1,22 @@
-use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
-use crate::arb::pipeline::trade_strategy::entry::on_swap_occurred;
+use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
+use crate::arb::pipeline::trade_strategy::entry::on_pool_update;
 use anyhow::Result;
+use tracing::{debug, info};
 
-pub async fn process_vault_update(update: VaultUpdate) -> Result<()> {
+pub async fn process_pool_update(update: PoolUpdate) -> Result<()> {
+    debug!("Processing pool update for: {}", update.pool());
+    
     if update.is_initial() {
+        debug!("Skipping initial pool update");
         return Ok(());
     }
 
-    on_swap_occurred(update).await;
+    if update.data_changed() {
+        info!("Pool data changed for: {}", update.pool());
+        on_pool_update(update).await;
+    } else {
+        debug!("Pool data unchanged, skipping update");
+    }
 
     Ok(())
 }

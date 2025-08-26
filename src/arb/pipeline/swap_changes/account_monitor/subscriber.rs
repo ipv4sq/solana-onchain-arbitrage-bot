@@ -1,10 +1,9 @@
 use crate::arb::convention::chain::AccountState;
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
-use crate::arb::pipeline::swap_changes::account_monitor::pool_vault::list_all_vaults;
-use crate::arb::pipeline::swap_changes::account_monitor::vault_update::VaultUpdate;
-use crate::arb::pipeline::swap_changes::cache::VaultAccountCache;
+use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::list_all_pools;
+use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
+use crate::arb::pipeline::swap_changes::cache::PoolAccountCache;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
-use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{empty_ok, lazy_arc};
 use anyhow::Result;
@@ -12,46 +11,46 @@ use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::{error, info, debug};
 
 #[allow(unused)]
-static VAULT_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<VaultUpdate>>> = lazy_arc!({
+static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<PoolUpdate>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 4,
         channel_buffer_size: 500,
-        name: "VaultUpdateProcessor".to_string(),
+        name: "PoolUpdateProcessor".to_string(),
     };
 
-    PubSubProcessor::new(config, |update: VaultUpdate| {
+    PubSubProcessor::new(config, |update: PoolUpdate| {
         Box::pin(async move {
-            entry::process_vault_update(update).await?;
+            entry::process_pool_update(update).await?;
             Ok(())
         })
     })
 });
 
 #[allow(unused)]
-pub struct VaultAccountMonitor {
+pub struct PoolAccountMonitor {
     client: SolanaGrpcClient,
-    vaults: HashSet<Pubkey>,
+    pools: HashSet<Pubkey>,
 }
 
-impl VaultAccountMonitor {
+impl PoolAccountMonitor {
     pub async fn new() -> Result<Self> {
         Ok(Self {
             client: SolanaGrpcClient::from_env()?,
-            vaults: list_all_vaults().await?,
+            pools: list_all_pools().await?,
         })
     }
 
     pub async fn start(self) -> Result<()> {
         info!(
-            "Starting vault account subscription for {} vaults",
-            self.vaults.len(),
+            "Starting pool account subscription for {} pools",
+            self.pools.len(),
         );
 
-        let vault_vec: Vec<Pubkey> = self.vaults.into_iter().collect();
-        let filter = AccountFilter::new("vault_monitor").with_accounts(&vault_vec);
+        let pool_vec: Vec<Pubkey> = self.pools.into_iter().collect();
+        let filter = AccountFilter::new("pool_monitor").with_accounts(&pool_vec);
 
         self.client
             .subscribe_accounts(
@@ -65,20 +64,21 @@ impl VaultAccountMonitor {
     }
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
+        debug!("Pool account update received: {}", update.account);
         let updated = AccountState::from_grpc_update(&update);
-        let previous = VaultAccountCache.put(update.account, updated.clone());
-        let vault_update = VaultUpdate {
+        let previous = PoolAccountCache.put(update.account, updated.clone());
+        let pool_update = PoolUpdate {
             previous,
             current: updated,
         };
-        if let Err(e) = VAULT_UPDATE_CONSUMER.publish(vault_update).await {
-            error!("Failed to publish vault update: {}", e);
+        if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
+            error!("Failed to publish pool update: {}", e);
         }
         empty_ok!()
     }
 }
 
-pub async fn start_vault_monitor() -> Result<()> {
-    let monitor = VaultAccountMonitor::new().await?;
+pub async fn start_pool_monitor() -> Result<()> {
+    let monitor = PoolAccountMonitor::new().await?;
     monitor.start().await
 }
