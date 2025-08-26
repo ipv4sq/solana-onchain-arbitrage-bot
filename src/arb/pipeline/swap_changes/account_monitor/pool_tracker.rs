@@ -15,11 +15,7 @@ pub async fn list_all_pools() -> Result<HashSet<Pubkey>> {
 
     let all_pools: HashSet<PoolAddress> = mint_with_pools
         .iter()
-        .flat_map(|(mint, pools)| {
-            MintWithPools.put(*mint, pools.iter().map(|pool| pool.clone()).collect());
-
-            pools.iter().map(|pool| pool.address.into())
-        })
+        .flat_map(|(_mint, pools)| pools.iter().map(|pool| pool.address.into()))
         .collect();
 
     Ok(all_pools)
