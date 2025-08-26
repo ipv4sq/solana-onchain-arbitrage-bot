@@ -62,7 +62,7 @@ where
             .clone())
     }
 
-    pub fn insert(&self, key: K, value: V) -> Option<V> {
+    pub fn put(&self, key: K, value: V) -> Option<V> {
         self.inner
             .write()
             .insert(key, Arc::new(value))
@@ -134,7 +134,7 @@ mod tests {
         assert!(CACHE.is_empty());
         assert_eq!(CACHE.len(), 0);
 
-        CACHE.insert("key1".to_string(), 100);
+        CACHE.put("key1".to_string(), 100);
         assert_eq!(CACHE.get(&"key1".to_string()), Some(100));
         assert_eq!(CACHE.len(), 1);
 
@@ -203,9 +203,9 @@ mod tests {
     fn test_iteration_methods() {
         static CACHE: LazyCache<String, i32> = LazyCache::new();
 
-        CACHE.insert("a".to_string(), 1);
-        CACHE.insert("b".to_string(), 2);
-        CACHE.insert("c".to_string(), 3);
+        CACHE.put("a".to_string(), 1);
+        CACHE.put("b".to_string(), 2);
+        CACHE.put("c".to_string(), 3);
 
         let keys = CACHE.keys();
         assert_eq!(keys.len(), 3);
@@ -228,7 +228,7 @@ mod tests {
         static CACHE: LazyCache<i32, String> = LazyCache::new();
 
         for i in 0..10 {
-            CACHE.insert(i, format!("value_{}", i));
+            CACHE.put(i, format!("value_{}", i));
         }
 
         CACHE.retain(|k, _| *k % 2 == 0);

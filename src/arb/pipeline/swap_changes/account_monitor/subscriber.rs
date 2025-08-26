@@ -66,7 +66,7 @@ impl VaultAccountMonitor {
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
         let updated = AccountState::from_grpc_update(&update);
-        let previous = VaultAccountCache.insert(update.account, updated.clone());
+        let previous = VaultAccountCache.put(update.account, updated.clone());
         let vault_update = VaultUpdate {
             previous,
             current: updated,

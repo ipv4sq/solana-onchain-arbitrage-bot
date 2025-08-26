@@ -16,10 +16,10 @@ pub async fn list_all_vaults() -> Result<HashSet<Pubkey>> {
     let all_vaults: HashSet<VaultAddress> = mint_with_pools
         .iter()
         .flat_map(|(mint, pools)| {
-            MintWithPools.insert(*mint, pools.iter().map(|pool| pool.clone()).collect());
+            MintWithPools.put(*mint, pools.iter().map(|pool| pool.clone()).collect());
             for pool in pools {
-                VAULT_TO_POOL.insert(pool.base_vault.into(), (*mint, pool.address.into()));
-                VAULT_TO_POOL.insert(pool.quote_vault.into(), (*mint, pool.address.into()));
+                VAULT_TO_POOL.put(pool.base_vault.into(), (*mint, pool.address.into()));
+                VAULT_TO_POOL.put(pool.quote_vault.into(), (*mint, pool.address.into()));
             }
             pools
         })

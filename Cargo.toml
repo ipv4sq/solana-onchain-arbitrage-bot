@@ -48,6 +48,7 @@ base64 = "0.21"
 hex = "0.4"
 borsh = "0.10.3"
 bytemuck = { version = "1.16.1", features = ["derive"] }
+dashmap = "5.5"
 lazy_static = "1.4"
 
 # Command line argument parsing

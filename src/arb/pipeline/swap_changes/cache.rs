@@ -19,7 +19,7 @@ pub static PoolConfigCache: Lazy<PersistentCache<Pubkey, AnyPoolConfig>> = Lazy:
     PersistentCache::new(
         CacheType::PoolConfig,
         3000,
-        Duration::from_secs(3600), // 1 hour TTL
+        Duration::MAX, // 1 hour TTL
         |pool: &Pubkey| {
             let pool = *pool;
             async move { AnyPoolConfig::from(&pool).await.ok() }
