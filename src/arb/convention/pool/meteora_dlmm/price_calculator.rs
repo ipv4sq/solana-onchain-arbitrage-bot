@@ -27,31 +27,30 @@ impl MeteoraDlmmPoolData {
         to: &MintAddress,
     ) -> Result<DlmmQuote> {
         let base = Decimal::ONE + Decimal::from(self.bin_step) / Decimal::from(10_000u32);
-        let px_x_per_y = base.powi(self.active_id as i64); // 1 X -> ? Y
-        let px_y_per_x = Decimal::ONE / px_x_per_y; // 1 Y -> ? X
+        let px = base.powi(self.active_id as i64);
+        
+        let x_dec: u8 = MintRecordRepository::get_decimal_from_cache(&self.token_x_mint)
+            .await?
+            .ok_or_else(|| anyhow!("mint decimals not found in cache for token_x"))?;
+
+        let y_dec: u8 = MintRecordRepository::get_decimal_from_cache(&self.token_y_mint)
+            .await?
+            .ok_or_else(|| anyhow!("mint decimals not found in cache for token_y"))?;
+
         let dir = self.dir(from, to);
-        let mid_price_token = match dir {
-            Direction::XtoY => px_x_per_y,
-            Direction::YtoX => px_y_per_x,
-        };
-
-        let from_dec: u8 = MintRecordRepository::get_decimal_from_cache(from)
-            .await?
-            .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", from))?;
-
-        let to_dec: u8 = MintRecordRepository::get_decimal_from_cache(to)
-            .await?
-            .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", to))?;
-
-        let exp = to_dec as i32 - from_dec as i32;
-        let scale = if exp >= 0 {
-            Decimal::from(10u64.pow(exp as u32))
-        } else {
-            Decimal::new(1, (-exp) as u32)
+        let mid_price = match dir {
+            Direction::XtoY => {
+                let scale = Decimal::from(10u64.pow(x_dec as u32)) / Decimal::from(10u64.pow(y_dec as u32));
+                px * scale
+            }
+            Direction::YtoX => {
+                let scale = Decimal::from(10u64.pow(y_dec as u32)) / Decimal::from(10u64.pow(x_dec as u32));
+                (Decimal::ONE / px) * scale
+            }
         };
 
         Ok(DlmmQuote {
-            mid_price: mid_price_token * scale,
+            mid_price,
         })
     }
 }
