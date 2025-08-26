@@ -195,4 +195,9 @@ where
             }
         }
     }
+    
+    pub async fn ensure_exists(&self, key: &K) {
+        // Trigger the loader which will read from db and save if needed
+        let _ = self.get(key).await;
+    }
 }

@@ -7,7 +7,7 @@ use crate::arb::database::entity::pool_do::{
 };
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
-use crate::arb::util::alias::VaultAddress;
+use crate::arb::util::alias::{MintAddress, VaultAddress};
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -17,6 +17,7 @@ use sea_orm::{
     ColumnTrait, EntityTrait, QueryFilter,
 };
 use solana_program::pubkey::Pubkey;
+use std::collections::HashSet;
 use std::time::Duration;
 
 pub struct PoolRecordRepository;
@@ -62,10 +63,32 @@ static VAULT_TO_POOL: Lazy<PersistentCache<VaultAddress, PoolRecord>> = Lazy::ne
     )
 });
 
+static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = Lazy::new(|| {
+    PersistentCache::new_with_custom_db(
+        100_000,
+        Duration::MAX,
+        |_mint: &MintAddress| async move { None },
+        |_mint: MintAddress, _pools: HashSet<PoolRecord>, _duration: Duration| async move {},
+        |mint: &MintAddress| {
+            let mint = *mint;
+            async move {
+                PoolRecordRepository::find_by_any_mint(&mint)
+                    .await
+                    .ok()
+                    .map(|pools| pools.into_iter().collect())
+            }
+        },
+    )
+});
+
 // cache related
 impl PoolRecordRepository {
     pub async fn get_record_by_any_vault(vault: &VaultAddress) -> Option<PoolRecord> {
         VAULT_TO_POOL.get(vault).await
+    }
+
+    pub async fn ensure_exists(vault: &VaultAddress) {
+        VAULT_TO_POOL.ensure_exists(vault).await
     }
 }
 
@@ -94,7 +117,8 @@ impl PoolRecordRepository {
             )
             .exec(db)
             .await;
-
+        MINT_TO_POOLS.evict(&pool.address).await;
+        MINT_TO_POOLS.ensure_exists(&pool.address).await;
         match result {
             Ok(_) => Ok(pool),
             Err(_) => Self::find_by_address(&pool.address.0)

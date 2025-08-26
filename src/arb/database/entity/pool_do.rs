@@ -3,6 +3,7 @@ use crate::arb::global::enums::dex_type::DexType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "pools")]
@@ -31,6 +32,14 @@ pub struct PoolRecordDescriptor {
     pub quote: String,
     #[serde(default)]
     pub pool_address: String,
+}
+
+impl Eq for Model {}
+
+impl Hash for Model {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.address.hash(state);
+    }
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
