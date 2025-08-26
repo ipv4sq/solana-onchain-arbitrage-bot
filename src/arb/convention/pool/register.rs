@@ -39,6 +39,14 @@ impl AnyPoolConfig {
         Self::from_address(pool_address, dex_type).await
     }
 
+    pub fn dex_type(&self) -> DexType {
+        match self {
+            MeteoraDlmm(_) => DexType::MeteoraDlmm,
+            MeteoraDammV2(_) => DexType::MeteoraDammV2,
+            AnyPoolConfig::Unsupported => DexType::Unknown,
+        }
+    }
+
     pub async fn from_address(pool: &Pubkey, dex_type: DexType) -> Result<AnyPoolConfig> {
         match dex_type {
             DexType::MeteoraDlmm => {

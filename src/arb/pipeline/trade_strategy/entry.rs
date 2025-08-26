@@ -22,3 +22,5 @@ pub async fn on_swap_occurred(update: VaultUpdate) -> Option<()> {
         .await;
     None
 }
+
+pub async fn compute() {}

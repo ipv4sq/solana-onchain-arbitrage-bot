@@ -30,7 +30,7 @@ pub async fn ensure_pool_record_exists(pool: &Pubkey, dex_type: DexType) -> Resu
     PoolRecordRepository::upsert_pool(dto).await
 }
 
-async fn build_model<T: PoolDataLoader + Serialize>(
+pub async fn build_model<T: PoolDataLoader + Serialize>(
     pool: &Pubkey,
     data: &T,
     dex_type: DexType,

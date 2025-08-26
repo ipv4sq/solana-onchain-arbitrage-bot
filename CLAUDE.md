@@ -279,6 +279,13 @@ sqlx database drop
 
 This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
 
+### CRITICAL: Fix Forward, Never Delete
+
+**NEVER remove code to fix compilation errors** - Always fix forward:
+- When encountering compilation errors, understand the intent and fix the actual issue
+- Don't delete functionality - fix types, lifetimes, or logic issues instead
+- If something doesn't compile, make it compile by fixing it, not removing it
+
 ### Code Hygiene
 
 - **NO COMMENTS**: Write self-documenting code. Comments are code smell.
@@ -428,6 +435,7 @@ In `src/arb/database/repositories/<table_name>_repo.rs`:
 ```bash
 sqlx migrate run
 ```
+
 
 ## Important Constants
 
