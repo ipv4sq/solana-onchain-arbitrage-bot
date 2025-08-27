@@ -12,6 +12,7 @@ use crate::arb::pipeline::trade_strategy::price_tracker::{
 use crate::arb::pipeline::uploader::entry::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::PoolAddress;
 use crate::arb::util::alias::{AResult, MintAddress};
+use anyhow::anyhow;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use tracing::info;
@@ -33,24 +34,13 @@ pub async fn on_pool_update(update: PoolUpdate, trace: Trace) -> Option<()> {
         pool_address, mint
     );
 
-    let pool_records = PoolRecordRepository::get_pools_contains_mint(&mint).await?;
-    info!(
-        "Found {} pool records for mint {}",
-        pool_records.len(),
-        mint
-    );
-
-    let updated_pool_record = pool_records.iter().find(|p| p.address.0 == pool_address)?;
-    info!(
-        "Processing pool update: {} (DEX: {:?})",
-        pool_address, updated_pool_record.dex_type
-    );
+    let pool_record = PoolRecordRepository::get_pool_by_address(&pool_address).await?;
     trace.step_with_address(
         StepType::DetermineOpportunityStarted,
         "pool_address",
         pool_address,
     );
-    if let Some(opportunity) = compute(&mint, updated_pool_record).await {
+    if let Some(opportunity) = compute(&mint, &pool_record).await {
         trace.step_with(
             StepType::DetermineOpportunityFinished,
             "spread",
@@ -83,7 +73,14 @@ pub async fn compute(
 ) -> Option<ArbitrageOpportunity> {
     info!("🔧 Computing arbitrage for mint: {}", minor_mint);
 
-    let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint).await?;
+    let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint)
+        .await?
+        .into_iter()
+        .filter(|pool| {
+            (pool.base_mint.0 == Mints::WSOL && pool.quote_mint.0 == *minor_mint)
+                || (pool.quote_mint.0 == Mints::WSOL && pool.base_mint.0 == *minor_mint)
+        })
+        .collect::<Vec<_>>();
     info!(
         "Found {} related pools for arbitrage computation",
         related_pools.len()

@@ -19,11 +19,10 @@ use tracing::{debug, error, info};
 #[allow(non_upper_case_globals)]
 pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
-#[allow(unused)]
 static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
-        worker_pool_size: 4,
-        channel_buffer_size: 500,
+        worker_pool_size: 64,
+        channel_buffer_size: 5000,
         name: "PoolUpdateProcessor".to_string(),
     };
 
