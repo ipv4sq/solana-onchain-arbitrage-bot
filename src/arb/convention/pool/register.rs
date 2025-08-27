@@ -1,11 +1,13 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
-use crate::arb::convention::chain::Transaction;
-use crate::arb::convention::pool::interface::{InputAccountUtil, PoolConfigInit};
+use crate::arb::convention::chain::{AccountState, Transaction};
+use crate::arb::convention::pool::interface::{InputAccountUtil, PoolConfigInit, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::convention::pool::meteora_damm_v2::pool_config::MeteoraDammV2Config;
+use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
+use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
 use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::global::enums::dex_type::DexType;
@@ -33,6 +35,28 @@ pub enum AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
+    pub async fn from_account_update(
+        update: &AccountState,
+        desired_mint: &Pubkey,
+    ) -> Result<AnyPoolConfig> {
+        let dex_type = DexType::determine_from(&update.owner);
+        let c = match dex_type {
+            DexType::MeteoraDlmm => {
+                let config =
+                    MeteoraDlmmPoolConfig::from_pool_data(&update.pubkey, data, *desired_mint)?;
+                MeteoraDlmm(config)
+            }
+            DexType::MeteoraDammV2 => {
+                let data = MeteoraDammV2PoolData::load_data(&update.data)?;
+                let config =
+                    MeteoraDammV2Config::from_pool_data(&update.pubkey, data, *desired_mint)?;
+                MeteoraDammV2(config)
+            }
+            _ => AnyPoolConfig::Unsupported,
+        };
+        Ok(c)
+    }
+
     pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
         let account = rpc_client().get_account(pool_address).await?;
         let dex_type = DexType::determine_from(&account.owner);

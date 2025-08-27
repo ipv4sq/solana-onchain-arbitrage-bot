@@ -9,15 +9,24 @@ use crate::arb::pipeline::trade_strategy::price_tracker::{
     clear_prices_for_token, detect_arbitrage, update_pool_prices, ArbitrageOpportunity,
 };
 use crate::arb::pipeline::uploader::entry::{FireMevBotConsumer, MevBotFire};
-use crate::arb::util::alias::MintAddress;
 use crate::arb::util::alias::PoolAddress;
+use crate::arb::util::alias::{AResult, MintAddress};
+use crate::empty_ok;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
-use tracing::{debug, info};
+use std::io::empty;
+use tracing::info;
 
 pub async fn on_pool_update(update: PoolUpdate) -> Option<()> {
     let pool_address: PoolAddress = update.pool().clone().into();
-    debug!("🔍 on_pool_update triggered for pool: {}", pool_address);
+
+    // update pool
+    let updated_config = AnyPoolConfig::from_account_update(&update.current, &Mints::WSOL)
+        .await
+        .ok()?;
+    PoolConfigCache.put(pool_address, updated_config).await;
+
+    info!("🔍 on_pool_update triggered for pool: {}", pool_address);
 
     let mint = get_minor_mint_for_pool(&pool_address).await?;
     info!(
@@ -26,7 +35,7 @@ pub async fn on_pool_update(update: PoolUpdate) -> Option<()> {
     );
 
     let pool_records = PoolRecordRepository::get_pools_contains_mint(&mint).await?;
-    debug!(
+    info!(
         "Found {} pool records for mint {}",
         pool_records.len(),
         mint
@@ -54,7 +63,7 @@ pub async fn on_pool_update(update: PoolUpdate) -> Option<()> {
             })
             .await;
     } else {
-        debug!("No arbitrage opportunity found for mint {}", mint);
+        info!("No arbitrage opportunity found for mint {}", mint);
     }
 
     None
@@ -64,7 +73,7 @@ pub async fn compute(
     minor_mint: &MintAddress,
     _updated_pool: &PoolRecord,
 ) -> Option<ArbitrageOpportunity> {
-    debug!("🔧 Computing arbitrage for mint: {}", minor_mint);
+    info!("🔧 Computing arbitrage for mint: {}", minor_mint);
 
     let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint).await?;
     info!(
@@ -73,7 +82,7 @@ pub async fn compute(
     );
 
     if related_pools.len() < 2 {
-        debug!(
+        info!(
             "Insufficient pools (< 2) for arbitrage on mint {}",
             minor_mint
         );
@@ -81,11 +90,11 @@ pub async fn compute(
     }
 
     clear_prices_for_token(*minor_mint);
-    debug!("Cleared price cache for token {}", minor_mint);
+    info!("Cleared price cache for token {}", minor_mint);
 
     for pool in related_pools.iter() {
         let config = PoolConfigCache.get(&pool.address.0).await?;
-        debug!(
+        info!(
             "Processing pool {} (DEX: {:?})",
             pool.address.0, pool.dex_type
         );
@@ -93,13 +102,13 @@ pub async fn compute(
         if let Some((buy_price, sell_price)) =
             calculate_pool_prices(config, *minor_mint, &Mints::WSOL).await
         {
-            debug!(
+            info!(
                 "Pool {} prices - Buy: {}, Sell: {}",
                 pool.address.0, buy_price, sell_price
             );
             update_pool_prices(*minor_mint, pool.address.0, buy_price, sell_price);
         } else {
-            debug!("Failed to calculate prices for pool {}", pool.address.0);
+            info!("Failed to calculate prices for pool {}", pool.address.0);
         }
     }
 
@@ -133,7 +142,7 @@ async fn calculate_pool_prices(
 ) -> Option<(Decimal, Decimal)> {
     match config {
         AnyPoolConfig::MeteoraDlmm(ref c) => {
-            debug!("Calculating prices for MeteoraDlmm pool");
+            info!("Calculating prices for MeteoraDlmm pool");
             let sol_to_token = c
                 .data
                 .mid_price_for_quick_estimate(sol_mint, &token_mint)
@@ -148,14 +157,14 @@ async fn calculate_pool_prices(
             let buy_price = Decimal::ONE / sol_to_token.mid_price;
             let sell_price = token_to_sol.mid_price;
 
-            debug!(
+            info!(
                 "MeteoraDlmm prices calculated - Buy: {}, Sell: {}",
                 buy_price, sell_price
             );
             Some((buy_price, sell_price))
         }
         AnyPoolConfig::MeteoraDammV2(ref c) => {
-            debug!("Calculating prices for MeteoraDammV2 pool");
+            info!("Calculating prices for MeteoraDammV2 pool");
             let sol_to_token = c
                 .data
                 .mid_price_for_quick_estimate(sol_mint, &token_mint)
@@ -170,14 +179,14 @@ async fn calculate_pool_prices(
             let buy_price = Decimal::ONE / sol_to_token.mid_price;
             let sell_price = token_to_sol.mid_price;
 
-            debug!(
+            info!(
                 "MeteoraDammV2 prices calculated - Buy: {}, Sell: {}",
                 buy_price, sell_price
             );
             Some((buy_price, sell_price))
         }
         AnyPoolConfig::Unsupported => {
-            debug!("Unsupported pool config type");
+            info!("Unsupported pool config type");
             None
         }
     }
