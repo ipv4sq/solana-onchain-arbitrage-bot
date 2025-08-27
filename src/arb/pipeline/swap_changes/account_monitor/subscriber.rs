@@ -1,4 +1,6 @@
 use crate::arb::convention::chain::AccountState;
+use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
+use crate::arb::global::trace::types::{StepType, Trace, WithTrace};
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::list_all_pools;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
@@ -32,22 +34,25 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<PoolUpdate>>> = lazy_arc!(
 });
 
 #[allow(unused)]
-static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, GrpcAccountUpdate>>> = lazy_arc!({
-    BufferedDebouncer::new(
-        Duration::from_millis(30),
-        |update: GrpcAccountUpdate| async move {
-            let updated = AccountState::from_grpc_update(&update);
-            let previous = PoolAccountCache.put(update.account, updated.clone());
-            let pool_update = PoolUpdate {
-                previous,
-                current: updated,
-            };
-            if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
-                error!("Failed to publish pool update: {}", e);
-            }
-        },
-    )
-});
+static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, WithTrace<GrpcAccountUpdate>>>> =
+    lazy_arc!({
+        BufferedDebouncer::new(
+            Duration::from_millis(30),
+            |update: WithTrace<GrpcAccountUpdate>| async move {
+                let (account_update, trace) = (update.0, update.1);
+                trace.step_with_address(AccountUpdateDebounced, account_update.account);
+                let updated = AccountState::from_grpc_update(&account_update);
+                let previous = PoolAccountCache.put(account_update.account, updated.clone());
+                let pool_update = PoolUpdate {
+                    previous,
+                    current: updated,
+                };
+                if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
+                    error!("Failed to publish pool update: {}", e);
+                }
+            },
+        )
+    });
 
 #[allow(unused)]
 pub struct PoolAccountMonitor {
@@ -76,18 +81,28 @@ impl PoolAccountMonitor {
             .subscribe_accounts(
                 filter,
                 move |account_update| {
-                    async move { Self::handle_account_update(account_update).await }
+                    let mut trace = Trace::new();
+                    trace.step_with_address(
+                        StepType::AccountUpdateReceived,
+                        "account_address",
+                        account_update.account,
+                    );
+                    async move { Self::handle_account_update(account_update, trace).await }
                 },
                 true,
             )
             .await
     }
 
-    async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
+    async fn handle_account_update(update: GrpcAccountUpdate, mut trace: Trace) -> Result<()> {
         debug!("Pool account update received: {}", update.account);
-        
-        POOL_UPDATE_DEBOUNCER.update(update.account, update);
-        
+        trace.step_with_address(
+            StepType::AccountUpdateDebouncing,
+            "account_address",
+            update.account,
+        );
+        POOL_UPDATE_DEBOUNCER.update(update.account, WithTrace::new(trace, update));
+
         empty_ok!()
     }
 }
