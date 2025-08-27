@@ -25,7 +25,7 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<WithTrace<PoolUpdate>>>> =
         name: "PoolUpdateProcessor".to_string(),
     };
 
-    PubSubProcessor::new(config, |update: PoolUpdate| {
+    PubSubProcessor::new(config, |update: WithTrace<PoolUpdate>| {
         Box::pin(async move {
             entry::process_pool_update(update).await?;
             Ok(())
@@ -39,18 +39,19 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, WithTrace<GrpcA
         BufferedDebouncer::new(
             Duration::from_millis(30),
             |update: WithTrace<GrpcAccountUpdate>| async move {
-                update.step_with_address(
-                    AccountUpdateDebounced,
-                    "account_address",
-                    update.param.account,
-                );
                 let updated = AccountState::from_grpc_update(&update.param);
                 let previous = PoolAccountCache.put(update.param.account, updated.clone());
                 let pool_update = PoolUpdate {
                     previous,
                     current: updated,
                 };
-                if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
+                update.step_with_address(
+                    AccountUpdateDebounced,
+                    "account_address",
+                    update.param.account,
+                );
+                let wrapped = update.with_param(pool_update);
+                if let Err(e) = POOL_UPDATE_CONSUMER.publish(wrapped).await {
                     error!("Failed to publish pool update: {}", e);
                 }
             },

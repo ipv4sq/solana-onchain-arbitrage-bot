@@ -29,6 +29,7 @@ pub enum StepType {
     AccountUpdateReceived,
     AccountUpdateDebouncing,
     AccountUpdateDebounced,
+    TradeStrategyStarted,
     Custom(String),
 }
 
@@ -45,35 +46,51 @@ impl<T: Sized> WithTrace<T> {
             trace: Arc::new(Mutex::new(trace)),
         }
     }
-    
+
     pub fn new_shared(trace: Arc<Mutex<Trace>>, param: T) -> WithTrace<T> {
         WithTrace { param, trace }
     }
-    
+
+    pub fn with_param<U: Sized>(&self, new_param: U) -> WithTrace<U> {
+        WithTrace {
+            param: new_param,
+            trace: self.trace.clone(),
+        }
+    }
+
     pub fn step(&self, step_type: StepType) {
         self.trace.lock().unwrap().step(step_type);
     }
-    
+
     pub fn step_with_address(
         &self,
         step_type: StepType,
         attr_name: impl Into<String>,
         attr_value: Pubkey,
     ) {
-        self.trace.lock().unwrap().step_with_address(step_type, attr_name, attr_value);
+        self.trace
+            .lock()
+            .unwrap()
+            .step_with_address(step_type, attr_name, attr_value);
     }
-    
+
     pub fn step_with(
         &self,
         step_type: StepType,
         attr_name: impl Into<String>,
         attr_value: impl Into<String>,
     ) {
-        self.trace.lock().unwrap().step_with(step_type, attr_name, attr_value);
+        self.trace
+            .lock()
+            .unwrap()
+            .step_with(step_type, attr_name, attr_value);
     }
-    
+
     pub fn step_with_attrs(&self, step_type: StepType, attributes: HashMap<String, String>) {
-        self.trace.lock().unwrap().step_with_attrs(step_type, attributes);
+        self.trace
+            .lock()
+            .unwrap()
+            .step_with_attrs(step_type, attributes);
     }
 }
 
@@ -156,6 +173,7 @@ impl Trace {
                         StepType::AccountUpdateReceived => "AccountUpdateReceived",
                         StepType::AccountUpdateDebouncing => "AccountUpdateDebouncing",
                         StepType::AccountUpdateDebounced => "AccountUpdateDebounced",
+                        StepType::TradeStrategyStarted => "TradeStrategyStarted",
                         StepType::Custom(s) => s.as_str(),
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),

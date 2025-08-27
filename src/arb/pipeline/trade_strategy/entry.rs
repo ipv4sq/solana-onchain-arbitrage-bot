@@ -2,6 +2,7 @@ use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::entity::pool_do::Model as PoolRecord;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::trace::types::{StepType, WithTrace};
 use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::get_minor_mint_for_pool;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
 use crate::arb::pipeline::swap_changes::cache::PoolConfigCache;
@@ -11,17 +12,15 @@ use crate::arb::pipeline::trade_strategy::price_tracker::{
 use crate::arb::pipeline::uploader::entry::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::PoolAddress;
 use crate::arb::util::alias::{AResult, MintAddress};
-use crate::empty_ok;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
-use std::io::empty;
 use tracing::info;
 
-pub async fn on_pool_update(update: PoolUpdate) -> Option<()> {
-    let pool_address: PoolAddress = update.pool().clone().into();
-
+pub async fn on_pool_update(update: WithTrace<PoolUpdate>) -> Option<()> {
+    let pool_address: PoolAddress = update.param.pool().clone().into();
+    update.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
     // update pool
-    let updated_config = AnyPoolConfig::from_account_update(&update.current, &Mints::WSOL)
+    let updated_config = AnyPoolConfig::from_account_update(&update.param.current, &Mints::WSOL)
         .await
         .ok()?;
     PoolConfigCache.put(pool_address, updated_config).await;
