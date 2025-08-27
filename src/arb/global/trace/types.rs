@@ -31,6 +31,7 @@ pub enum StepType {
     AccountUpdateDebounced,
     TradeStrategyStarted,
     DetermineOpportunityStarted,
+    DetermineOpportunityFinished,
     MevTxFired,
     MevTxTryToFile,
     MevTxReadyToBuild,
@@ -108,10 +109,13 @@ impl Trace {
         });
     }
 
-    pub fn dump(&self) -> String {
+    pub fn dump_json(&self) -> serde_json::Value {
         let steps = self.steps.lock().unwrap();
         if steps.is_empty() {
-            return format!("{{\"trace_id\": \"{}\", \"steps\": []}}", self.id);
+            return json!({
+                "trace_id": self.id,
+                "steps": []
+            });
         }
 
         let first_timestamp = steps.first().unwrap().happened_at;
@@ -129,14 +133,15 @@ impl Trace {
                         StepType::AccountUpdateDebounced => "AccountUpdateDebounced",
                         StepType::TradeStrategyStarted => "TradeStrategyStarted",
                         StepType::DetermineOpportunityStarted => "DetermineOpportunityStarted",
+                        StepType::DetermineOpportunityFinished => "DetermineOpportunityFinished",
                         StepType::MevTxFired => "MevTxFired",
                         StepType::MevTxTryToFile => "MevTxTryToFile",
+                        StepType::MevTxReadyToBuild => "MevTxReadyToBuild",
                         StepType::MevIxBuilding => "MevIxBuilding",
                         StepType::MevIxBuilt => "MevIxBuilt",
                         StepType::MevTxRpcCall => "MevTxRpcCall",
                         StepType::MevTxRpcReturned => "MevTxRpcReturned",
                         StepType::Custom(s) => s.as_str(),
-                        &StepType::MevTxReadyToBuild => "MevTxReadyToBuild",
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),
                     "relative_ms": relative_ms,
@@ -145,12 +150,14 @@ impl Trace {
             })
             .collect();
 
-        let output = json!({
+        json!({
             "trace_id": self.id,
             "total_duration_ms": (steps.last().unwrap().happened_at - first_timestamp).num_milliseconds(),
             "steps": steps_json,
-        });
+        })
+    }
 
-        serde_json::to_string_pretty(&output).unwrap()
+    pub fn dump(&self) -> String {
+        serde_json::to_string_pretty(&self.dump_json()).unwrap()
     }
 }

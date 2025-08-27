@@ -15,7 +15,7 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::info;
+use tracing::{info, warn};
 
 pub struct MevBotFire {
     pub minor_mint: MintAddress,
@@ -49,7 +49,7 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
 
 async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) -> AResult<()> {
     if !MevBotRateLimiter.try_acquire() {
-        tracing::warn!("MEV bot rate limit exceeded, skipping execution");
+        warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
     }
     trace.step_with(StepType::MevTxFired, "path", format!("{:?}", pools));
@@ -82,7 +82,7 @@ pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
     }
 
     let Some(meta) = result.meta else {
-        tracing::info!("TX simulation completed (no metadata)");
+        info!("TX simulation completed (no metadata)");
         return;
     };
 
@@ -109,10 +109,10 @@ pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
         .unwrap_or(0);
 
     if wsol_change > 0 {
-        tracing::info!("Profitable TX: +{} WSOL lamports", wsol_change);
+        info!("Profitable TX: +{} WSOL lamports", wsol_change);
     } else if wsol_change < 0 {
-        tracing::warn!("Unprofitable TX: {} WSOL lamports", wsol_change);
+        warn!("Unprofitable TX: {} WSOL lamports", wsol_change);
     } else {
-        tracing::info!("Break-even TX: 0 WSOL change");
+        info!("Break-even TX: 0 WSOL change");
     }
 }

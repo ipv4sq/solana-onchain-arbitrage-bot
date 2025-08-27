@@ -74,8 +74,16 @@ pub async fn build_and_send(
     .await?;
     trace.step(StepType::MevIxBuilt);
 
-    let simulation_result =
-        simulate_and_log_mev(&tx, minor_mint, &Mints::WSOL, pools, minimum_profit, trace).await?;
+    let simulation_result = simulate_and_log_mev(
+        wallet.pubkey(),
+        &tx,
+        minor_mint,
+        &Mints::WSOL,
+        pools,
+        minimum_profit,
+        trace,
+    )
+    .await?;
 
     Ok(simulation_result)
 }
@@ -253,6 +261,7 @@ fn ensure_token_account_exists(
 }
 
 async fn simulate_and_log_mev(
+    owner: Pubkey,
     tx: &VersionedTransaction,
     minor_mint: &Pubkey,
     desired_mint: &Pubkey,
@@ -304,36 +313,27 @@ async fn simulate_and_log_mev(
 
     // Calculate actual profit from simulation results
     let actual_profit = if let Some(ref meta) = result.meta {
-        // Find wallet address from transaction (first signer)
-        let wallet_address = match &tx.message {
-            solana_sdk::message::VersionedMessage::Legacy(msg) => msg.account_keys.first(),
-            solana_sdk::message::VersionedMessage::V0(msg) => msg.account_keys.first(),
-        };
-
-        if let Some(wallet) = wallet_address {
-            meta.post_token_balances
-                .iter()
-                .find(|tb| {
-                    tb.mint == desired_mint.to_string()
-                        && tb.owner.as_ref() == Some(&wallet.to_string())
-                })
-                .and_then(|post| {
-                    meta.pre_token_balances
-                        .iter()
-                        .find(|tb| {
-                            tb.mint == desired_mint.to_string()
-                                && tb.owner.as_ref() == Some(&wallet.to_string())
-                        })
-                        .map(|pre| {
-                            let post_amount: i64 = post.ui_token_amount.amount.parse().unwrap_or(0);
-                            let pre_amount: i64 = pre.ui_token_amount.amount.parse().unwrap_or(0);
-                            post_amount - pre_amount
-                        })
-                })
-                .unwrap_or(0)
-        } else {
-            0
-        }
+        let owner_str = owner.to_string();
+        meta.post_token_balances
+            .iter()
+            .find(|tb| {
+                tb.mint == desired_mint.to_string()
+                    && tb.owner.as_ref() == Some(&owner_str)
+            })
+            .and_then(|post| {
+                meta.pre_token_balances
+                    .iter()
+                    .find(|tb| {
+                        tb.mint == desired_mint.to_string()
+                            && tb.owner.as_ref() == Some(&owner_str)
+                    })
+                    .map(|pre| {
+                        let post_amount: i64 = post.ui_token_amount.amount.parse().unwrap_or(0);
+                        let pre_amount: i64 = pre.ui_token_amount.amount.parse().unwrap_or(0);
+                        post_amount - pre_amount
+                    })
+            })
+            .unwrap_or(0)
     } else {
         0
     };
@@ -419,6 +419,7 @@ async fn simulate_and_log_mev(
         logs,
         return_data,
         units_per_byte: None,
+        trace: Some(trace.dump_json()),
     };
 
     if let Err(e) = MevSimulationLogRepository::insert(params).await {

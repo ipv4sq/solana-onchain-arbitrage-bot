@@ -2,6 +2,7 @@ use crate::arb::database::columns::PubkeyType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
@@ -24,6 +25,7 @@ pub struct Model {
     pub logs: Option<Vec<String>>,
     pub return_data: Option<ReturnData>,
     pub units_per_byte: Option<i64>,
+    pub trace: Option<JsonValue>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -63,6 +65,7 @@ pub struct MevSimulationLogParams {
     pub logs: Option<Vec<String>>,
     pub return_data: Option<ReturnData>,
     pub units_per_byte: Option<i64>,
+    pub trace: Option<JsonValue>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

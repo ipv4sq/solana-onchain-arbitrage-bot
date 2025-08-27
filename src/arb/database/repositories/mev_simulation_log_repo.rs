@@ -1,6 +1,8 @@
 use crate::arb::database::columns::PubkeyType;
+use crate::arb::database::entity::mev_simulation_log::{
+    MevSimulationLogDetails, MevSimulationLogParams, ReturnData, SimulationAccount,
+};
 use crate::arb::database::entity::{mev_simulation_log, MevSimulationLog, MevSimulationLogTable};
-use crate::arb::database::entity::mev_simulation_log::{MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount, ReturnData};
 use crate::arb::global::db::get_db;
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
@@ -8,8 +10,8 @@ use sea_orm::{
     ActiveValue::{NotSet, Set},
     ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
-use solana_program::pubkey::Pubkey;
 use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
 
 pub struct MevSimulationLogRepository;
 
@@ -27,7 +29,7 @@ impl MevSimulationLogRepository {
                 is_writable: acc.is_writable,
             })
             .collect();
-        
+
         Self::insert(new_params).await
     }
     pub async fn insert(params: MevSimulationLogParams) -> Result<MevSimulationLog> {
@@ -48,24 +50,22 @@ impl MevSimulationLogRepository {
             logs: Set(params.logs),
             return_data: Set(params.return_data),
             units_per_byte: Set(params.units_per_byte),
+            trace: Set(params.trace),
             created_at: NotSet,
             updated_at: NotSet,
         };
 
         let db = get_db();
-        let result = MevSimulationLogTable::insert(model)
-            .exec(db)
-            .await?;
+        let result = MevSimulationLogTable::insert(model).exec(db).await?;
 
-        Self::find_by_id(result.last_insert_id).await?
+        Self::find_by_id(result.last_insert_id)
+            .await?
             .ok_or_else(|| anyhow::anyhow!("Failed to retrieve inserted record"))
     }
 
     pub async fn find_by_id(id: i32) -> Result<Option<MevSimulationLog>> {
         let db = get_db();
-        Ok(MevSimulationLogTable::find_by_id(id)
-            .one(db)
-            .await?)
+        Ok(MevSimulationLogTable::find_by_id(id).one(db).await?)
     }
 
     pub async fn find_by_mints(
@@ -100,9 +100,7 @@ impl MevSimulationLogRepository {
 
     pub async fn count_total() -> Result<u64> {
         let db = get_db();
-        Ok(MevSimulationLogTable::find()
-            .count(db)
-            .await?)
+        Ok(MevSimulationLogTable::find().count(db).await?)
     }
 
     pub async fn count_profitable() -> Result<u64> {
@@ -120,36 +118,5 @@ impl MevSimulationLogRepository {
             .order_by_desc(mev_simulation_log::Column::CreatedAt)
             .paginate(db, limit);
         Ok(paginator.fetch_page(0).await?)
-    }
-
-    pub async fn update_profitability(id: i32, profitability: i64) -> Result<()> {
-        let db = get_db();
-        
-        let model = mev_simulation_log::ActiveModel {
-            id: Set(id),
-            profitability: Set(Some(profitability)),
-            minor_mint: NotSet,
-            desired_mint: NotSet,
-            minor_mint_sym: NotSet,
-            desired_mint_sym: NotSet,
-            pools: NotSet,
-            profitable: NotSet,
-            details: NotSet,
-            tx_size: NotSet,
-            simulation_status: NotSet,
-            compute_units_consumed: NotSet,
-            error_message: NotSet,
-            logs: NotSet,
-            return_data: NotSet,
-            units_per_byte: NotSet,
-            created_at: NotSet,
-            updated_at: NotSet,
-        };
-
-        MevSimulationLogTable::update(model)
-            .exec(db)
-            .await?;
-
-        Ok(())
     }
 }
