@@ -59,7 +59,7 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
     .collect();
 
     let wallet_pubkey = wallet.pubkey();
-    build_and_send(&wallet, minor_mint, 700_000, 1_000, &configs, 0, true)
+    build_and_send(&wallet, minor_mint, 1000_000, 1_000, &configs, 0, true)
         .await
         .map(|result| log(result, &wallet_pubkey))?;
     empty_ok!()

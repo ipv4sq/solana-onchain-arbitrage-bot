@@ -291,7 +291,8 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 - **NO COMMENTS**: Write self-documenting code. Comments are code smell.
     - Exception: Use `//` ONLY when the code does something non-obvious that cannot be made clear through naming
 - **NO DOC COMMENTS**: Never use `///`. They clutter the code.
-- **NO DEBUG LOGS**: Remove ALL debug `println!`, `dbg!`, or debug logs after debugging
+- **NO DEBUG LOGS**: Never use `debug!()` macro. Use `info!()`, `warn!()`, or `error!()` only
+    - Remove ALL debug `println!`, `dbg!()` after debugging
     - Production code should only log critical events via proper logging framework
     - Tests should only assert, never print (unless actively debugging, then remove)
 - **NO EXPLANATORY TEST MESSAGES**: Assertions should be clear without messages
