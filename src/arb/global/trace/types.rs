@@ -6,6 +6,7 @@ use serde_json::json;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 static TRACE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -32,11 +33,47 @@ pub enum StepType {
 }
 
 #[derive(Clone)]
-pub struct WithTrace<T: Sized>(pub T, pub Trace);
+pub struct WithTrace<T: Sized> {
+    pub param: T,
+    pub trace: Arc<Mutex<Trace>>,
+}
 
 impl<T: Sized> WithTrace<T> {
     pub fn new(trace: Trace, param: T) -> WithTrace<T> {
-        WithTrace(param, trace)
+        WithTrace {
+            param,
+            trace: Arc::new(Mutex::new(trace)),
+        }
+    }
+    
+    pub fn new_shared(trace: Arc<Mutex<Trace>>, param: T) -> WithTrace<T> {
+        WithTrace { param, trace }
+    }
+    
+    pub fn step(&self, step_type: StepType) {
+        self.trace.lock().unwrap().step(step_type);
+    }
+    
+    pub fn step_with_address(
+        &self,
+        step_type: StepType,
+        attr_name: impl Into<String>,
+        attr_value: Pubkey,
+    ) {
+        self.trace.lock().unwrap().step_with_address(step_type, attr_name, attr_value);
+    }
+    
+    pub fn step_with(
+        &self,
+        step_type: StepType,
+        attr_name: impl Into<String>,
+        attr_value: impl Into<String>,
+    ) {
+        self.trace.lock().unwrap().step_with(step_type, attr_name, attr_value);
+    }
+    
+    pub fn step_with_attrs(&self, step_type: StepType, attributes: HashMap<String, String>) {
+        self.trace.lock().unwrap().step_with_attrs(step_type, attributes);
     }
 }
 
@@ -118,8 +155,8 @@ impl Trace {
                     "type": match &step.step_type {
                         StepType::AccountUpdateReceived => "AccountUpdateReceived",
                         StepType::AccountUpdateDebouncing => "AccountUpdateDebouncing",
+                        StepType::AccountUpdateDebounced => "AccountUpdateDebounced",
                         StepType::Custom(s) => s.as_str(),
-                        &StepType::AccountUpdateDebounced => todo!(),
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),
                     "relative_ms": relative_ms,

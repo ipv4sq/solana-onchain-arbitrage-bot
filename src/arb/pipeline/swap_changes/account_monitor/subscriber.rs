@@ -18,7 +18,7 @@ use std::time::Duration;
 use tracing::{debug, error, info};
 
 #[allow(unused)]
-static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<PoolUpdate>>> = lazy_arc!({
+static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<WithTrace<PoolUpdate>>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 4,
         channel_buffer_size: 500,
@@ -39,10 +39,13 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, WithTrace<GrpcA
         BufferedDebouncer::new(
             Duration::from_millis(30),
             |update: WithTrace<GrpcAccountUpdate>| async move {
-                let (account_update, trace) = (update.0, update.1);
-                trace.step_with_address(AccountUpdateDebounced, account_update.account);
-                let updated = AccountState::from_grpc_update(&account_update);
-                let previous = PoolAccountCache.put(account_update.account, updated.clone());
+                update.step_with_address(
+                    AccountUpdateDebounced,
+                    "account_address",
+                    update.param.account,
+                );
+                let updated = AccountState::from_grpc_update(&update.param);
+                let previous = PoolAccountCache.put(update.param.account, updated.clone());
                 let pool_update = PoolUpdate {
                     previous,
                     current: updated,
