@@ -5,13 +5,16 @@ use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2I
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
-use crate::arb::database::entity::mev_simulation_log::{MevSimulationLogDetails, MevSimulationLogParams, ReturnData, SimulationAccount};
+use crate::arb::database::entity::mev_simulation_log::{
+    MevSimulationLogDetails, MevSimulationLogParams, ReturnData, SimulationAccount,
+};
 use crate::arb::database::repositories::mint_repo::MintRecordRepository;
 use crate::arb::database::repositories::MevSimulationLogRepository;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
+use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::pubkey::ToPubkey;
@@ -40,7 +43,8 @@ pub async fn build_and_send(
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
     include_create_token_account_ix: bool,
-) -> Result<SimulationResult> {
+    trace: Trace,
+) -> Result<(SimulationResult, Trace)> {
     let blockhash = rpc_client().get_latest_blockhash().await?;
 
     let alt_keys = vec![
@@ -48,6 +52,7 @@ pub async fn build_and_send(
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
         // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
     ];
+    trace.step(StepType::MevIxBuilding);
 
     let alts = fetch_address_lookup_tables(&alt_keys).await?;
 
@@ -63,14 +68,10 @@ pub async fn build_and_send(
         include_create_token_account_ix,
     )
     .await?;
+    trace.step(StepType::MevIxBuilt);
 
-    let simulation_result = simulate_and_log_mev(
-        &tx,
-        minor_mint,
-        &Mints::WSOL,
-        pools,
-        minimum_profit,
-    ).await?;
+    let simulation_result =
+        simulate_and_log_mev(&tx, minor_mint, &Mints::WSOL, pools, minimum_profit, trace).await?;
 
     Ok(simulation_result)
 }
@@ -253,40 +254,50 @@ async fn simulate_and_log_mev(
     desired_mint: &Pubkey,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
-) -> Result<SimulationResult> {
+    trace: Trace,
+) -> Result<(SimulationResult, Trace)> {
     let tx_bytes = bincode::serialize(tx)?;
     let tx_size = tx_bytes.len();
-    
+    trace.step(StepType::MevTxRpcCall);
     let response = rpc_client().simulate_transaction(tx).await?;
     let result = SimulationResult::from(&response.value);
-    
+    trace.step(StepType::MevTxRpcReturned);
     let simulation_status = if response.value.err.is_some() {
         "failed"
     } else {
         "success"
     };
-    
+
     let error_message = response.value.err.as_ref().map(|e| format!("{:?}", e));
     let logs = response.value.logs.clone();
     let compute_units_consumed = response.value.units_consumed.map(|u| u as i64);
-    
+
     let return_data = response.value.return_data.as_ref().map(|rd| {
         use base64::Engine;
         ReturnData {
             program_id: rd.program_id.clone(),
-            data: base64::engine::general_purpose::STANDARD.decode(&rd.data.0).unwrap_or_default(),
+            data: base64::engine::general_purpose::STANDARD
+                .decode(&rd.data.0)
+                .unwrap_or_default(),
         }
     });
-    
-    let pool_addresses: Vec<String> = pools.iter().map(|p| match p {
-        AnyPoolConfig::MeteoraDlmm(c) => c.pool.to_string(),
-        AnyPoolConfig::MeteoraDammV2(c) => c.pool.to_string(),
-        AnyPoolConfig::Unsupported => "unsupported".to_string(),
-    }).collect();
-    
-    let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint).await?.ok_or_else(|| anyhow!("Minor mint not found"))?;
-    let desired_mint_record = MintRecordRepository::get_mint_from_cache(desired_mint).await?.ok_or_else(|| anyhow!("Desired mint not found"))?;
-    
+
+    let pool_addresses: Vec<String> = pools
+        .iter()
+        .map(|p| match p {
+            AnyPoolConfig::MeteoraDlmm(c) => c.pool.to_string(),
+            AnyPoolConfig::MeteoraDammV2(c) => c.pool.to_string(),
+            AnyPoolConfig::Unsupported => "unsupported".to_string(),
+        })
+        .collect();
+
+    let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint)
+        .await?
+        .ok_or_else(|| anyhow!("Minor mint not found"))?;
+    let desired_mint_record = MintRecordRepository::get_mint_from_cache(desired_mint)
+        .await?
+        .ok_or_else(|| anyhow!("Desired mint not found"))?;
+
     // Calculate actual profit from simulation results
     let actual_profit = if let Some(ref meta) = result.meta {
         // Find wallet address from transaction (first signer)
@@ -294,7 +305,7 @@ async fn simulate_and_log_mev(
             solana_sdk::message::VersionedMessage::Legacy(msg) => msg.account_keys.first(),
             solana_sdk::message::VersionedMessage::V0(msg) => msg.account_keys.first(),
         };
-        
+
         if let Some(wallet) = wallet_address {
             meta.post_token_balances
                 .iter()
@@ -322,52 +333,72 @@ async fn simulate_and_log_mev(
     } else {
         0
     };
-    
+
     let profitable = simulation_status == "success" && actual_profit > 0;
-    let profitability = if actual_profit > 0 { Some(actual_profit) } else { None };
-    
+    let profitability = if actual_profit > 0 {
+        Some(actual_profit)
+    } else {
+        None
+    };
+
     // Extract accounts from the transaction
     let accounts: Vec<SimulationAccount> = match &tx.message {
         solana_sdk::message::VersionedMessage::Legacy(msg) => {
-            msg.account_keys.iter().enumerate().map(|(idx, pubkey)| {
-                let is_signer = idx < msg.header.num_required_signatures as usize;
-                let is_writable = if is_signer {
-                    // For signers, writable if index is before readonly signed accounts
-                    idx < (msg.header.num_required_signatures - msg.header.num_readonly_signed_accounts) as usize
-                } else {
-                    // For non-signers, writable if before the readonly unsigned section
-                    let non_signer_idx = idx - msg.header.num_required_signatures as usize;
-                    let num_writable_unsigned = msg.account_keys.len() - msg.header.num_required_signatures as usize - msg.header.num_readonly_unsigned_accounts as usize;
-                    non_signer_idx < num_writable_unsigned
-                };
-                SimulationAccount {
-                    pubkey: *pubkey,
-                    is_signer,
-                    is_writable,
-                }
-            }).collect()
-        },
+            msg.account_keys
+                .iter()
+                .enumerate()
+                .map(|(idx, pubkey)| {
+                    let is_signer = idx < msg.header.num_required_signatures as usize;
+                    let is_writable = if is_signer {
+                        // For signers, writable if index is before readonly signed accounts
+                        idx < (msg.header.num_required_signatures
+                            - msg.header.num_readonly_signed_accounts)
+                            as usize
+                    } else {
+                        // For non-signers, writable if before the readonly unsigned section
+                        let non_signer_idx = idx - msg.header.num_required_signatures as usize;
+                        let num_writable_unsigned = msg.account_keys.len()
+                            - msg.header.num_required_signatures as usize
+                            - msg.header.num_readonly_unsigned_accounts as usize;
+                        non_signer_idx < num_writable_unsigned
+                    };
+                    SimulationAccount {
+                        pubkey: *pubkey,
+                        is_signer,
+                        is_writable,
+                    }
+                })
+                .collect()
+        }
         solana_sdk::message::VersionedMessage::V0(msg) => {
-            msg.account_keys.iter().enumerate().map(|(idx, pubkey)| {
-                let is_signer = idx < msg.header.num_required_signatures as usize;
-                let is_writable = if is_signer {
-                    // For signers, writable if index is before readonly signed accounts
-                    idx < (msg.header.num_required_signatures - msg.header.num_readonly_signed_accounts) as usize
-                } else {
-                    // For non-signers, writable if before the readonly unsigned section
-                    let non_signer_idx = idx - msg.header.num_required_signatures as usize;
-                    let num_writable_unsigned = msg.account_keys.len() - msg.header.num_required_signatures as usize - msg.header.num_readonly_unsigned_accounts as usize;
-                    non_signer_idx < num_writable_unsigned
-                };
-                SimulationAccount {
-                    pubkey: *pubkey,
-                    is_signer,
-                    is_writable,
-                }
-            }).collect()
+            msg.account_keys
+                .iter()
+                .enumerate()
+                .map(|(idx, pubkey)| {
+                    let is_signer = idx < msg.header.num_required_signatures as usize;
+                    let is_writable = if is_signer {
+                        // For signers, writable if index is before readonly signed accounts
+                        idx < (msg.header.num_required_signatures
+                            - msg.header.num_readonly_signed_accounts)
+                            as usize
+                    } else {
+                        // For non-signers, writable if before the readonly unsigned section
+                        let non_signer_idx = idx - msg.header.num_required_signatures as usize;
+                        let num_writable_unsigned = msg.account_keys.len()
+                            - msg.header.num_required_signatures as usize
+                            - msg.header.num_readonly_unsigned_accounts as usize;
+                        non_signer_idx < num_writable_unsigned
+                    };
+                    SimulationAccount {
+                        pubkey: *pubkey,
+                        is_signer,
+                        is_writable,
+                    }
+                })
+                .collect()
         }
     };
-    
+
     let params = MevSimulationLogParams {
         minor_mint: *minor_mint,
         desired_mint: *desired_mint,
@@ -385,10 +416,10 @@ async fn simulate_and_log_mev(
         return_data,
         units_per_byte: None,
     };
-    
+
     if let Err(e) = MevSimulationLogRepository::insert(params).await {
         error!("Failed to log MEV simulation: {}", e);
     }
-    
-    Ok(result)
+
+    Ok((result, trace))
 }

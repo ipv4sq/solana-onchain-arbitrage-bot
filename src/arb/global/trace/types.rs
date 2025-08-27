@@ -33,6 +33,10 @@ pub enum StepType {
     DetermineOpportunityStarted,
     MevTxFired,
     MevTxSending,
+    MevIxBuilding,
+    MevIxBuilt,
+    MevTxRpcCall,
+    MevTxRpcReturned,
     Custom(String),
 }
 
@@ -103,11 +107,10 @@ impl Trace {
         });
     }
 
-    pub fn dump(&self) {
+    pub fn dump(&self) -> String {
         let steps = self.steps.lock().unwrap();
         if steps.is_empty() {
-            println!("{{\"trace_id\": \"{}\", \"steps\": []}}", self.id);
-            return;
+            return format!("{{\"trace_id\": \"{}\", \"steps\": []}}", self.id);
         }
 
         let first_timestamp = steps.first().unwrap().happened_at;
@@ -127,6 +130,10 @@ impl Trace {
                         StepType::DetermineOpportunityStarted => "DetermineOpportunityStarted",
                         StepType::MevTxFired => "MevTxFired",
                         StepType::MevTxSending => "MevTxSending",
+                        StepType::MevIxBuilding => "MevIxBuilding",
+                        StepType::MevIxBuilt => "MevIxBuilt",
+                        StepType::MevTxRpcCall => "MevTxRpcCall",
+                        StepType::MevTxRpcReturned => "MevTxRpcReturned",
                         StepType::Custom(s) => s.as_str(),
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),
@@ -142,6 +149,6 @@ impl Trace {
             "steps": steps_json,
         });
 
-        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        serde_json::to_string_pretty(&output).unwrap()
     }
 }

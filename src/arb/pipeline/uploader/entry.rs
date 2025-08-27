@@ -52,7 +52,7 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
         tracing::warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
     }
-    trace.step_with(StepType::MevTxSending, "path", format!("{:?}", pools));
+    trace.step_with(StepType::MevTxFired, "path", format!("{:?}", pools));
     let wallet = get_wallet();
     let configs: Vec<_> = join_all(
         pools
@@ -65,14 +65,16 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
     .collect();
 
     let wallet_pubkey = wallet.pubkey();
-    build_and_send(&wallet, minor_mint, 1000_000, 1_000, &configs, 0, true)
-        .await
-        .map(|result| log(result, &wallet_pubkey, trace))?;
+    build_and_send(
+        &wallet, minor_mint, 1000_000, 1_000, &configs, 0, true, trace,
+    )
+    .await
+    .map(|result| log(result.0, &wallet_pubkey, result.1))?;
     empty_ok!()
 }
 
 pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
-    info!("Finished simulation {}", trace.dump());
+    info!("Finished simulation: {}", trace.dump());
     if let Some(err) = result.err {
         tracing::error!("TX aborted: {}", err);
         return;

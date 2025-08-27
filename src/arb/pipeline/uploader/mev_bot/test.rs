@@ -12,6 +12,7 @@ mod tests {
     use solana_sdk::signature::{read_keypair_file, Keypair};
 
     use crate::arb::global::constant::token_program::TokenProgram;
+    use crate::arb::global::trace::types::Trace;
     use crate::arb::util::debug::log_account_metas;
 
     fn get_wallet() -> Keypair {
@@ -54,9 +55,10 @@ mod tests {
             &pools,
             1000,
             false,
+            Trace::new(),
         )
         .await;
-        println!("{:?}", result);
+        println!("{:?}", result.unwrap().0);
     }
 
     #[tokio::test]
