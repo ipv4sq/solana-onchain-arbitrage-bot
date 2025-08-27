@@ -282,6 +282,7 @@ This is a production code and any bug may result into a leakage or loss, be VERY
 ### CRITICAL: Fix Forward, Never Delete
 
 **NEVER remove code to fix compilation errors** - Always fix forward:
+
 - When encountering compilation errors, understand the intent and fix the actual issue
 - Don't delete functionality - fix types, lifetimes, or logic issues instead
 - If something doesn't compile, make it compile by fixing it, not removing it
@@ -359,7 +360,7 @@ result.insert(item.key, value);
 **Never hardcode addresses** - use provided constants:
 
 - `Mints::WSOL`, `Mints::USDC` - token mints
-- `DexPrograms::RAYDIUM_AMM`, etc - DEX program IDs
+- `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs
 - `MevBot::PROGRAM_ID` - MEV bot constants
 
 ### Pump.fun Specific Notes
@@ -405,15 +406,19 @@ result.insert(item.key, value);
 When creating a new database table, follow this pattern:
 
 ### 1. Create Migration
+
 ```bash
 sqlx migrate add create_<table_name>_table
 ```
+
 - Include indexes for frequently queried columns
 - Add `created_at` and `updated_at` with default timestamps
 - Create update trigger for `updated_at`
 
 ### 2. Create Entity
+
 In `src/arb/database/entity/<table_name>.rs`:
+
 - Define `Model` with `#[derive(DeriveEntityModel)]`
 - Add `#[sea_orm(primary_key)]` to ID field
 - Use `PubkeyType` for Solana addresses
@@ -422,21 +427,24 @@ In `src/arb/database/entity/<table_name>.rs`:
 - Omit `id`, `created_at`, `updated_at` from param structs
 
 ### 3. Create Repository
+
 In `src/arb/database/repositories/<table_name>_repo.rs`:
+
 - Use param structs for methods with many parameters
 - Use `get_db()` directly (not `await`)
 - For pagination: use `.paginate(db, limit).fetch_page(0).await`
 - Set `NotSet` for auto fields in ActiveModel
 
 ### 4. Register Components
+
 - Export entity in `entity/mod.rs`
 - Export repository in `repositories/mod.rs`
 
 ### 5. Run Migration
+
 ```bash
 sqlx migrate run
 ```
-
 
 ## Important Constants
 

@@ -1,21 +1,23 @@
 use crate::arb::convention::chain::AccountState;
+use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
 use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
-use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::list_all_pools;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
-use crate::arb::pipeline::swap_changes::cache::PoolAccountCache;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
+use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{empty_ok, lazy_arc};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, error, info};
+
+#[allow(non_upper_case_globals)]
+pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 #[allow(unused)]
 static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
@@ -56,25 +58,20 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
 #[allow(unused)]
 pub struct PoolAccountMonitor {
     client: SolanaGrpcClient,
-    pools: HashSet<Pubkey>,
 }
 
 impl PoolAccountMonitor {
     pub async fn new() -> Result<Self> {
         Ok(Self {
             client: SolanaGrpcClient::from_env()?,
-            pools: list_all_pools().await?,
         })
     }
 
     pub async fn start(self) -> Result<()> {
-        info!(
-            "Starting pool account subscription for {} pools",
-            self.pools.len(),
-        );
+        info!("Starting pool account subscription for Meteora DLMM and DAMM V2 programs");
 
-        let pool_vec: Vec<Pubkey> = self.pools.into_iter().collect();
-        let filter = AccountFilter::new("pool_monitor").with_accounts(&pool_vec);
+        let filter = AccountFilter::new("meteora_pools")
+            .with_owners(&[PoolPrograms::METEORA_DLMM, PoolPrograms::METEORA_DAMM_V2]);
 
         self.client
             .subscribe_accounts(

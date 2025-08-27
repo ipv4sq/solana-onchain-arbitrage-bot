@@ -3,7 +3,7 @@
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::pool_do::{
-    self, Entity as PoolRecordEntity, Model as PoolRecord,
+    self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
@@ -88,7 +88,7 @@ impl PoolRecordRepository {
         POOL_CACHE.get(pool).await
     }
 
-    pub async fn ensure_exists(pool: &PoolAddress) {
+    pub async fn ensure_exists(pool: &PoolAddress) -> Option<Model> {
         POOL_CACHE.ensure_exists(pool).await
     }
 }

@@ -9,16 +9,11 @@ use crate::arb::util::structs::loading_cache::LoadingCache;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 
-pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
-
 pub static MintWithPools: LazyCache<MintAddress, Vec<PoolRecord>> = LazyCache::new();
 
 pub static PoolConfigCache: Lazy<LoadingCache<Pubkey, AnyPoolConfig>> = Lazy::new(|| {
-    LoadingCache::new(
-        3000,
-        |pool: &Pubkey| {
-            let pool = *pool;
-            async move { AnyPoolConfig::from(&pool).await.ok() }
-        },
-    )
+    LoadingCache::new(3000, |pool: &Pubkey| {
+        let pool = *pool;
+        async move { AnyPoolConfig::from(&pool).await.ok() }
+    })
 });
