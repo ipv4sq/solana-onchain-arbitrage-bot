@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::pipeline::swap_changes::cache::PoolConfigCache;
 use crate::arb::pipeline::uploader::mev_bot::construct::build_and_send;
 use crate::arb::pipeline::uploader::wallet::get_wallet;
@@ -14,10 +15,12 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::info;
 
 pub struct MevBotFire {
     pub minor_mint: MintAddress,
     pub pools: Vec<PoolAddress>,
+    pub trace: Trace,
 }
 
 pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc!({
@@ -28,7 +31,9 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
             name: "VaultUpdateProcessor".to_string(),
         },
         |event: MevBotFire| {
-            Box::pin(async move { fire_mev_bot(&event.minor_mint, &event.pools).await })
+            Box::pin(
+                async move { fire_mev_bot(&event.minor_mint, &event.pools, event.trace).await },
+            )
         },
     )
 });
@@ -42,11 +47,12 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     )
 });
 
-async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
+async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) -> AResult<()> {
     if !MevBotRateLimiter.try_acquire() {
         tracing::warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
     }
+    trace.step_with(StepType::MevTxSending, "path", format!("{:?}", pools));
     let wallet = get_wallet();
     let configs: Vec<_> = join_all(
         pools
@@ -61,11 +67,12 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>) -> AResult<()> {
     let wallet_pubkey = wallet.pubkey();
     build_and_send(&wallet, minor_mint, 1000_000, 1_000, &configs, 0, true)
         .await
-        .map(|result| log(result, &wallet_pubkey))?;
+        .map(|result| log(result, &wallet_pubkey, trace))?;
     empty_ok!()
 }
 
-pub fn log(result: SimulationResult, wallet_address: &Pubkey) {
+pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
+    info!("Finished simulation {}", trace.dump());
     if let Some(err) = result.err {
         tracing::error!("TX aborted: {}", err);
         return;
