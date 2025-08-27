@@ -1,4 +1,4 @@
-use crate::arb::convention::chain::util::alt::fetch_address_lookup_tables;
+use crate::arb::convention::chain::util::alt::get_alt_by_key;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
@@ -54,7 +54,10 @@ pub async fn build_and_send(
     ];
     trace.step(StepType::MevIxBuilding);
 
-    let alts = fetch_address_lookup_tables(&alt_keys).await?;
+    let mut alts = Vec::new();
+    for key in &alt_keys {
+        alts.push(get_alt_by_key(key).await?);
+    }
 
     let tx = build_tx(
         wallet,

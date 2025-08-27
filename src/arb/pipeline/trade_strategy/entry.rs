@@ -51,16 +51,11 @@ pub async fn on_pool_update(update: PoolUpdate, trace: Trace) -> Option<()> {
         pool_address,
     );
     if let Some(opportunity) = compute(&mint, updated_pool_record).await {
-        info!(
-            "✅ Found arbitrage opportunity with spread {} SOL for mint {}",
-            opportunity.spread, mint
-        );
-
         let pools_for_mev = vec![opportunity.buy_pool, opportunity.sell_pool];
 
-        info!("🚀 Publishing MEV bot fire for pools: {:?}", pools_for_mev);
+        info!("🚀 Try to MEV bot fire for pools: {:?}", pools_for_mev);
         trace.step_with(
-            StepType::MevTxSending,
+            StepType::MevTxTryToFile,
             "path",
             format!("{:?}", pools_for_mev),
         );

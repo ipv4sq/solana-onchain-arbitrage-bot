@@ -26,8 +26,8 @@ pub struct MevBotFire {
 pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc!({
     PubSubProcessor::new(
         PubSubConfig {
-            worker_pool_size: 4,
-            channel_buffer_size: 500,
+            worker_pool_size: 12,
+            channel_buffer_size: 1000,
             name: "VaultUpdateProcessor".to_string(),
         },
         |event: MevBotFire| {
@@ -63,6 +63,7 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
     .into_iter()
     .flatten()
     .collect();
+    trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
 
     let wallet_pubkey = wallet.pubkey();
     build_and_send(
