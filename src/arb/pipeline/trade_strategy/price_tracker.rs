@@ -64,6 +64,9 @@ impl MintPriceTracker {
     }
 
     pub fn detect_arbitrage(&self) -> Option<ArbitrageOpportunity> {
+        // Minimum profit threshold: 1.5% (adjust as needed for gas costs and slippage)
+        const MIN_PROFIT_PERCENTAGE: Decimal = Decimal::from_parts(15, 0, 0, false, 1); // 1.5%
+        
         let buy_prices = self.buy_prices.read().unwrap();
         let sell_prices = self.sell_prices.read().unwrap();
 
@@ -85,39 +88,92 @@ impl MintPriceTracker {
             if max_sell.1.price_in_sol > second_min_buy.1.price_in_sol
                 && max_sell.1.pool_address != second_min_buy.1.pool_address
             {
-                return Some(ArbitrageOpportunity {
-                    buy_pool: second_min_buy.1.pool_address,
-                    sell_pool: max_sell.1.pool_address,
-                    token_mint: self.mint,
-                    buy_price: second_min_buy.1.price_in_sol,
-                    sell_price: max_sell.1.price_in_sol,
-                    spread: max_sell.1.price_in_sol - second_min_buy.1.price_in_sol,
-                });
+                let sol_in = Decimal::from(1);
+                let tokens_bought = sol_in / second_min_buy.1.price_in_sol;
+                let sol_out = tokens_bought * max_sell.1.price_in_sol;
+                let profit = sol_out - sol_in;
+                let profit_percentage = profit * Decimal::from(100);
+                
+                if profit_percentage >= MIN_PROFIT_PERCENTAGE {
+                    tracing::info!(
+                        "🎯 Arbitrage detected for mint {}: 1 SOL → {:.6} tokens → {:.6} SOL (profit: {:.6} SOL, {:.2}%)",
+                        self.mint,
+                        tokens_bought,
+                        sol_out,
+                        profit,
+                        profit_percentage
+                    );
+                    
+                    return Some(ArbitrageOpportunity {
+                        buy_pool: second_min_buy.1.pool_address,
+                        sell_pool: max_sell.1.pool_address,
+                        token_mint: self.mint,
+                        buy_price: second_min_buy.1.price_in_sol,
+                        sell_price: max_sell.1.price_in_sol,
+                        spread: max_sell.1.price_in_sol - second_min_buy.1.price_in_sol,
+                    });
+                }
             }
 
             if second_max_sell.1.price_in_sol > min_buy.1.price_in_sol
                 && second_max_sell.1.pool_address != min_buy.1.pool_address
             {
-                return Some(ArbitrageOpportunity {
-                    buy_pool: min_buy.1.pool_address,
-                    sell_pool: second_max_sell.1.pool_address,
-                    token_mint: self.mint,
-                    buy_price: min_buy.1.price_in_sol,
-                    sell_price: second_max_sell.1.price_in_sol,
-                    spread: second_max_sell.1.price_in_sol - min_buy.1.price_in_sol,
-                });
+                let sol_in = Decimal::from(1);
+                let tokens_bought = sol_in / min_buy.1.price_in_sol;
+                let sol_out = tokens_bought * second_max_sell.1.price_in_sol;
+                let profit = sol_out - sol_in;
+                let profit_percentage = profit * Decimal::from(100);
+                
+                if profit_percentage >= MIN_PROFIT_PERCENTAGE {
+                    tracing::info!(
+                        "🎯 Arbitrage detected for mint {}: 1 SOL → {:.6} tokens → {:.6} SOL (profit: {:.6} SOL, {:.2}%)",
+                        self.mint,
+                        tokens_bought,
+                        sol_out,
+                        profit,
+                        profit_percentage
+                    );
+                    
+                    return Some(ArbitrageOpportunity {
+                        buy_pool: min_buy.1.pool_address,
+                        sell_pool: second_max_sell.1.pool_address,
+                        token_mint: self.mint,
+                        buy_price: min_buy.1.price_in_sol,
+                        sell_price: second_max_sell.1.price_in_sol,
+                        spread: second_max_sell.1.price_in_sol - min_buy.1.price_in_sol,
+                    });
+                }
             }
         }
 
         if max_sell.1.price_in_sol > min_buy.1.price_in_sol {
-            Some(ArbitrageOpportunity {
-                buy_pool: min_buy.1.pool_address,
-                sell_pool: max_sell.1.pool_address,
-                token_mint: self.mint,
-                buy_price: min_buy.1.price_in_sol,
-                sell_price: max_sell.1.price_in_sol,
-                spread: max_sell.1.price_in_sol - min_buy.1.price_in_sol,
-            })
+            let sol_in = Decimal::from(1);
+            let tokens_bought = sol_in / min_buy.1.price_in_sol;
+            let sol_out = tokens_bought * max_sell.1.price_in_sol;
+            let profit = sol_out - sol_in;
+            let profit_percentage = profit * Decimal::from(100);
+            
+            if profit_percentage >= MIN_PROFIT_PERCENTAGE {
+                tracing::info!(
+                    "🎯 Arbitrage detected for mint {}: 1 SOL → {:.6} tokens → {:.6} SOL (profit: {:.6} SOL, {:.2}%)",
+                    self.mint,
+                    tokens_bought,
+                    sol_out,
+                    profit,
+                    profit_percentage
+                );
+                
+                Some(ArbitrageOpportunity {
+                    buy_pool: min_buy.1.pool_address,
+                    sell_pool: max_sell.1.pool_address,
+                    token_mint: self.mint,
+                    buy_price: min_buy.1.price_in_sol,
+                    sell_price: max_sell.1.price_in_sol,
+                    spread: max_sell.1.price_in_sol - min_buy.1.price_in_sol,
+                })
+            } else {
+                None
+            }
         } else {
             None
         }

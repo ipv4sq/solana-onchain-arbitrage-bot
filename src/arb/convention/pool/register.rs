@@ -42,6 +42,7 @@ impl AnyPoolConfig {
         let dex_type = DexType::determine_from(&update.owner);
         let c = match dex_type {
             DexType::MeteoraDlmm => {
+                let data = MeteoraDlmmPoolData::load_data(&update.data)?;
                 let config =
                     MeteoraDlmmPoolConfig::from_pool_data(&update.pubkey, data, *desired_mint)?;
                 MeteoraDlmm(config)

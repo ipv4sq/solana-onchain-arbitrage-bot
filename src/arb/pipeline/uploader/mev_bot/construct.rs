@@ -290,7 +290,47 @@ async fn simulate_and_log_mev(
     let profitable = simulation_status == "success" && compute_units_consumed.is_some();
     let profitability = if profitable { Some(minimum_profit as i64) } else { None };
     
-    let accounts: Vec<SimulationAccount> = vec![];
+    // Extract accounts from the transaction
+    let accounts: Vec<SimulationAccount> = match &tx.message {
+        solana_sdk::message::VersionedMessage::Legacy(msg) => {
+            msg.account_keys.iter().enumerate().map(|(idx, pubkey)| {
+                let is_signer = idx < msg.header.num_required_signatures as usize;
+                let is_writable = if is_signer {
+                    // For signers, writable if index is before readonly signed accounts
+                    idx < (msg.header.num_required_signatures - msg.header.num_readonly_signed_accounts) as usize
+                } else {
+                    // For non-signers, writable if before the readonly unsigned section
+                    let non_signer_idx = idx - msg.header.num_required_signatures as usize;
+                    let num_writable_unsigned = msg.account_keys.len() - msg.header.num_required_signatures as usize - msg.header.num_readonly_unsigned_accounts as usize;
+                    non_signer_idx < num_writable_unsigned
+                };
+                SimulationAccount {
+                    pubkey: *pubkey,
+                    is_signer,
+                    is_writable,
+                }
+            }).collect()
+        },
+        solana_sdk::message::VersionedMessage::V0(msg) => {
+            msg.account_keys.iter().enumerate().map(|(idx, pubkey)| {
+                let is_signer = idx < msg.header.num_required_signatures as usize;
+                let is_writable = if is_signer {
+                    // For signers, writable if index is before readonly signed accounts
+                    idx < (msg.header.num_required_signatures - msg.header.num_readonly_signed_accounts) as usize
+                } else {
+                    // For non-signers, writable if before the readonly unsigned section
+                    let non_signer_idx = idx - msg.header.num_required_signatures as usize;
+                    let num_writable_unsigned = msg.account_keys.len() - msg.header.num_required_signatures as usize - msg.header.num_readonly_unsigned_accounts as usize;
+                    non_signer_idx < num_writable_unsigned
+                };
+                SimulationAccount {
+                    pubkey: *pubkey,
+                    is_signer,
+                    is_writable,
+                }
+            }).collect()
+        }
+    };
     
     let params = MevSimulationLogParams {
         minor_mint: *minor_mint,

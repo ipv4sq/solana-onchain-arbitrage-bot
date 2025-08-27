@@ -154,11 +154,16 @@ async fn calculate_pool_prices(
                 .await
                 .ok()?;
 
+            info!(
+                "Raw prices - sol_to_token: {} tokens per SOL, token_to_sol: {} SOL per token",
+                sol_to_token.mid_price, token_to_sol.mid_price
+            );
+
             let buy_price = Decimal::ONE / sol_to_token.mid_price;
             let sell_price = token_to_sol.mid_price;
 
             info!(
-                "MeteoraDlmm prices calculated - Buy: {}, Sell: {}",
+                "MeteoraDlmm prices calculated - Buy: {} SOL per token, Sell: {} SOL per token",
                 buy_price, sell_price
             );
             Some((buy_price, sell_price))
@@ -176,11 +181,16 @@ async fn calculate_pool_prices(
                 .await
                 .ok()?;
 
+            info!(
+                "Raw prices - sol_to_token: {} tokens per SOL, token_to_sol: {} SOL per token",
+                sol_to_token.mid_price, token_to_sol.mid_price
+            );
+
             let buy_price = Decimal::ONE / sol_to_token.mid_price;
             let sell_price = token_to_sol.mid_price;
 
             info!(
-                "MeteoraDammV2 prices calculated - Buy: {}, Sell: {}",
+                "MeteoraDammV2 prices calculated - Buy: {} SOL per token, Sell: {} SOL per token",
                 buy_price, sell_price
             );
             Some((buy_price, sell_price))
