@@ -13,6 +13,7 @@ use crate::arb::database::repositories::MevSimulationLogRepository;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
+use crate::arb::global::state::blockhash::get_blockhash;
 use crate::arb::global::state::rpc::{rpc_client, simulate_tx_with_retry};
 use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
@@ -45,7 +46,7 @@ pub async fn build_and_send(
     include_create_token_account_ix: bool,
     trace: Trace,
 ) -> Result<(SimulationResult, Trace)> {
-    let blockhash = rpc_client().get_latest_blockhash().await?;
+    let blockhash = get_blockhash().await?;
 
     let alt_keys = vec![
         // this seems to be legit

@@ -92,11 +92,5 @@ pub async fn initialize() -> Result<()> {
 
 pub async fn get_blockhash() -> Result<Hash> {
     ensure_initialized().await?;
-
-    let hash = GLOBAL_BLOCKHASH
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("Blockhash holder not initialized"))?
-        .get();
-
-    Ok(hash)
+    Ok(GLOBAL_BLOCKHASH.get().unwrap().get())
 }
