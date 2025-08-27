@@ -287,8 +287,44 @@ async fn simulate_and_log_mev(
     let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint).await?.ok_or_else(|| anyhow!("Minor mint not found"))?;
     let desired_mint_record = MintRecordRepository::get_mint_from_cache(desired_mint).await?.ok_or_else(|| anyhow!("Desired mint not found"))?;
     
-    let profitable = simulation_status == "success" && compute_units_consumed.is_some();
-    let profitability = if profitable { Some(minimum_profit as i64) } else { None };
+    // Calculate actual profit from simulation results
+    let actual_profit = if let Some(ref meta) = result.meta {
+        // Find wallet address from transaction (first signer)
+        let wallet_address = match &tx.message {
+            solana_sdk::message::VersionedMessage::Legacy(msg) => msg.account_keys.first(),
+            solana_sdk::message::VersionedMessage::V0(msg) => msg.account_keys.first(),
+        };
+        
+        if let Some(wallet) = wallet_address {
+            meta.post_token_balances
+                .iter()
+                .find(|tb| {
+                    tb.mint == desired_mint.to_string()
+                        && tb.owner.as_ref() == Some(&wallet.to_string())
+                })
+                .and_then(|post| {
+                    meta.pre_token_balances
+                        .iter()
+                        .find(|tb| {
+                            tb.mint == desired_mint.to_string()
+                                && tb.owner.as_ref() == Some(&wallet.to_string())
+                        })
+                        .map(|pre| {
+                            let post_amount: i64 = post.ui_token_amount.amount.parse().unwrap_or(0);
+                            let pre_amount: i64 = pre.ui_token_amount.amount.parse().unwrap_or(0);
+                            post_amount - pre_amount
+                        })
+                })
+                .unwrap_or(0)
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+    
+    let profitable = simulation_status == "success" && actual_profit > 0;
+    let profitability = if actual_profit > 0 { Some(actual_profit) } else { None };
     
     // Extract accounts from the transaction
     let accounts: Vec<SimulationAccount> = match &tx.message {
