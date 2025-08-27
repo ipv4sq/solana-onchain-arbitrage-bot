@@ -4,6 +4,7 @@ use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::list_all_
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
 use crate::arb::pipeline::swap_changes::cache::PoolAccountCache;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
+use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{empty_ok, lazy_arc};
 use anyhow::Result;
@@ -11,7 +12,8 @@ use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::{error, info, debug};
+use std::time::Duration;
+use tracing::{debug, error, info};
 
 #[allow(unused)]
 static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<PoolUpdate>>> = lazy_arc!({
@@ -27,6 +29,24 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<PoolUpdate>>> = lazy_arc!(
             Ok(())
         })
     })
+});
+
+#[allow(unused)]
+static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, GrpcAccountUpdate>>> = lazy_arc!({
+    BufferedDebouncer::new(
+        Duration::from_millis(30),
+        |update: GrpcAccountUpdate| async move {
+            let updated = AccountState::from_grpc_update(&update);
+            let previous = PoolAccountCache.put(update.account, updated.clone());
+            let pool_update = PoolUpdate {
+                previous,
+                current: updated,
+            };
+            if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
+                error!("Failed to publish pool update: {}", e);
+            }
+        },
+    )
 });
 
 #[allow(unused)]
@@ -65,15 +85,9 @@ impl PoolAccountMonitor {
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
         debug!("Pool account update received: {}", update.account);
-        let updated = AccountState::from_grpc_update(&update);
-        let previous = PoolAccountCache.put(update.account, updated.clone());
-        let pool_update = PoolUpdate {
-            previous,
-            current: updated,
-        };
-        if let Err(e) = POOL_UPDATE_CONSUMER.publish(pool_update).await {
-            error!("Failed to publish pool update: {}", e);
-        }
+        
+        POOL_UPDATE_DEBOUNCER.update(update.account, update);
+        
         empty_ok!()
     }
 }

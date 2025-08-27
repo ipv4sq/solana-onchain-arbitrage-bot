@@ -428,6 +428,7 @@ impl AccountFilter {
     }
 }
 
+#[derive(Clone)]
 pub struct GrpcAccountUpdate {
     pub account: Pubkey,
     pub slot: u64,

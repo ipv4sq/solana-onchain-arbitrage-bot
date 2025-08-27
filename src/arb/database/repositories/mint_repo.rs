@@ -45,6 +45,13 @@ impl MintRecordRepository {
         Ok(MINT_CACHE.get(mint).await)
     }
 
+    pub fn get_symbol_from_cache_sync(mint: &Pubkey) -> String {
+        (*MINT_CACHE)
+            .get_if_present(mint)
+            .map(|record| record.symbol)
+            .unwrap_or("Unknown".parse().unwrap())
+    }
+
     pub async fn get_decimal_from_cache(mint: &Pubkey) -> Result<Option<u8>> {
         Ok(MINT_CACHE
             .get(mint)

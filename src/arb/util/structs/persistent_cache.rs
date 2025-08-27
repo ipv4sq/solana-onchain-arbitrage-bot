@@ -154,6 +154,10 @@ where
         self.mem_cache.get(key).await
     }
     
+    pub fn get_if_present(&self, key: &K) -> Option<V> {
+        self.mem_cache.get_if_present(key)
+    }
+    
     pub async fn put(&self, key: K, value: V) {
         self.put_with_ttl(key, value, self.default_ttl).await;
     }

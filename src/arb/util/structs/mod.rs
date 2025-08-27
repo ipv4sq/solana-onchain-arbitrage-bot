@@ -1,3 +1,4 @@
+pub mod buffered_debouncer;
 pub mod cache_type;
 pub mod lazy_arc;
 pub mod lazy_cache;
