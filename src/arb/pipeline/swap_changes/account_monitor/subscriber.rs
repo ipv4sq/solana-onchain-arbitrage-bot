@@ -45,11 +45,7 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                     previous,
                     current: updated,
                 };
-                trace.step_with_address(
-                    AccountUpdateDebounced,
-                    "account_address",
-                    update.account,
-                );
+                trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
                 if let Err(e) = POOL_UPDATE_CONSUMER.publish((pool_update, trace)).await {
                     error!("Failed to publish pool update: {}", e);
                 }
@@ -84,7 +80,7 @@ impl PoolAccountMonitor {
             .subscribe_accounts(
                 filter,
                 move |account_update| {
-                    let mut trace = Trace::new();
+                    let trace = Trace::new();
                     trace.step_with_address(
                         StepType::AccountUpdateReceived,
                         "account_address",
