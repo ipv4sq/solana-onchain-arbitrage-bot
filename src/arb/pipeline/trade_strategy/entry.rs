@@ -10,9 +10,8 @@ use crate::arb::pipeline::trade_strategy::price_tracker::{
     clear_prices_for_token, detect_arbitrage, update_pool_prices, ArbitrageOpportunity,
 };
 use crate::arb::pipeline::uploader::entry::{FireMevBotConsumer, MevBotFire};
+use crate::arb::util::alias::MintAddress;
 use crate::arb::util::alias::PoolAddress;
-use crate::arb::util::alias::{AResult, MintAddress};
-use anyhow::anyhow;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use tracing::info;
