@@ -52,3 +52,4 @@ coverage/
 # Submodule build artifacts
 meteora-cpi-examples/target/
 meteora-cpi-examples/node_modules//logs
+/.serena
