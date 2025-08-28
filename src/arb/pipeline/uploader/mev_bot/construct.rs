@@ -335,11 +335,7 @@ async fn simulate_and_log_mev(
     };
 
     let profitable = simulation_status == "success" && actual_profit > 0;
-    let profitability = if actual_profit > 0 {
-        Some(actual_profit)
-    } else {
-        None
-    };
+    let profitability = Some(actual_profit);
 
     // Extract accounts from the transaction
     let accounts: Vec<SimulationAccount> = match &tx.message {
