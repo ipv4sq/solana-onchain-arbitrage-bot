@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a sophisticated Solana MEV bot and arbitrage system that monitors and executes arbitrage opportunities across
-multiple DEX protocols using an onchain program. The project has evolved into a modular architecture with advanced
-features including:
+This is a production-grade Solana MEV bot and arbitrage system that monitors and executes arbitrage opportunities across
+multiple DEX protocols using an onchain program. The project features a sophisticated modular architecture with advanced
+caching, comprehensive logging, and robust error handling:
 
-- **MEV Bot Integration**: Real-time monitoring of onchain MEV opportunities
-- **Database Persistence**: SeaORM-based data management for pools and mints
-- **Pool Abstraction**: Unified interface for all DEX protocols
-- **Advanced Pipeline**: Pool indexing, swap monitoring, and trade strategy execution
-- **Multi-DEX Support**: Comprehensive coverage of Solana DEX ecosystem
+- **MEV Bot Integration**: Real-time monitoring and execution of onchain MEV opportunities
+- **Advanced Caching**: Multi-layer cache system with TTL support (LoadingCache, PersistentCache, TTLLoadingCache)
+- **Database Persistence**: SeaORM-based data management with complex simulation logging
+- **Pool Abstraction**: Unified trait-based interface for 10+ DEX protocols
+- **Active Pipeline**: Pool indexing, swap monitoring, price tracking, and trade strategy execution
+- **Production Features**: Rate limiting, dual logging, background cache cleanup, connection pooling
 
 **Onchain Program ID**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
@@ -97,98 +98,138 @@ The `logs/` directory is in `.gitignore` so log files won't be committed to the 
 Provides abstraction layers for consistent interaction across different components:
 
 - **Chain** (`convention/chain/`): Transaction and instruction parsing
-    - Mappers for converting from gRPC/RPC formats
-    - Instruction analysis and metadata extraction
-    - ALT (Address Lookup Table) utilities
-    - Transaction simulation capabilities
+    - **Mappers** (`mapper/`): Convert from gRPC/RPC formats (`from_grpc.rs`, `from_rpc.rs`)
+    - **Utils** (`util/`): ALT utilities, instruction analysis, simulation, transaction handling
+    - Core types: `account.rs`, `instruction.rs`, `transaction.rs`, `meta.rs`
 
-- **Pool** (`convention/pool/`): Unified pool interface
-    - `PoolDataLoader` trait for consistent pool data access
-    - `PoolConfigInit` for pool initialization
-    - DEX-specific implementations (Meteora DLMM/DAMM, Raydium CPMM, Whirlpool, Pump)
-    - Account and data structures for each pool type
+- **Pool** (`convention/pool/`): Unified pool interface with trait-based abstraction
+    - **Interface** (`interface.rs`): Core traits - `PoolDataLoader`, `PoolConfigInit`, `InputAccountUtil`
+    - **DEX Implementations**: 
+        - `meteora_damm/` and `meteora_damm_v2/` - Meteora Dynamic AMM pools
+        - `meteora_dlmm/` - Meteora Dynamic Liquidity Market Maker
+        - `raydium_cpmm/` - Raydium Constant Product Market Maker
+        - `pump_amm/` - Pump.fun AMM with creator fees
+        - `whirlpool/` - Orca Whirlpool concentrated liquidity
+    - Each implementation contains: `account.rs`, `data.rs`, `pool_config.rs`, often `test.rs`
 
-#### 2. **Pipeline Module** (`src/arb/pipeline/`)
+#### 2. **Pipeline Module** (`src/arb/pipeline/`) - **ACTIVE IMPLEMENTATION**
 
 Orchestrates the main business logic flow:
 
 - **Pool Indexer** (`pipeline/pool_indexer/`):
-    - Pool discovery and registration
-    - Mint metadata fetching and caching
-    - Database persistence of pool configurations
+    - `mev_bot/entry.rs` - **ACTIVE**: MEV bot transaction processing entry point
+    - `pool_recorder.rs`, `token_recorder.rs` - Pool and token discovery/registration
+    - `registrar.rs` - Pool registration logic
 
-- **Swap Monitor** (`pipeline/swap_monitor/`): Real-time monitoring (placeholder for future implementation)
+- **Swap Changes** (`pipeline/swap_changes/`) - **NEW MODULE**:
+    - `account_monitor/` - Real-time pool account monitoring
+    - `cache.rs`, `registrar.rs` - Swap event processing infrastructure
 
-- **Trade Strategy** (`pipeline/trade_strategy/`): Arbitrage strategy execution (placeholder)
+- **Trade Strategy** (`pipeline/trade_strategy/`):
+    - `entry.rs` - Strategy execution framework
+    - `price_tracker.rs` - **NEW**: Price tracking implementation
 
-- **Uploader** (`pipeline/uploader/`): Data upload services (placeholder)
+- **Uploader** (`pipeline/uploader/`):
+    - `mev_bot/construct.rs` - MEV bot instruction construction
+    - `wallet.rs` - Wallet management utilities
 
 #### 3. **Database Module** (`src/arb/database/`)
 
-SeaORM-based data persistence layer:
+Advanced SeaORM-based persistence with custom column types:
 
-- **Core** (`database/core/`): Database connection management, transactions
+- **Custom Columns** (`database/columns/`):
+    - `pubkey_type.rs` - Custom Solana address storage type
+    - `pool_descriptor.rs` - Pool metadata descriptors
+    - `cache_type_column.rs` - Cache type definitions
+
 - **Entities** (`database/entity/`):
-    - `mint_record`: Token metadata and information
-    - `pool_record`: Pool configurations with snapshots
-- **Repositories** (`database/repositories/`): Data access patterns
-- **Custom Types**: `PubkeyType` for Solana address storage
+    - `mint_do.rs` - Token metadata (address, symbol, decimals, program)
+    - `pool_do.rs` - Pool configurations with snapshots
+    - `kv_cache.rs` - **NEW**: Generic key-value cache with TTL
+    - `mev_simulation_log.rs` - **NEW**: Complex MEV simulation logging
 
-#### 4. **Global State** (`src/arb/global/`)
+- **Repositories** (`database/repositories/`):
+    - `MintRecordRepository`, `PoolRecordRepository` - Core data access
+    - `KvCacheRepository` - Generic cache operations
+    - `MevSimulationLogRepository` - Simulation logging
+    - **Built-in caching**: `POOL_CACHE`, `MINT_TO_POOLS`, `POOL_RECORDED` static caches
+
+#### 4. **Global Module** (`src/arb/global/`)
 
 Shared state and utilities:
 
 - **State Management** (`global/state/`):
-    - `blockhash`: Dedicated thread for blockhash refresh (200ms intervals)
-    - `rpc`: Global RPC client management
-    - `mem_pool`: Memory pool for transaction management
+    - `blockhash.rs` - Dedicated thread for blockhash refresh (200ms intervals)
+    - `rpc.rs` - Global RPC client management
+    - `mem_pool.rs` - Memory pool for transaction management
 
 - **Constants** (`global/constant/`):
-    - MEV bot configuration
-    - Well-known mint addresses
-    - DEX program IDs
+    - `mev_bot.rs` - MEV bot program constants
+    - `mint.rs` - Well-known mint addresses (WSOL, USDC, etc.)
+    - `pool_program.rs` - All supported DEX program IDs
+    - `token_program.rs` - SPL Token program constants
 
-- **Enums** (`global/enums/`): Type-safe DEX type definitions
+- **Enums** (`global/enums/`):
+    - `dex_type.rs` - Comprehensive DEX type system (10+ DEXes)
+
+- **Database** (`global/db.rs`) - Connection management
+- **Trace** (`global/trace/`) - **NEW**: Tracing and monitoring types
 
 #### 5. **Program Module** (`src/arb/program/`)
 
 Onchain program interaction:
 
 - **MEV Bot** (`program/mev_bot/`):
-    - Instruction building and serialization
-    - Onchain monitoring with producer/consumer pattern
-    - Fire module for transaction construction
+    - `ix.rs` - Instruction building and parsing
+    - `ix_input.rs` - Input parameter structures for MEV operations
 
-#### 6. **Utility Module** (`src/arb/util/`)
+#### 6. **Utility Module** (`src/arb/util/`) - **EXTENSIVE UTILITY LIBRARY**
 
-Common utilities and traits:
+Production-grade utilities and abstractions:
+
+- **Advanced Structures** (`util/structs/`):
+    - `loading_cache.rs` - **LRU cache with async loader** (368 lines)
+    - `persistent_cache.rs` - **Database-backed cache** with TTL support
+    - `ttl_loading_cache.rs` - **TTL-aware LRU cache** (500 lines)
+    - `rate_limiter.rs` - **Token bucket rate limiter** with burst capacity
+    - `buffered_debouncer.rs` - Event debouncing utility
+    - `lazy_cache.rs`, `lazy_arc.rs` - Lazy initialization utilities
+    - `mint_pair.rs` - Token pair management
 
 - **Traits** (`util/traits/`):
-    - `pubkey`: Extension methods for Pubkey (`.to_pubkey()`)
-    - `orm`: SeaORM conversion traits
-    - `signature`: Signature handling
+    - `pubkey.rs` - **`.to_pubkey()` extension** for string conversion
+    - `orm.rs` - SeaORM conversion traits (`.to_orm()`)
+    - `account_meta.rs`, `signature.rs` - Solana utilities
 
-- **Workers** (`util/worker/`): PubSub worker implementations
+- **Workers** (`util/worker/`):
+    - `pubsub.rs` - PubSub worker implementations
 
-- **Types** (`util/types/`): Common type definitions like `MintPair`
+- **Other** (`util/`):
+    - `logging.rs` - **Dual console/file logging** with auto-rotation
+    - `macros.rs` - Utility macros
+    - `cron/periodic_logger.rs` - Periodic logging utilities
 
-### DEX Modules (`src/dex/`)
+#### 7. **SDK Module** (`src/arb/sdk/`)
 
-Each DEX has its own module with:
+- `yellowstone.rs` - Yellowstone gRPC integration for real-time data
 
+### DEX Support
+
+**Comprehensive multi-DEX coverage** with dedicated modules in `src/dex/`:
+
+1. **Raydium**: AMM V4, CPMM, CLMM
+2. **Meteora**: DLMM, DAMM, DAMM V2
+3. **Orca**: Whirlpool
+4. **Pump.fun**: AMM with creator fee mechanism
+5. **SolFi**: Custom pools
+6. **Vertigo**: CLMM
+7. **Plus**: Additional/future DEX support
+
+Each DEX module includes:
 - Configuration structures
 - Constants (program IDs, fees)
-- Pool information structures
+- Pool information structures  
 - Swap instruction builders
-
-Supported DEXes:
-
-- **Raydium**: AMM V4, CPMM, CLMM
-- **Meteora**: DLMM, DAMM, DAMM V2
-- **Orca**: Whirlpool
-- **Pump.fun**: AMM
-- **SolFi**: Custom pools
-- **Vertigo**: CLMM
 
 ### Configuration Structure
 
@@ -224,10 +265,9 @@ enabled = false
 
 ## Database Schema
 
-### Tables
+### Active Tables (11 migrations)
 
 #### `pools`
-
 - `address` (PubkeyType, PRIMARY KEY): Pool address
 - `name` (String): Pool name
 - `dex_type` (DexType): DEX protocol type
@@ -237,17 +277,27 @@ enabled = false
 - `quote_vault` (PubkeyType): Quote token vault
 - `description` (JSON): Pool metadata descriptor
 - `data_snapshot` (JSON): Latest pool state snapshot
-- `created_at` (DateTime, optional)
-- `updated_at` (DateTime, optional)
+- `created_at`, `updated_at` (DateTime, optional)
 
 #### `mint_records`
-
 - `address` (PubkeyType, PRIMARY KEY): Mint address
 - `symbol` (String): Token symbol
 - `decimals` (i16): Token decimals
 - `program` (PubkeyType): Token program ID
-- `created_at` (DateTime, optional)
-- `updated_at` (DateTime, optional)
+- `created_at`, `updated_at` (DateTime, optional)
+
+#### `kv_cache` - **NEW**
+- `type` (CacheType): Cache type identifier
+- `key` (String): Cache key
+- `value` (JSON): Cached value
+- `valid_until` (DateTime): TTL expiration
+
+#### `mev_simulation_log` - **NEW**
+- Complex MEV simulation tracking with:
+- Mint pairs (`minor_mint`, `desired_mint` with symbols)
+- Pool arrays and profitability metrics
+- Simulation details (accounts, compute units, errors, logs, traces)
+- Return data and units per byte fields
 
 ### Database Management
 
@@ -277,7 +327,7 @@ sqlx database drop
 
 ## Coding Principles
 
-This is a production code and any bug may result into a leakage or loss, be VERY CAREFUL!!!
+This is production code where bugs can result in financial loss. Exercise extreme caution!
 
 ### CRITICAL: Fix Forward, Never Delete
 
@@ -355,13 +405,18 @@ result.insert(item.key, value);
 - This provides cleaner, more readable code and consistent error handling
 - Example: `"So11111111111111111111111111111111111111112".to_pubkey()`
 
-### Using Constants
+### Using Constants and Utilities
 
 **Never hardcode addresses** - use provided constants:
 
 - `Mints::WSOL`, `Mints::USDC` - token mints
-- `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs
+- `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs  
 - `MevBot::PROGRAM_ID` - MEV bot constants
+
+**Use built-in caching**:
+- `PoolRecordRepository::is_pool_recorded()` - Check if pool exists
+- `PoolRecordRepository::get_pool_by_address()` - Get cached pool
+- `MintRecordRepository` methods - Cached mint operations
 
 ### Pump.fun Specific Notes
 
@@ -389,8 +444,9 @@ result.insert(item.key, value);
 - **Error Resilience**: Use `Result<T>` everywhere, handle errors gracefully
 - **Modular Architecture**: Each component has clear boundaries
 - **Trait-based Abstraction**: Use traits for cross-DEX compatibility
-- **Database Optional**: Core functionality works without database
+- **Multi-layer Caching**: LoadingCache, PersistentCache, TTLLoadingCache
 - **Configuration-driven**: Behavior controlled via config.toml
+- **Production Monitoring**: Comprehensive logging and simulation tracking
 
 ## Development Workflow
 
@@ -398,8 +454,9 @@ result.insert(item.key, value);
 2. **Run clippy**: `cargo clippy` for linting
 3. **Format code**: `cargo fmt` for consistent style
 4. **Test changes**: Run relevant tests with `cargo test`
-5. **Monitor logs**: Use dual console/file logging for debugging
-6. **Database migrations**: Always use SeaORM CLI for schema changes
+5. **Monitor logs**: Use dual console/file logging (`logs/bot_*.log`)
+6. **Database migrations**: Always use sqlx CLI for schema changes
+7. **Cache invalidation**: Remember to invalidate caches after updates
 
 ## Creating Database Tables
 
