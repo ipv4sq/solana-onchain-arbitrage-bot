@@ -9,7 +9,7 @@ use crate::arb::pipeline::swap_changes::cache::PoolConfigCache;
 use crate::arb::pipeline::trade_strategy::price_tracker::{
     clear_prices_for_token, detect_arbitrage, update_pool_prices, ArbitrageOpportunity,
 };
-use crate::arb::pipeline::uploader::entry::{FireMevBotConsumer, MevBotFire};
+use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::alias::PoolAddress;
 use rust_decimal::Decimal;

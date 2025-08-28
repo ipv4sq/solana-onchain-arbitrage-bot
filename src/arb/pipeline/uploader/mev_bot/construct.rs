@@ -36,58 +36,6 @@ use tracing::error;
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
 
-pub async fn build_and_send(
-    wallet: &Keypair,
-    minor_mint: &Pubkey,
-    compute_unit_limit: u32,
-    unit_price: u64,
-    pools: &[AnyPoolConfig],
-    minimum_profit: u64,
-    include_create_token_account_ix: bool,
-    trace: Trace,
-) -> Result<(SimulationResult, Trace)> {
-    let blockhash = get_blockhash().await?;
-
-    let alt_keys = vec![
-        // this seems to be legit
-        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-        // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
-    ];
-    trace.step(StepType::MevIxBuilding);
-
-    let mut alts = Vec::new();
-    for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
-    }
-
-    let tx = build_tx(
-        wallet,
-        minor_mint,
-        compute_unit_limit,
-        unit_price,
-        pools,
-        blockhash,
-        &alts,
-        minimum_profit,
-        include_create_token_account_ix,
-    )
-    .await?;
-    trace.step(StepType::MevIxBuilt);
-
-    let simulation_result = simulate_and_log_mev(
-        wallet.pubkey(),
-        &tx,
-        minor_mint,
-        &Mints::WSOL,
-        pools,
-        minimum_profit,
-        trace,
-    )
-    .await?;
-
-    Ok(simulation_result)
-}
-
 pub async fn build_tx(
     wallet: &Keypair,
     minor_mint: &Pubkey,
@@ -260,43 +208,46 @@ fn ensure_token_account_exists(
     create_associated_token_account_idempotent(belong_to, belong_to, mint, &mint_program)
 }
 
-async fn simulate_and_log_mev(
-    owner: Pubkey,
-    tx: &VersionedTransaction,
-    minor_mint: &Pubkey,
-    desired_mint: &Pubkey,
-    pools: &[AnyPoolConfig],
-    minimum_profit: u64,
-    trace: Trace,
-) -> Result<(SimulationResult, Trace)> {
-    let tx_bytes = bincode::serialize(tx)?;
-    let tx_size = tx_bytes.len();
+pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<SimulationResult> {
     trace.step(StepType::MevTxRpcCall);
-    
+
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
     let response = rpc_client().simulate_transaction(tx).await?;
     let result = SimulationResult::from(&response.value);
     trace.step(StepType::MevTxRpcReturned);
-    let simulation_status = if response.value.err.is_some() {
+
+    Ok(result)
+}
+
+pub async fn log_mev_simulation(
+    result: &SimulationResult,
+    trace: &Trace,
+    owner: &Pubkey,
+    tx: &VersionedTransaction,
+    minor_mint: &Pubkey,
+    desired_mint: &Pubkey,
+    pools: &[AnyPoolConfig],
+) -> Result<()> {
+    let tx_bytes = bincode::serialize(tx)?;
+    let tx_size = tx_bytes.len();
+
+    let simulation_status = if result.err.is_some() {
         "failed"
     } else {
         "success"
     };
 
-    let error_message = response.value.err.as_ref().map(|e| format!("{:?}", e));
-    let logs = response.value.logs.clone();
-    let compute_units_consumed = response.value.units_consumed.map(|u| u as i64);
+    let error_message = result.err.clone();
+    let logs = Some(result.logs.clone());
+    let compute_units_consumed = result.units_consumed.map(|u| u as i64);
 
-    let return_data = response.value.return_data.as_ref().map(|rd| {
-        use base64::Engine;
-        ReturnData {
-            program_id: rd.program_id.clone(),
-            data: base64::engine::general_purpose::STANDARD
-                .decode(&rd.data.0)
-                .unwrap_or_default(),
-        }
-    });
+    let return_data = if let Some(ref meta) = result.meta {
+        // Extract return data from meta if available
+        None // TransactionMeta doesn't have return_data field based on the struct
+    } else {
+        None
+    };
 
     let pool_addresses: Vec<String> = pools
         .iter()
@@ -316,15 +267,15 @@ async fn simulate_and_log_mev(
 
     // Calculate actual profit from simulation results
     // Find the user's token account for the desired mint
-    let user_ata = ata(&owner, desired_mint, &spl_token::ID);
+    let user_ata = ata(owner, desired_mint, &spl_token::ID);
     let user_ata_str = user_ata.to_string();
-
 
     // When simulation fails or doesn't return metadata, we can't calculate actual profit
     // Mark both profitable and profitability as None to distinguish from actual 0 values
     let (profitable, profitability) = if let Some(ref meta) = result.meta {
         // Find the token balance changes for the user's ATA
-        let actual_profit = meta.post_token_balances
+        let actual_profit = meta
+            .post_token_balances
             .iter()
             .find(|tb| {
                 tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&user_ata_str)
@@ -341,7 +292,7 @@ async fn simulate_and_log_mev(
                         let post_amount: i128 = post.ui_token_amount.amount.parse().unwrap_or(0);
                         let pre_amount: i128 = pre.ui_token_amount.amount.parse().unwrap_or(0);
                         let profit = post_amount - pre_amount;
-                        
+
                         // Clamp to i64 range if overflow would occur
                         if profit > i64::MAX as i128 {
                             i64::MAX
@@ -353,7 +304,7 @@ async fn simulate_and_log_mev(
                     })
             })
             .unwrap_or(0);
-        
+
         // Set profitable based on actual profit value (positive, zero, or negative)
         // Only when simulation succeeded
         let is_profitable = if simulation_status == "success" {
@@ -362,7 +313,7 @@ async fn simulate_and_log_mev(
             // Failed simulations are not profitable
             Some(false)
         };
-        
+
         // Always record the actual profit/loss value (can be negative)
         (is_profitable, Some(actual_profit))
     } else {
@@ -445,10 +396,30 @@ async fn simulate_and_log_mev(
         return_data,
         units_per_byte: None,
         trace: Some(trace.dump_json()),
-        reason: generate_reason(&result),
+        reason: generate_reason(result),
     };
 
     if let Err(e) = MevSimulationLogRepository::insert(params).await {
+        error!("Failed to log MEV simulation: {}", e);
+    }
+
+    Ok(())
+}
+
+pub async fn simulate_and_log_mev(
+    owner: Pubkey,
+    tx: &VersionedTransaction,
+    minor_mint: &Pubkey,
+    desired_mint: &Pubkey,
+    pools: &[AnyPoolConfig],
+    minimum_profit: u64,
+    trace: Trace,
+) -> Result<(SimulationResult, Trace)> {
+    let result = simulate_mev_tx(tx, &trace).await?;
+
+    if let Err(e) =
+        log_mev_simulation(&result, &trace, &owner, tx, minor_mint, desired_mint, pools).await
+    {
         error!("Failed to log MEV simulation: {}", e);
     }
 

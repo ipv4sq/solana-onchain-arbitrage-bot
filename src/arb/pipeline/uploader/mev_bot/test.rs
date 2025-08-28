@@ -13,6 +13,7 @@ mod tests {
 
     use crate::arb::global::constant::token_program::TokenProgram;
     use crate::arb::global::trace::types::Trace;
+    use crate::arb::pipeline::uploader::entry::build_and_send;
     use crate::arb::util::debug::log_account_metas;
 
     fn get_wallet() -> Keypair {

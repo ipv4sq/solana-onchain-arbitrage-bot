@@ -509,3 +509,4 @@ sqlx migrate run
 - **Token Programs**: SPL Token and Token-2022 supported
 - **Blockhash Refresh**: Every 200ms via dedicated thread
 - **Database Pool**: 100 max connections, 5 min connections
+- please check compile error once you update files, unless you are told not to
