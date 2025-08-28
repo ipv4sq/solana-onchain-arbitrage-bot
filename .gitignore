@@ -5,6 +5,7 @@ Cargo.lock
 
 # Config and env
 .env
+.env.prod
 config.toml
 
 # IDE

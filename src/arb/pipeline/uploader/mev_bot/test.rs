@@ -54,7 +54,7 @@ mod tests {
             compute_unit_limit,
             unit_price,
             &pools,
-            1000,
+            5000,
             false,
             Trace::new(),
         )

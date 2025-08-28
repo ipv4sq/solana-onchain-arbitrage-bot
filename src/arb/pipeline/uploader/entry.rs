@@ -77,8 +77,6 @@ pub async fn build_and_send(
     include_create_token_account_ix: bool,
     trace: Trace,
 ) -> anyhow::Result<(SimulationResult, Trace)> {
-    let blockhash = get_blockhash().await?;
-
     let alt_keys = vec![
         // this seems to be legit
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
@@ -97,7 +95,7 @@ pub async fn build_and_send(
         compute_unit_limit,
         unit_price,
         pools,
-        blockhash,
+        get_blockhash().await?,
         &alts,
         minimum_profit,
         false,
@@ -118,7 +116,7 @@ pub async fn build_and_send(
                 compute_unit_limit,
                 unit_price,
                 pools,
-                blockhash,
+                get_blockhash().await?,
                 &alts,
                 minimum_profit,
                 true,
