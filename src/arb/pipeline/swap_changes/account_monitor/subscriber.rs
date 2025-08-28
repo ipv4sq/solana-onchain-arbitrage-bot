@@ -54,7 +54,7 @@ static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy
 static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpdate, Trace)>>> =
     lazy_arc!({
         BufferedDebouncer::new(
-            Duration::from_millis(30),
+            Duration::from_millis(1),
             |(update, trace): (GrpcAccountUpdate, Trace)| async move {
                 let updated = AccountState::from_grpc_update(&update);
                 let previous = PoolAccountCache.put(update.account, updated.clone());
