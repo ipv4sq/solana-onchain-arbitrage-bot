@@ -5,9 +5,11 @@ use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::pool_do::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
+use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
+use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -78,6 +80,23 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
     )
 });
 
+static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
+    LoadingCache::new(1_000_000, |addr: &PoolAddress| {
+        let addr = *addr;
+        async move {
+            Some(
+                PoolRecordEntity::find()
+                    .filter(pool_do::Column::Address.eq(PubkeyType::from(addr)))
+                    .one(get_db())
+                    .await
+                    .ok()
+                    .flatten()
+                    .is_some(),
+            )
+        }
+    })
+});
+
 // cache related
 impl PoolRecordRepository {
     pub async fn get_pools_contains_mint(mint: &MintAddress) -> Option<HashSet<PoolRecord>> {
@@ -90,6 +109,10 @@ impl PoolRecordRepository {
 
     pub async fn ensure_exists(pool: &PoolAddress) -> Option<Model> {
         POOL_CACHE.ensure_exists(pool).await
+    }
+
+    pub async fn is_pool_recorded(pool: &PoolAddress) -> bool {
+        POOL_RECORDED.get(pool).await.unwrap_or(false)
     }
 }
 
@@ -122,6 +145,7 @@ impl PoolRecordRepository {
         // update corresponding cache
         MINT_TO_POOLS.evict(&pool.address).await;
         MINT_TO_POOLS.ensure_exists(&pool.address).await;
+        POOL_RECORDED.put(pool.address.0, true).await;
 
         match result {
             Ok(_) => Ok(pool),

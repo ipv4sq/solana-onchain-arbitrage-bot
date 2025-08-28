@@ -51,6 +51,7 @@ impl MevSimulationLogRepository {
             return_data: Set(params.return_data),
             units_per_byte: Set(params.units_per_byte),
             trace: Set(params.trace),
+            reason: Set(params.reason),
             created_at: NotSet,
             updated_at: NotSet,
         };

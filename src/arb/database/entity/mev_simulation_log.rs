@@ -26,6 +26,7 @@ pub struct Model {
     pub return_data: Option<ReturnData>,
     pub units_per_byte: Option<i64>,
     pub trace: Option<JsonValue>,
+    pub reason: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -66,6 +67,7 @@ pub struct MevSimulationLogParams {
     pub return_data: Option<ReturnData>,
     pub units_per_byte: Option<i64>,
     pub trace: Option<JsonValue>,
+    pub reason: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

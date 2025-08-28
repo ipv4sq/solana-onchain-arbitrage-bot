@@ -316,16 +316,12 @@ async fn simulate_and_log_mev(
         let owner_str = owner.to_string();
         meta.post_token_balances
             .iter()
-            .find(|tb| {
-                tb.mint == desired_mint.to_string()
-                    && tb.owner.as_ref() == Some(&owner_str)
-            })
+            .find(|tb| tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&owner_str))
             .and_then(|post| {
                 meta.pre_token_balances
                     .iter()
                     .find(|tb| {
-                        tb.mint == desired_mint.to_string()
-                            && tb.owner.as_ref() == Some(&owner_str)
+                        tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&owner_str)
                     })
                     .map(|pre| {
                         let post_amount: i64 = post.ui_token_amount.amount.parse().unwrap_or(0);
@@ -420,6 +416,7 @@ async fn simulate_and_log_mev(
         return_data,
         units_per_byte: None,
         trace: Some(trace.dump_json()),
+        reason: generate_reason(&result),
     };
 
     if let Err(e) = MevSimulationLogRepository::insert(params).await {
@@ -427,4 +424,20 @@ async fn simulate_and_log_mev(
     }
 
     Ok((result, trace))
+}
+
+fn generate_reason(result: &SimulationResult) -> Option<String> {
+    for log in &result.logs {
+        let log_lower = log.to_lowercase();
+        
+        if log_lower.contains("no profitable") {
+            return Some("No profitable path".to_string());
+        }
+        
+        if log_lower.contains("insufficient funds") {
+            return Some("Insufficient funds".to_string());
+        }
+    }
+    
+    None
 }

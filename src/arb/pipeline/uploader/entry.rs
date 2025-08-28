@@ -48,9 +48,8 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     )
 });
 
-pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> = lazy_arc!({
-    TxDeduplicator::new(Duration::from_secs(60))
-});
+pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> =
+    lazy_arc!({ TxDeduplicator::new(Duration::from_secs(60)) });
 
 async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) -> AResult<()> {
     if !MevBotDeduplicator.can_send(minor_mint, pools) {
@@ -61,7 +60,7 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
         );
         return Ok(());
     }
-    
+
     if !MevBotRateLimiter.try_acquire() {
         warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
@@ -84,11 +83,11 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
         &wallet, minor_mint, 1000_000, 1_000, &configs, 0, true, trace,
     )
     .await
-    .map(|result| log(result.0, &wallet_pubkey, result.1))?;
+    .map(|result| print_log_to_console(result.0, &wallet_pubkey, result.1))?;
     unit_ok!()
 }
 
-pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
+pub fn print_log_to_console(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
     info!("Finished simulation: {}", trace.dump());
     if let Some(err) = result.err {
         tracing::error!("TX aborted: {}", err);
