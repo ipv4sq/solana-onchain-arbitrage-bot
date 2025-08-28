@@ -1,5 +1,6 @@
 use crate::arb::convention::chain::util::alt::get_alt_by_key;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
+use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
@@ -28,10 +29,10 @@ use solana_program::message::v0::Message;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
-use solana_sdk::signature::{Keypair, Signer};
+use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
-use tracing::error;
+use tracing::{error, info};
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -45,6 +46,7 @@ pub async fn build_tx(
     blockhash: Hash,
     alts: &[AddressLookupTableAccount],
     minimum_profit: u64,
+    never_abort: bool,
     include_create_token_account_ix: bool,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
@@ -70,6 +72,7 @@ pub async fn build_tx(
         compute_unit_limit,
         pools,
         minimum_profit,
+        never_abort,
     )?;
     instructions.push(swap_ix);
 
@@ -88,6 +91,7 @@ pub fn create_invoke_mev_instruction(
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
+    never_abort: bool,
 ) -> Result<Instruction> {
     let use_flashloan = true;
     let fee_account = fee_collector(use_flashloan);
@@ -159,7 +163,7 @@ pub fn create_invoke_mev_instruction(
     let mut data = vec![28u8];
 
     // When true, the bot will not fail the transaction even when it can't find a profitable arbitrage. It will just do nothing and succeed.
-    let no_failure_mode = false;
+    let no_failure_mode = never_abort;
 
     data.extend_from_slice(&minimum_profit.to_le_bytes());
     data.extend_from_slice(&compute_unit_limit.to_le_bytes());
@@ -209,15 +213,26 @@ fn ensure_token_account_exists(
 }
 
 pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<SimulationResult> {
-    trace.step(StepType::MevTxRpcCall);
+    trace.step(StepType::MevSimulationTxRpcCall);
 
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
     let response = rpc_client().simulate_transaction(tx).await?;
     let result = SimulationResult::from(&response.value);
-    trace.step(StepType::MevTxRpcReturned);
+    trace.step(StepType::MevSimulationTxRpcReturned);
 
     Ok(result)
+}
+
+pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<Signature> {
+    trace.step(StepType::MevRealTxRpcCall);
+    let response = rpc_client().send_transaction(tx).await?;
+    trace.step(StepType::MevRealTxRpcReturned);
+    info!(
+        "MEV transaction sent successfully: {}",
+        response.to_string()
+    );
+    Ok(response)
 }
 
 pub async fn log_mev_simulation(

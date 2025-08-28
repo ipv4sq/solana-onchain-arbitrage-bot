@@ -39,7 +39,9 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     )
 });
 pub static ENABLE_SEND_TX: Lazy<bool> = Lazy::new(|| {
-    let env = std::env::var("ENABLE_SEND_TX").unwrap_or("false".to_string());
+    let env = std::env::var("ENABLE_SEND_TX")
+        .unwrap_or("false".to_string())
+        .to_lowercase();
     return env == "true";
 });
 pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> =

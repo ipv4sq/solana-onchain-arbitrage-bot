@@ -90,6 +90,7 @@ mod tests {
             1,
             &pools,
             1000,
+            false,
         )
         .unwrap();
     }
