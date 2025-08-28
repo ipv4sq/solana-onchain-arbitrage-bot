@@ -272,6 +272,9 @@ async fn simulate_and_log_mev(
     let tx_bytes = bincode::serialize(tx)?;
     let tx_size = tx_bytes.len();
     trace.step(StepType::MevTxRpcCall);
+    
+    // Use the simpler simulate_transaction for better performance
+    // Note: This won't return metadata for failed simulations
     let response = rpc_client().simulate_transaction(tx).await?;
     let result = SimulationResult::from(&response.value);
     trace.step(StepType::MevTxRpcReturned);
@@ -312,30 +315,60 @@ async fn simulate_and_log_mev(
         .ok_or_else(|| anyhow!("Desired mint not found"))?;
 
     // Calculate actual profit from simulation results
-    let actual_profit = if let Some(ref meta) = result.meta {
-        let owner_str = owner.to_string();
-        meta.post_token_balances
+    // Find the user's token account for the desired mint
+    let user_ata = ata(&owner, desired_mint, &spl_token::ID);
+    let user_ata_str = user_ata.to_string();
+
+
+    // When simulation fails or doesn't return metadata, we can't calculate actual profit
+    // Mark both profitable and profitability as None to distinguish from actual 0 values
+    let (profitable, profitability) = if let Some(ref meta) = result.meta {
+        // Find the token balance changes for the user's ATA
+        let actual_profit = meta.post_token_balances
             .iter()
-            .find(|tb| tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&owner_str))
+            .find(|tb| {
+                tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&user_ata_str)
+            })
             .and_then(|post| {
                 meta.pre_token_balances
                     .iter()
-                    .find(|tb| {
-                        tb.mint == desired_mint.to_string() && tb.owner.as_ref() == Some(&owner_str)
+                    .find(|pre| {
+                        pre.mint == desired_mint.to_string()
+                            && pre.account_index == post.account_index
                     })
                     .map(|pre| {
-                        let post_amount: i64 = post.ui_token_amount.amount.parse().unwrap_or(0);
-                        let pre_amount: i64 = pre.ui_token_amount.amount.parse().unwrap_or(0);
-                        post_amount - pre_amount
+                        // Parse as i128 first to avoid overflow, then check if it fits in i64
+                        let post_amount: i128 = post.ui_token_amount.amount.parse().unwrap_or(0);
+                        let pre_amount: i128 = pre.ui_token_amount.amount.parse().unwrap_or(0);
+                        let profit = post_amount - pre_amount;
+                        
+                        // Clamp to i64 range if overflow would occur
+                        if profit > i64::MAX as i128 {
+                            i64::MAX
+                        } else if profit < i64::MIN as i128 {
+                            i64::MIN
+                        } else {
+                            profit as i64
+                        }
                     })
             })
-            .unwrap_or(0)
+            .unwrap_or(0);
+        
+        // Set profitable based on actual profit value (positive, zero, or negative)
+        // Only when simulation succeeded
+        let is_profitable = if simulation_status == "success" {
+            Some(actual_profit > 0)
+        } else {
+            // Failed simulations are not profitable
+            Some(false)
+        };
+        
+        // Always record the actual profit/loss value (can be negative)
+        (is_profitable, Some(actual_profit))
     } else {
-        0
+        // No meta available - can't determine profitability
+        (None, None)
     };
-
-    let profitable = simulation_status == "success" && actual_profit > 0;
-    let profitability = Some(actual_profit);
 
     // Extract accounts from the transaction
     let accounts: Vec<SimulationAccount> = match &tx.message {
@@ -425,15 +458,15 @@ async fn simulate_and_log_mev(
 fn generate_reason(result: &SimulationResult) -> Option<String> {
     for log in &result.logs {
         let log_lower = log.to_lowercase();
-        
+
         if log_lower.contains("no profitable") {
             return Some("No profitable path".to_string());
         }
-        
+
         if log_lower.contains("insufficient funds") {
             return Some("Insufficient funds".to_string());
         }
     }
-    
+
     None
 }
