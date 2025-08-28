@@ -93,7 +93,7 @@ impl AnyPoolConfig {
                 use crate::arb::convention::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
 
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
-                let trade_direction = accounts.clone().get_trade_direction();
+                let trade_direction = accounts.clone().get_trade_direction()?;
 
                 let data_hex = hex::encode(&ix.data);
                 let ix_data = MeteoraDlmmIxData::load_ix_data(&data_hex);
@@ -112,7 +112,7 @@ impl AnyPoolConfig {
                 use crate::arb::convention::pool::meteora_damm_v2::input_data::MeteoraDammV2InputData;
 
                 let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
-                let trade_direction = accounts.clone().get_trade_direction();
+                let trade_direction = accounts.clone().get_trade_direction()?;
 
                 let data_hex = hex::encode(&ix.data);
                 let ix_data = MeteoraDammV2InputData::load_from_hex(&data_hex)?;

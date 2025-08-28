@@ -1,6 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::alias::AResult;
 use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -85,7 +86,7 @@ pub trait InputAccountUtil<Account, Data>: Sized {
         output_amount: Option<u64>,
     ) -> Result<Account>;
 
-    fn get_trade_direction(self) -> TradeDirection;
+    fn get_trade_direction(self) -> AResult<TradeDirection>;
 
     fn to_list(&self) -> Vec<&AccountMeta>;
 

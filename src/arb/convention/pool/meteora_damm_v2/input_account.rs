@@ -3,6 +3,7 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader, TradeDirection};
 use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::convention::pool::util::ata;
+use crate::arb::util::alias::AResult;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
@@ -129,7 +130,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         })
     }
 
-    fn get_trade_direction(self) -> TradeDirection {
+    fn get_trade_direction(self) -> AResult<TradeDirection> {
         let payer = self.payer.pubkey;
         let token_a_program = self.token_a_program.pubkey;
         let token_b_program = self.token_b_program.pubkey;
@@ -139,22 +140,22 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         let expected_ata_b = ata(&payer, &self.token_b_mint.pubkey, &token_b_program);
 
         if self.input_token_account.pubkey == expected_ata_a {
-            TradeDirection {
+            Ok(TradeDirection {
                 from: self.token_a_mint.pubkey,
                 to: self.token_b_mint.pubkey,
-            }
+            })
         } else if self.input_token_account.pubkey == expected_ata_b {
-            TradeDirection {
+            Ok(TradeDirection {
                 from: self.token_b_mint.pubkey,
                 to: self.token_a_mint.pubkey,
-            }
+            })
         } else {
-            panic!(
+            Err(anyhow::anyhow!(
                 "Invalid input token account: {} doesn't match expected ATA for token A {} or token B {}",
                 self.input_token_account.pubkey,
                 expected_ata_a,
                 expected_ata_b
-            )
+            ))
         }
     }
 

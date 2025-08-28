@@ -2,6 +2,7 @@ use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader, TradeDirection};
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::util::alias::AResult;
 use anyhow::Result;
 use itertools::concat;
 use solana_program::instruction::AccountMeta;
@@ -184,7 +185,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         })
     }
 
-    fn get_trade_direction(self) -> TradeDirection {
+    fn get_trade_direction(self) -> AResult<TradeDirection> {
         use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         let user = self.user.pubkey;
@@ -204,20 +205,20 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         );
 
         if self.user_token_in.pubkey == expected_ata_x {
-            TradeDirection {
+            Ok(TradeDirection {
                 from: self.token_x_mint.pubkey,
                 to: self.token_y_mint.pubkey,
-            }
+            })
         } else if self.user_token_in.pubkey == expected_ata_y {
-            TradeDirection {
+            Ok(TradeDirection {
                 from: self.token_y_mint.pubkey,
                 to: self.token_x_mint.pubkey,
-            }
+            })
         } else {
-            panic!(
+            Err(anyhow::anyhow!(
                 "Invalid user_token_in: {} doesn't match expected ATA for token X {} or token Y {}",
                 self.user_token_in.pubkey, expected_ata_x, expected_ata_y
-            )
+            ))
         }
     }
 
