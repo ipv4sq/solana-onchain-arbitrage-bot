@@ -1,4 +1,5 @@
 use crate::arb::convention::chain::AccountState;
+use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::pool_program::PoolPrograms;
 use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
 use crate::arb::global::trace::types::{StepType, Trace};
@@ -8,7 +9,7 @@ use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcC
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::{empty_ok, lazy_arc};
+use crate::{lazy_arc, unit_ok};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
@@ -21,7 +22,7 @@ pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
-        worker_pool_size: 64,
+        worker_pool_size: 8,
         channel_buffer_size: 5000,
         name: "PoolUpdateProcessor".to_string(),
     };
@@ -29,6 +30,21 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = l
     PubSubProcessor::new(config, |(update, trace): (PoolUpdate, Trace)| {
         Box::pin(async move {
             entry::process_pool_update(update, trace).await?;
+            Ok(())
+        })
+    })
+});
+
+static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
+    let config = PubSubConfig {
+        worker_pool_size: 32,
+        channel_buffer_size: 100_000,
+        name: "NewPoolProcesseor".to_string(),
+    };
+
+    PubSubProcessor::new(config, |(update, trace): (PoolUpdate, Trace)| {
+        Box::pin(async move {
+            entry::on_new_pool_received(update, trace).await?;
             Ok(())
         })
     })
@@ -47,8 +63,14 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                     current: updated,
                 };
                 trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
-                if let Err(e) = POOL_UPDATE_CONSUMER.publish((pool_update, trace)).await {
-                    error!("Failed to publish pool update: {}", e);
+                if PoolRecordRepository::is_pool_recorded(pool_update.pool()).await {
+                    if let Err(e) = POOL_UPDATE_CONSUMER.publish((pool_update, trace)).await {
+                        error!("Failed to publish pool update: {}", e);
+                    }
+                } else {
+                    if let Err(e) = NEW_POOL_CONSUMER.publish((pool_update, trace)).await {
+                        error!("Failed to publish new pool update: {}", e);
+                    }
                 }
             },
         )
@@ -98,7 +120,7 @@ impl PoolAccountMonitor {
         );
         POOL_UPDATE_DEBOUNCER.update(update.account, (update, trace));
 
-        empty_ok!()
+        unit_ok!()
     }
 }
 

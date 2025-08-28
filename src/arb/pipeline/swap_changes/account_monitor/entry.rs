@@ -6,11 +6,13 @@ use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate
 use crate::arb::pipeline::trade_strategy::entry::on_pool_update;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
+use crate::unit_ok;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
+use std::io::empty;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
@@ -57,10 +59,6 @@ pub static NonPoolBlocklist: Lazy<PersistentCache<Pubkey, BlocklistEntry>> = Laz
 pub async fn process_pool_update(update: PoolUpdate, trace: Trace) -> Result<()> {
     let pool_addr = update.pool();
     trace.step(StepType::ReceivePoolUpdate);
-    if !determine_if_pool_address(pool_addr).await {
-        return Ok(());
-    }
-    trace.step(StepType::IsAccountPoolData);
     if update.is_initial() {
         return Ok(());
     }
@@ -72,7 +70,16 @@ pub async fn process_pool_update(update: PoolUpdate, trace: Trace) -> Result<()>
     info!("Pool data changed for: {}", pool_addr);
     on_pool_update(update, trace).await;
 
-    Ok(())
+    unit_ok!()
+}
+
+pub async fn on_new_pool_received(update: PoolUpdate, trace: Trace) -> Result<()> {
+    let pool_addr = update.pool();
+    trace.step(StepType::IsAccountPoolData);
+
+    determine_if_pool_address(pool_addr).await;
+
+    unit_ok!()
 }
 
 async fn determine_if_pool_address(addr: &Pubkey) -> bool {

@@ -1,5 +1,5 @@
 use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
-use crate::empty_ok;
+use crate::unit_ok;
 use anyhow::Result;
 use tracing::{error, info};
 
@@ -10,5 +10,5 @@ pub async fn bootstrap_swap_changes_monitors() -> Result<()> {
             error!("Pool monitor failed: {}", e);
         }
     });
-    empty_ok!()
+    unit_ok!()
 }

@@ -1,10 +1,10 @@
 use crate::arb::pipeline::pool_indexer::mev_bot::subscriber::start_mev_bot_subscriber;
-use crate::empty_ok;
+use crate::unit_ok;
 use anyhow::Result;
 
 pub async fn bootstrap_indexer() -> Result<()> {
     tokio::spawn(async move {
         let _ = start_mev_bot_subscriber().await;
     });
-    empty_ok!()
+    unit_ok!()
 }

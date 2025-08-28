@@ -8,7 +8,7 @@ use crate::arb::pipeline::uploader::wallet::get_wallet;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::{empty_ok, lazy_arc};
+use crate::{lazy_arc, unit_ok};
 use futures::future::join_all;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
@@ -71,7 +71,7 @@ async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) ->
     )
     .await
     .map(|result| log(result.0, &wallet_pubkey, result.1))?;
-    empty_ok!()
+    unit_ok!()
 }
 
 pub fn log(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {

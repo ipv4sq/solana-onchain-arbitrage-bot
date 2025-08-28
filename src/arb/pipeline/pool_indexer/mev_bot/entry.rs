@@ -6,7 +6,7 @@ use crate::arb::global::state::mem_pool::mem_pool;
 use crate::arb::pipeline::pool_indexer::mev_bot::logging::log_token_balances_of;
 use crate::arb::pipeline::pool_indexer::token_recorder::ensure_mint_record_exist;
 use crate::arb::program::mev_bot::ix;
-use crate::empty_ok;
+use crate::unit_ok;
 use anyhow::Result;
 use tracing::info;
 
@@ -40,5 +40,5 @@ pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
         ensure_mint_record_exist(&lite_pool.mints.1)
     )?;
     PoolRecordRepository::ensure_exists(&lite_pool.pool_address).await;
-    empty_ok!()
+    unit_ok!()
 }

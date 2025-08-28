@@ -18,7 +18,7 @@ macro_rules! ok_map_else {
 }
 
 #[macro_export]
-macro_rules! empty_ok {
+macro_rules! unit_ok {
     () => {
         Ok(())
     };
