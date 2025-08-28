@@ -7,6 +7,7 @@ use crate::arb::pipeline::uploader::mev_bot::construct::build_and_send;
 use crate::arb::pipeline::uploader::wallet::get_wallet;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::rate_limiter::RateLimiter;
+use crate::arb::util::structs::tx_dedup::TxDeduplicator;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use futures::future::join_all;
@@ -47,7 +48,20 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     )
 });
 
+pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> = lazy_arc!({
+    TxDeduplicator::new(Duration::from_secs(60))
+});
+
 async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace) -> AResult<()> {
+    if !MevBotDeduplicator.can_send(minor_mint, pools) {
+        warn!(
+            "Duplicate transaction detected for mint {} with pools {:?}, skipping (backoff period active)",
+            minor_mint,
+            pools
+        );
+        return Ok(());
+    }
+    
     if !MevBotRateLimiter.try_acquire() {
         warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());

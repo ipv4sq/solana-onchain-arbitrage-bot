@@ -9,3 +9,4 @@ mod persistent_cache_custom_example;
 mod persistent_cache_example;
 pub mod rate_limiter;
 pub mod ttl_loading_cache;
+pub mod tx_dedup;
