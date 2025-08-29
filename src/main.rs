@@ -13,9 +13,7 @@ pub mod util;
 
 use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
 use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
-use arb::pipeline::pool_indexer;
-use arb::{global, pipeline, program};
-use clap::{Arg, Command};
+use arb::global;
 use tracing::info;
 
 #[tokio::main]

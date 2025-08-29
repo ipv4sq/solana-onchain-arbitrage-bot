@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use solana_sdk::pubkey::Pubkey;
-use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio_stream::StreamExt;

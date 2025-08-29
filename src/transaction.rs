@@ -7,7 +7,6 @@ use crate::util::random_select;
 use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
-use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
 use solana_sdk::message::v0::Message;
@@ -30,7 +29,6 @@ use crate::dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
 };
 use crate::dex::whirlpool::constants::whirlpool_program_id;
-use clap::Error;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;

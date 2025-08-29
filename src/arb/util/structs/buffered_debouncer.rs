@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinHandle;
-use tokio::time::{sleep, Instant};
+use tokio::time::sleep;
 
 type Callback<V> = Arc<dyn Fn(V) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
 
@@ -107,6 +107,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::Arc;
+    use std::time::Instant;
     use tokio::sync::Mutex;
     use tokio::time::sleep;
 

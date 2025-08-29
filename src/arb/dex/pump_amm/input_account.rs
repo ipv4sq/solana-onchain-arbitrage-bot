@@ -16,7 +16,6 @@ use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::f;
-use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 

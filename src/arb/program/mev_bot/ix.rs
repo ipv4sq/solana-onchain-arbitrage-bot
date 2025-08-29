@@ -1,10 +1,8 @@
 use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mev_bot::MevBot;
-use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::program::mev_bot::ix_input::{SolanaMevBotIxInput, SolanaMevBotIxInputData};
-use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address_with_program_id;

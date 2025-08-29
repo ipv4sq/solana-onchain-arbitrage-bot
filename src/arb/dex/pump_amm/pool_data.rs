@@ -1,4 +1,4 @@
-use crate::arb::dex::interface::{PoolConfig, PoolDataLoader};
+use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};

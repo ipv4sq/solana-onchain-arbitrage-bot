@@ -3,18 +3,10 @@ use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::dex::meteora::constants::{damm_program_id, damm_v2_program_id};
 use crate::dex::meteora::pool_damm_v2_info::MeteoraDAmmV2Info;
-use crate::dex::meteora::{constants::dlmm_program_id, pool_dlmm_info::MeteoraDlmmInfo};
 use crate::dex::pool_fetch::fetch_pool;
-use crate::dex::raydium::{
-    _get_tick_array_pubkeys, raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
-    RaydiumAmmInfo, RaydiumClmmPoolInfo, RaydiumCpAmmInfo,
-};
 use crate::dex::solfi::constants::solfi_program_id;
 use crate::dex::solfi::pool_info::SolfiInfo;
 use crate::dex::vertigo::{derive_vault_address, vertigo_program_id, VertigoInfo};
-use crate::dex::whirlpool::{
-    constants::whirlpool_program_id, get_tick_arrays, pool_clmm::WhirlpoolInfo,
-};
 use crate::pools::*;
 use futures::StreamExt;
 use solana_client::rpc_client::RpcClient;

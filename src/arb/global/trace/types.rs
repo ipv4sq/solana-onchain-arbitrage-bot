@@ -8,7 +8,6 @@ use solana_program::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use strum_macros::{AsRefStr, Display};
 
 static TRACE_COUNTER: AtomicU64 = AtomicU64::new(0);
 

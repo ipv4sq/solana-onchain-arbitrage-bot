@@ -1,6 +1,5 @@
 use crate::arb::dex::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
-use crate::arb::util::traits::pubkey::ToPubkey;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 
