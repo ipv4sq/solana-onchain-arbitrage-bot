@@ -1,6 +1,6 @@
 use crate::arb::convention::chain::util::alt::get_alt_by_key;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
-use crate::arb::convention::pool::register::AnyPoolConfig;
+use crate::arb::dex::register::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::blockhash::get_blockhash;

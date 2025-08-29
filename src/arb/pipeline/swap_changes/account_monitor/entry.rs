@@ -1,5 +1,5 @@
-use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::dex::register::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::rpc::rpc_client;

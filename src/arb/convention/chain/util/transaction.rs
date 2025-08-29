@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::convention::chain::types::SwapInstruction;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::convention::pool::register::AnyPoolConfig;
+use crate::arb::dex::register::AnyPoolConfig;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 

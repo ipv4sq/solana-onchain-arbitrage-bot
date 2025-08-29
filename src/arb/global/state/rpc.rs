@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::convention::chain::transaction::Transaction;
 use crate::arb::convention::chain::util::simulation::SimulationResult;
-use crate::arb::convention::pool::util::ata;
+use crate::arb::dex::util::ata;
 use crate::arb::global::constant::token_program::TokenProgram;
 use crate::arb::util::traits::signature::ToSignature;
 use anyhow::Result;

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::convention::pool::register::AnyPoolConfig;
+    use crate::arb::dex::register::AnyPoolConfig;
 
     use crate::arb::global::enums::dex_type::DexType;
     use crate::arb::global::state::rpc::{ensure_mint_account_exists, fetch_tx};

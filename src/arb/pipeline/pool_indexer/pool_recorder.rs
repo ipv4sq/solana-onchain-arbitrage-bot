@@ -1,6 +1,6 @@
-use crate::arb::convention::pool::interface::PoolDataLoader;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
+use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::orm::ToOrm;

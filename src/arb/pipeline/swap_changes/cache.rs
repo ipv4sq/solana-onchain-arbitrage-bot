@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
-use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::entity::PoolRecord;
+use crate::arb::dex::register::AnyPoolConfig;
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::structs::loading_cache::LoadingCache;

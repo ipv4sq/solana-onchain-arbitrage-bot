@@ -1,0 +1,37 @@
+use crate::arb::dex::interface::{PoolConfig, PoolConfigInit, PoolDataLoader};
+use crate::arb::dex::whirlpool::data::WhirlpoolPoolData;
+use anyhow::Result;
+use solana_program::pubkey::Pubkey;
+
+type WhirlpoolPoolConfig = PoolConfig<WhirlpoolPoolData>;
+pub struct WhirlpoolSwapAccounts {}
+impl PoolConfigInit<WhirlpoolPoolData> for WhirlpoolPoolConfig {
+    fn from_pool_data(
+        pool: &Pubkey,
+        account_data: WhirlpoolPoolData,
+        desired_mint: Pubkey,
+    ) -> Result<Self> {
+        account_data.shall_contain(&desired_mint)?;
+
+        Ok(WhirlpoolPoolConfig {
+            pool: *pool,
+            data: account_data,
+            desired_mint,
+            minor_mint: account_data.pair().minor_mint()?,
+            // readonly_accounts: vec![
+            //     // TODO memo program
+            //     desired_mint,
+            //     *WHIRLPOOL_PROGRAM,
+            // ],
+            // partial_writeable_accounts: concat(vec![
+            //     vec![
+            //         *pool,
+            //         WhirlpoolAccountData::get_oracle(pool),
+            //         account_data.token_vault_a,
+            //         account_data.token_vault_b,
+            //     ],
+            //     account_data.get_tick_arrays(pool),
+            // ]),
+        })
+    }
+}

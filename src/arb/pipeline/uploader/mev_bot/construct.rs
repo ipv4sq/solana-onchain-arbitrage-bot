@@ -1,15 +1,15 @@
 use crate::arb::convention::chain::util::simulation::SimulationResult;
-use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
-use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
-use crate::arb::convention::pool::register::AnyPoolConfig;
-use crate::arb::convention::pool::util::{ata, ata_sol_token};
 use crate::arb::database::mev_simulation_log::model::{
     MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount,
 };
 use crate::arb::database::mev_simulation_log::repository::MevSimulationLogRepository;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
+use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader};
+use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
+use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
+use crate::arb::dex::register::AnyPoolConfig;
+use crate::arb::dex::util::{ata, ata_sol_token};
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;

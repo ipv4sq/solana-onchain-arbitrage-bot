@@ -1,10 +1,10 @@
 #![allow(non_upper_case_globals)]
 
-use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
+use crate::arb::dex::register::AnyPoolConfig;
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
