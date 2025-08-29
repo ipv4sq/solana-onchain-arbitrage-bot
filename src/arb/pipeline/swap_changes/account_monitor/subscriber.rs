@@ -91,8 +91,11 @@ impl PoolAccountMonitor {
     pub async fn start(self) -> Result<()> {
         info!("Starting pool account subscription for Meteora DLMM and DAMM V2 programs");
 
-        let filter = AccountFilter::new("meteora_pools")
-            .with_owners(&[PoolProgram::METEORA_DLMM, PoolProgram::METEORA_DAMM_V2]);
+        let filter = AccountFilter::new("meteora_pools").with_owners(&[
+            PoolProgram::METEORA_DLMM,
+            PoolProgram::METEORA_DAMM_V2,
+            PoolProgram::PUMP_AMM,
+        ]);
 
         self.client
             .subscribe_accounts(

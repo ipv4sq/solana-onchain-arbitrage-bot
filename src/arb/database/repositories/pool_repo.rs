@@ -81,7 +81,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
 });
 
 static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
-    LoadingCache::new(1_000_000, |addr: &PoolAddress| {
+    LoadingCache::new(100_000_000, |addr: &PoolAddress| {
         let addr = *addr;
         async move {
             Some(

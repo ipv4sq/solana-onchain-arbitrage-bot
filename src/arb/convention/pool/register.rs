@@ -24,6 +24,7 @@ lazy_static! {
         let mut set = HashSet::new();
         set.insert(PoolProgram::METEORA_DLMM);
         set.insert(PoolProgram::METEORA_DAMM_V2);
+        set.insert(PoolProgram::PUMP_AMM);
         set
     };
 }
