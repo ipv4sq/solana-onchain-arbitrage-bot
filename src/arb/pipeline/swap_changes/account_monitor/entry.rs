@@ -77,12 +77,12 @@ pub async fn on_new_pool_received(update: PoolUpdate, trace: Trace) -> Result<()
     let pool_addr = update.pool();
     trace.step(StepType::IsAccountPoolData);
 
-    determine_if_pool_address(pool_addr).await;
+    record_if_real_pool(pool_addr).await;
 
     unit_ok!()
 }
 
-async fn determine_if_pool_address(addr: &Pubkey) -> bool {
+async fn record_if_real_pool(addr: &Pubkey) -> bool {
     if let Some(entry) = NonPoolBlocklist.get(addr).await {
         debug!("Address {} is blocklisted: {:?}", addr, entry.reason);
         return false;
@@ -90,10 +90,10 @@ async fn determine_if_pool_address(addr: &Pubkey) -> bool {
 
     let data_len = if let Ok(account) = rpc_client().get_account(addr).await {
         let data_len = account.data.len();
-        if data_len < 500 || data_len > 2000 {
+        if data_len < 200 || data_len > 2000 {
             let entry = BlocklistEntry::new(BlocklistReason::InvalidDataSize { size: data_len })
                 .with_data_size(data_len);
-            warn!("Account {} data size {} is outside pool range (500-2000 bytes), adding to blocklist", addr, data_len);
+            warn!("Account {} data size {} is outside pool range (200-2000 bytes), adding to blocklist", addr, data_len);
             NonPoolBlocklist.put(*addr, entry).await;
             return false;
         }

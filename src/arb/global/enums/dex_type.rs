@@ -52,6 +52,7 @@ impl DexType {
             x if x == PoolProgram::WHIRLPOOL.to_string() => DexType::OrcaWhirlpool,
             x if x == PoolProgram::SOLFI.to_string() => DexType::Solfi,
             x if x == PoolProgram::VERTIGO.to_string() => DexType::Vertigo,
+            x if x == PoolProgram::PUMP_AMM.to_string() => DexType::PumpAmm,
             _ => DexType::Unknown,
         }
     }
@@ -69,6 +70,7 @@ impl DexType {
             "OrcaWhirlpool" => DexType::OrcaWhirlpool,
             "Solfi" => DexType::Solfi,
             "Vertigo" => DexType::Vertigo,
+            "PumpAmm" => DexType::PumpAmm,
             _ => DexType::Unknown,
         }
     }

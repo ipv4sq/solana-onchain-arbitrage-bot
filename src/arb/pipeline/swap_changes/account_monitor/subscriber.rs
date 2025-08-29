@@ -35,7 +35,7 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = l
     })
 });
 
-static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
+pub static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 32,
         channel_buffer_size: 100_000,

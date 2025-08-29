@@ -467,6 +467,7 @@ impl GrpcAccountUpdate {
     }
 }
 
+#[derive(Clone)]
 pub struct GrpcTransactionUpdate {
     pub signature: String,
     pub slot: u64,
