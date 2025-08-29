@@ -23,7 +23,7 @@ pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 pub static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(Trigger, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
-        worker_pool_size: 8,
+        worker_pool_size: 24,
         channel_buffer_size: 5000,
         name: "PoolUpdateProcessor".to_string(),
     };
@@ -65,7 +65,10 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                 };
                 trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
                 if PoolRecordRepository::is_pool_recorded(pool_update.pool()).await {
-                    if let Err(e) = POOL_UPDATE_CONSUMER.publish((Trigger::PoolUpdate(pool_update), trace)).await {
+                    if let Err(e) = POOL_UPDATE_CONSUMER
+                        .publish((Trigger::PoolUpdate(pool_update), trace))
+                        .await
+                    {
                         error!("Failed to publish pool update: {}", e);
                     }
                 } else {
