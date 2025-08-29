@@ -20,7 +20,7 @@ use tracing::{debug, error, info};
 #[allow(non_upper_case_globals)]
 pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
-static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
+pub static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 8,
         channel_buffer_size: 5000,
@@ -35,16 +35,16 @@ static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = l
     })
 });
 
-pub static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
+pub static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(Pubkey, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 32,
         channel_buffer_size: 100_000,
         name: "NewPoolProcesseor".to_string(),
     };
 
-    PubSubProcessor::new(config, |(update, trace): (PoolUpdate, Trace)| {
+    PubSubProcessor::new(config, |(pool_address, trace): (Pubkey, Trace)| {
         Box::pin(async move {
-            entry::on_new_pool_received(update, trace).await?;
+            entry::on_new_pool_received(pool_address, trace).await?;
             Ok(())
         })
     })
@@ -68,7 +68,10 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                         error!("Failed to publish pool update: {}", e);
                     }
                 } else {
-                    if let Err(e) = NEW_POOL_CONSUMER.publish((pool_update, trace)).await {
+                    if let Err(e) = NEW_POOL_CONSUMER
+                        .publish((*pool_update.pool(), trace))
+                        .await
+                    {
                         error!("Failed to publish new pool update: {}", e);
                     }
                 }

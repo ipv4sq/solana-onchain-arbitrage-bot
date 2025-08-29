@@ -4,7 +4,9 @@ use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::trace::types::{StepType, Trace};
-use crate::arb::pipeline::swap_changes::account_monitor::subscriber::NEW_POOL_CONSUMER;
+use crate::arb::pipeline::swap_changes::account_monitor::subscriber::{
+    NEW_POOL_CONSUMER, POOL_UPDATE_CONSUMER,
+};
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::traits::pubkey::ToPubkey;
@@ -190,9 +192,11 @@ async fn process_involved_account_transaction(
         );
         if !PoolRecordRepository::is_pool_recorded(&pool_account).await {
             // this could be a new pool, we did not know, then we try to record it
-            NEW_POOL_CONSUMER.publish()
+            NEW_POOL_CONSUMER.publish((pool_account, trace)).await?;
+        } else {
+            // this is something we know, so trigger arbitrage opportunity.
+            POOL_UPDATE_CONSUMER.publish();
         }
-        // this is something we know, so trigger arbitrage opportunity.
     }
 
     unit_ok!()

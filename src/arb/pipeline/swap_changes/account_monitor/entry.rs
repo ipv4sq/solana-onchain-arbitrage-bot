@@ -73,11 +73,10 @@ pub async fn process_pool_update(update: PoolUpdate, trace: Trace) -> Result<()>
     unit_ok!()
 }
 
-pub async fn on_new_pool_received(update: PoolUpdate, trace: Trace) -> Result<()> {
-    let pool_addr = update.pool();
+pub async fn on_new_pool_received(pool_address: Pubkey, trace: Trace) -> Result<()> {
     trace.step(StepType::IsAccountPoolData);
 
-    record_if_real_pool(pool_addr).await;
+    record_if_real_pool(&pool_address).await;
 
     unit_ok!()
 }

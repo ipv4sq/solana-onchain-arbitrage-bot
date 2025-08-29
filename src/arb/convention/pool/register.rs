@@ -8,7 +8,10 @@ use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolD
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
+use crate::arb::convention::pool::pump_amm::input_data::PumpAmmIxData;
 use crate::arb::convention::pool::pump_amm::pool_config::PumpAmmPoolConfig;
+use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
@@ -86,6 +89,10 @@ impl AnyPoolConfig {
                 let config = MeteoraDammV2Config::from_address(&pool).await?;
                 Ok(MeteoraDammV2(config))
             }
+            DexType::PumpAmm => {
+                let c = PumpAmmPoolConfig::from_address(&pool).await?;
+                Ok(PumpAmm(c))
+            }
             _ => Ok(AnyPoolConfig::Unsupported),
         }
     }
@@ -106,8 +113,6 @@ impl AnyPoolConfig {
                     pool_address: accounts.lb_pair.pubkey,
                     accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
-                    amount_in: ix_data.amount_in,
-                    amount_out: ix_data.min_amount_out,
                 })
             }
             x if x == PoolProgram::METEORA_DAMM_V2.to_string().as_str() => {
@@ -123,8 +128,18 @@ impl AnyPoolConfig {
                     pool_address: accounts.pool.pubkey,
                     accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
-                    amount_in: ix_data.amount_in,
-                    amount_out: ix_data.minimum_amount_out,
+                })
+            }
+            x if x == PoolProgram::PUMP_AMM.to_string().as_str() => {
+                let accounts = PumpAmmInputAccounts::restore_from(ix, tx)?;
+
+                let data_hex = hex::encode(&ix.data);
+                let ix_data = PumpAmmIxData::load_ix_data(&data_hex);
+                Ok(SwapInstruction {
+                    dex_type: DexType::MeteoraDammV2,
+                    pool_address: accounts.pool.pubkey,
+                    accounts: accounts.to_list().into_iter().cloned().collect(),
+                    mints: MintPair(accounts.base_mint.pubkey, accounts.quote_mint.pubkey),
                 })
             }
             _ => Err(anyhow::anyhow!("Unsupported program: {}", program_id_str)),
