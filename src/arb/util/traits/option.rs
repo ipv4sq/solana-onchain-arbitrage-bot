@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 
 pub trait OptionExt<T> {
     fn or_err<S: Into<String>>(self, msg: S) -> Result<T>;
-    
+
     fn or_err_with<F, S>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> S,
@@ -13,7 +13,7 @@ impl<T> OptionExt<T> for Option<T> {
     fn or_err<S: Into<String>>(self, msg: S) -> Result<T> {
         self.ok_or_else(|| anyhow!(msg.into()))
     }
-    
+
     fn or_err_with<F, S>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> S,

@@ -103,7 +103,6 @@ impl AnyPoolConfig {
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDlmm,
                     pool_address: accounts.lb_pair.pubkey,
-                    mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
                 })
             }
             x if x == PoolProgram::METEORA_DAMM_V2.to_string().as_str() => {
@@ -117,7 +116,6 @@ impl AnyPoolConfig {
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
-                    mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
                 })
             }
             x if x == PoolProgram::PUMP_AMM.to_string().as_str() => {
@@ -128,7 +126,6 @@ impl AnyPoolConfig {
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
-                    mints: MintPair(accounts.base_mint.pubkey, accounts.quote_mint.pubkey),
                 })
             }
             _ => Err(anyhow::anyhow!("Unsupported program: {}", program_id_str)),

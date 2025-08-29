@@ -7,12 +7,4 @@ use solana_program::pubkey::Pubkey;
 pub struct SwapInstruction {
     pub dex_type: DexType,
     pub pool_address: Pubkey,
-    pub mints: MintPair,
-}
-
-#[derive(Debug, Clone)]
-pub struct LitePool {
-    pub dex_type: DexType,
-    pub pool_address: Pubkey,
-    pub mints: MintPair,
 }

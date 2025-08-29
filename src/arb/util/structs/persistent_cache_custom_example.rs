@@ -10,7 +10,7 @@ pub async fn example_custom_backing_store() {
     let backing_store: Arc<RwLock<HashMap<String, String>>> = Arc::new(RwLock::new(HashMap::new()));
     let backing_store_read = backing_store.clone();
     let backing_store_write = backing_store.clone();
-    
+
     // Create cache with custom save/read functions
     let cache: PersistentCache<String, String> = PersistentCache::new_with_custom_db(
         100,
@@ -32,7 +32,7 @@ pub async fn example_custom_backing_store() {
                 println!("Saved to custom backing store");
             }
         },
-        // Custom read_from_db - reads from our HashMap  
+        // Custom read_from_db - reads from our HashMap
         move |key: &String| {
             let store = backing_store_read.clone();
             let key = key.clone();
@@ -46,17 +46,19 @@ pub async fn example_custom_backing_store() {
             }
         },
     );
-    
+
     // First access - will call loader and save to backing store
     let value1 = cache.get(&"key1".to_string()).await;
     println!("First access: {:?}", value1);
-    
+
     // Second access - will retrieve from in-memory cache
     let value2 = cache.get(&"key1".to_string()).await;
     println!("Second access (from memory): {:?}", value2);
-    
+
     // Manually put a value
-    cache.put("key2".to_string(), "Manual value".to_string()).await;
+    cache
+        .put("key2".to_string(), "Manual value".to_string())
+        .await;
 }
 
 // Example: Cache with no persistence (memory only)
@@ -67,16 +69,14 @@ pub async fn example_memory_only_cache() {
         // Loader function
         |key: &u32| {
             let key = *key;
-            async move {
-                Some(format!("Generated value for {}", key))
-            }
+            async move { Some(format!("Generated value for {}", key)) }
         },
         // No-op save function - memory only
         |_key: u32, _value: String, _ttl: Duration| async move {},
         // No-op read function - memory only (always returns None)
         |_key: &u32| async move { None },
     );
-    
+
     let value = cache.get(&42).await;
     println!("Memory-only cache value: {:?}", value);
 }

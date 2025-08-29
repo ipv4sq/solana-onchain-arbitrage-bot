@@ -114,9 +114,7 @@ where
         F: FnMut(&K, &V) -> bool,
     {
         let mut f = f;
-        self.inner
-            .write()
-            .retain(|k, v| f(k, v.as_ref()));
+        self.inner.write().retain(|k, v| f(k, v.as_ref()));
     }
 }
 
@@ -183,9 +181,8 @@ mod tests {
     fn test_get_or_insert_with_result() {
         static CACHE: LazyCache<String, String> = LazyCache::new();
 
-        let result = CACHE.get_or_insert_with_result("key".to_string(), || {
-            Ok::<_, &str>("success".to_string())
-        });
+        let result = CACHE
+            .get_or_insert_with_result("key".to_string(), || Ok::<_, &str>("success".to_string()));
         assert_eq!(result, Ok("success".to_string()));
 
         let result = CACHE.get_or_insert_with_result("key".to_string(), || {

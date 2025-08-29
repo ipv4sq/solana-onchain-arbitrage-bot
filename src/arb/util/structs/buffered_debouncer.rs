@@ -52,14 +52,14 @@ where
         if let Some(mut entry) = self.buffers.get_mut(&key) {
             entry.timer_handle.abort();
             entry.value = value;
-            
+
             let timer_handle = tokio::spawn(async move {
                 sleep(delay).await;
                 if let Some((_, entry)) = buffers.remove(&key_clone) {
                     (callback)(entry.value).await;
                 }
             });
-            
+
             entry.timer_handle = timer_handle;
         } else {
             let timer_handle = tokio::spawn(async move {
@@ -148,17 +148,14 @@ mod tests {
         let events = Arc::new(Mutex::new(Vec::new()));
         let events_clone = events.clone();
 
-        let debouncer = BufferedDebouncer::new(
-            Duration::from_millis(30),
-            move |value: String| {
-                let events = events_clone.clone();
-                async move {
-                    let mut events = events.lock().await;
-                    println!("Fired: {}", value);
-                    events.push(value);
-                }
-            },
-        );
+        let debouncer = BufferedDebouncer::new(Duration::from_millis(30), move |value: String| {
+            let events = events_clone.clone();
+            async move {
+                let mut events = events.lock().await;
+                println!("Fired: {}", value);
+                events.push(value);
+            }
+        });
 
         println!("T+0ms: Emit 'first'");
         debouncer.update("key1", "first".to_string());
@@ -196,15 +193,19 @@ mod tests {
 
         debouncer.update("key1", 1);
         sleep(Duration::from_millis(10)).await;
-        
+
         debouncer.update("key2", 2);
         sleep(Duration::from_millis(10)).await;
-        
+
         debouncer.update("key3", 3);
 
         sleep(Duration::from_millis(40)).await;
 
-        assert_eq!(counter.load(Ordering::SeqCst), 3, "All three keys should fire");
+        assert_eq!(
+            counter.load(Ordering::SeqCst),
+            3,
+            "All three keys should fire"
+        );
     }
 
     #[tokio::test]
@@ -212,15 +213,12 @@ mod tests {
         let fired = Arc::new(AtomicU32::new(0));
         let fired_clone = fired.clone();
 
-        let debouncer = BufferedDebouncer::new(
-            Duration::from_millis(30),
-            move |_: i32| {
-                let fired = fired_clone.clone();
-                async move {
-                    fired.fetch_add(1, Ordering::SeqCst);
-                }
-            },
-        );
+        let debouncer = BufferedDebouncer::new(Duration::from_millis(30), move |_: i32| {
+            let fired = fired_clone.clone();
+            async move {
+                fired.fetch_add(1, Ordering::SeqCst);
+            }
+        });
 
         debouncer.update(1, 100);
         sleep(Duration::from_millis(10)).await;
@@ -229,7 +227,11 @@ mod tests {
         assert_eq!(cancelled_value, Some(100));
 
         sleep(Duration::from_millis(30)).await;
-        assert_eq!(fired.load(Ordering::SeqCst), 0, "Should not fire after cancel");
+        assert_eq!(
+            fired.load(Ordering::SeqCst),
+            0,
+            "Should not fire after cancel"
+        );
     }
 
     #[tokio::test]
@@ -271,15 +273,12 @@ mod tests {
         let last_value = Arc::new(Mutex::new(0));
         let last_value_clone = last_value.clone();
 
-        let debouncer = BufferedDebouncer::new(
-            Duration::from_millis(30),
-            move |value: i32| {
-                let last_value = last_value_clone.clone();
-                async move {
-                    *last_value.lock().await = value;
-                }
-            },
-        );
+        let debouncer = BufferedDebouncer::new(Duration::from_millis(30), move |value: i32| {
+            let last_value = last_value_clone.clone();
+            async move {
+                *last_value.lock().await = value;
+            }
+        });
 
         for i in 0..10 {
             debouncer.update(1, i);
@@ -288,7 +287,11 @@ mod tests {
 
         sleep(Duration::from_millis(35)).await;
 
-        assert_eq!(*last_value.lock().await, 9, "Should only fire the last update");
+        assert_eq!(
+            *last_value.lock().await,
+            9,
+            "Should only fire the last update"
+        );
     }
 
     #[tokio::test]
@@ -313,10 +316,10 @@ mod tests {
 
         debouncer.update(pubkey, (pubkey, 100));
         sleep(Duration::from_millis(5)).await;
-        
+
         debouncer.update(pubkey, (pubkey, 101));
         sleep(Duration::from_millis(5)).await;
-        
+
         debouncer.update(pubkey, (pubkey, 102));
 
         sleep(Duration::from_millis(35)).await;
@@ -331,40 +334,37 @@ mod tests {
         let events = Arc::new(Mutex::new(Vec::new()));
         let events_clone = events.clone();
 
-        let debouncer = BufferedDebouncer::new(
-            Duration::from_millis(30),
-            move |msg: String| {
-                let events = events_clone.clone();
-                async move {
-                    let instant = Instant::now();
-                    println!("    -> FIRED: '{}' at {:?}", msg, instant);
-                    events.lock().await.push(msg);
-                }
-            },
-        );
+        let debouncer = BufferedDebouncer::new(Duration::from_millis(30), move |msg: String| {
+            let events = events_clone.clone();
+            async move {
+                let instant = Instant::now();
+                println!("    -> FIRED: '{}' at {:?}", msg, instant);
+                events.lock().await.push(msg);
+            }
+        });
 
         println!("\n=== Buffered Debouncer Timeline (30ms delay) ===");
-        
+
         println!("T+0ms: Emit 'update1'");
         debouncer.update("key", "update1".to_string());
-        
+
         sleep(Duration::from_millis(10)).await;
         println!("T+10ms: Update to 'update2'");
         debouncer.update("key", "update2".to_string());
-        
+
         sleep(Duration::from_millis(10)).await;
         println!("T+20ms: Update to 'update3'");
         debouncer.update("key", "update3".to_string());
-        
+
         println!("T+20ms: Timer restarted, will fire at T+50ms");
-        
+
         sleep(Duration::from_millis(35)).await;
         println!("T+55ms: Check results");
-        
+
         let fired = events.lock().await;
         assert_eq!(fired.len(), 1, "Should fire exactly once");
         assert_eq!(fired[0], "update3", "Should fire latest value");
-        
+
         println!("=== Timeline Complete ===\n");
     }
 }

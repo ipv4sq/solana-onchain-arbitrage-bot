@@ -47,7 +47,7 @@ impl TryGetable for PubkeyType {
         array.copy_from_slice(&bytes);
         Ok(PubkeyType(Pubkey::from(array)))
     }
-    
+
     fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
         let bytes: Vec<u8> = Vec::<u8>::try_get_by(res, index)?;
         if bytes.len() != 32 {

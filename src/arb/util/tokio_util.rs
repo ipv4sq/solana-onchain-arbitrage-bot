@@ -1,13 +1,13 @@
 use std::future::Future;
 
 /// Blocks on an async operation from within a sync context.
-/// 
+///
 /// This function allows calling async code from synchronous contexts
 /// when you're already inside a tokio runtime.
-/// 
+///
 /// # Panics
 /// Panics if not called from within a tokio runtime.
-/// 
+///
 /// # Example
 /// ```
 /// let result = block_on(async {
@@ -22,13 +22,13 @@ where
 }
 
 /// Macro for calling async code from sync contexts.
-/// 
+///
 /// This macro provides a convenient syntax for blocking on async operations
 /// when you're already inside a tokio runtime.
-/// 
+///
 /// # Panics
 /// Panics if not called from within a tokio runtime.
-/// 
+///
 /// # Example
 /// ```
 /// let result = block_on_async!(some_async_function());

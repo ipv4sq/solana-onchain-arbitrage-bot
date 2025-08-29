@@ -15,8 +15,8 @@ pub fn log_account_metas(accounts: &[AccountMeta], context: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_program::pubkey::Pubkey;
     use rand::Rng;
+    use solana_program::pubkey::Pubkey;
 
     fn new_unique_pubkey() -> Pubkey {
         let mut rng = rand::thread_rng();
@@ -31,9 +31,9 @@ mod tests {
             AccountMeta::new_readonly(new_unique_pubkey(), false),
             AccountMeta::new(new_unique_pubkey(), false),
         ];
-        
+
         log_account_metas(&accounts, "test context");
-        
+
         assert_eq!(accounts[0].is_signer, true);
         assert_eq!(accounts[0].is_writable, true);
         assert_eq!(accounts[1].is_signer, false);

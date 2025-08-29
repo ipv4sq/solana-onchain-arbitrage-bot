@@ -16,9 +16,7 @@ impl PoolUpdate {
         self.previous
             .as_ref()
             .map(|prev| self.current.calculate_lamport_change(prev))
-            .unwrap_or_else(|| {
-                self.current.lamports.try_into().unwrap_or(i64::MAX)
-            })
+            .unwrap_or_else(|| self.current.lamports.try_into().unwrap_or(i64::MAX))
     }
 
     pub fn data_changed(&self) -> bool {

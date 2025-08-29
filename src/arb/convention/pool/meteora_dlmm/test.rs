@@ -262,7 +262,11 @@ mod tests {
 
         let product = quote_xy * quote_yx;
         let diff = (product - Decimal::ONE).abs();
-        assert!(diff < Decimal::new(1, 9), "reciprocal check failed: {}", product);
+        assert!(
+            diff < Decimal::new(1, 9),
+            "reciprocal check failed: {}",
+            product
+        );
     }
 
     const POOL_ADDRESS: &str = "8ztFxjFPfVUtEf4SLSapcFj8GW2dxyUA9no2bLPq7H7V";

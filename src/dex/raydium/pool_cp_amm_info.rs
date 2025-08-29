@@ -28,13 +28,21 @@ impl RaydiumCpAmmInfo {
             return Err(anyhow::anyhow!("Invalid data length for RaydiumCpAmmInfo"));
         }
 
-        let token_0_vault = Pubkey::new_from_array(data[TOKEN_0_VAULT_OFFSET..TOKEN_0_VAULT_OFFSET + 32].try_into()?);
-        let token_1_vault = Pubkey::new_from_array(data[TOKEN_1_VAULT_OFFSET..TOKEN_1_VAULT_OFFSET + 32].try_into()?);
-        let token_0_mint = Pubkey::new_from_array(data[TOKEN_0_MINT_OFFSET..TOKEN_0_MINT_OFFSET + 32].try_into()?);
-        let token_1_mint = Pubkey::new_from_array(data[TOKEN_1_MINT_OFFSET..TOKEN_1_MINT_OFFSET + 32].try_into()?);
-        let amm_config = Pubkey::new_from_array(data[AMM_CONFIG_OFFSET..AMM_CONFIG_OFFSET + 32].try_into()?);
-        let observation_key =
-            Pubkey::new_from_array(data[OBSERVATION_KEY_OFFSET..OBSERVATION_KEY_OFFSET + 32].try_into()?);
+        let token_0_vault = Pubkey::new_from_array(
+            data[TOKEN_0_VAULT_OFFSET..TOKEN_0_VAULT_OFFSET + 32].try_into()?,
+        );
+        let token_1_vault = Pubkey::new_from_array(
+            data[TOKEN_1_VAULT_OFFSET..TOKEN_1_VAULT_OFFSET + 32].try_into()?,
+        );
+        let token_0_mint =
+            Pubkey::new_from_array(data[TOKEN_0_MINT_OFFSET..TOKEN_0_MINT_OFFSET + 32].try_into()?);
+        let token_1_mint =
+            Pubkey::new_from_array(data[TOKEN_1_MINT_OFFSET..TOKEN_1_MINT_OFFSET + 32].try_into()?);
+        let amm_config =
+            Pubkey::new_from_array(data[AMM_CONFIG_OFFSET..AMM_CONFIG_OFFSET + 32].try_into()?);
+        let observation_key = Pubkey::new_from_array(
+            data[OBSERVATION_KEY_OFFSET..OBSERVATION_KEY_OFFSET + 32].try_into()?,
+        );
 
         Ok(Self {
             token_0_mint,

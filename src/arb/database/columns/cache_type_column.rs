@@ -27,7 +27,9 @@ impl From<CacheTypeColumn> for Value {
 impl TryGetable for CacheTypeColumn {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let column = format!("{}{}", pre, col);
-        let value = res.try_get::<String>("", &column).map_err(TryGetError::DbErr)?;
+        let value = res
+            .try_get::<String>("", &column)
+            .map_err(TryGetError::DbErr)?;
         let cache_type = match value.as_str() {
             "mint_record" => CacheType::MintRecord,
             // Support legacy values for backward compatibility
@@ -36,9 +38,11 @@ impl TryGetable for CacheTypeColumn {
         };
         Ok(CacheTypeColumn(cache_type))
     }
-    
+
     fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
-        let value = res.try_get_by::<String, I>(index).map_err(TryGetError::DbErr)?;
+        let value = res
+            .try_get_by::<String, I>(index)
+            .map_err(TryGetError::DbErr)?;
         let cache_type = match value.as_str() {
             "mint_record" => CacheType::MintRecord,
             // Support legacy values for backward compatibility

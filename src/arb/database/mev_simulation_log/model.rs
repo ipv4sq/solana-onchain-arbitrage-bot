@@ -53,7 +53,6 @@ pub struct ReturnData {
     pub data: Vec<u8>,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MevSimulationLogParams {
     pub minor_mint: Pubkey,

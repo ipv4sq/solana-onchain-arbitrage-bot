@@ -21,26 +21,29 @@ mod tests {
                 }
             },
         );
-        
+
         let custom_cache: PersistentCache<String, f64> = PersistentCache::new(
             CacheType::Custom("price_data".to_string()),
             50,
             Duration::from_secs(60),
-            |pair: &String| async move {
-                Some(150.25)
-            },
+            |pair: &String| async move { Some(150.25) },
         );
-        
-        let mint_info = mint_cache.get(&"So11111111111111111111111111111111111111112".to_string()).await;
+
+        let mint_info = mint_cache
+            .get(&"So11111111111111111111111111111111111111112".to_string())
+            .await;
         assert!(mint_info.is_some());
-        
+
         let price = custom_cache.get(&"SOL/USDC".to_string()).await;
         assert_eq!(price, Some(150.25));
     }
-    
+
     #[test]
     fn test_cache_type_display() {
         assert_eq!(CacheType::MintRecord.as_str(), "mint_record");
-        assert_eq!(CacheType::Custom("my_custom".to_string()).as_str(), "my_custom");
+        assert_eq!(
+            CacheType::Custom("my_custom".to_string()).as_str(),
+            "my_custom"
+        );
     }
 }

@@ -62,7 +62,8 @@ impl SolanaGrpcClient {
         Fut: std::future::Future<Output = Result<()>> + Send,
     {
         if auto_retry {
-            self.subscribe_accounts_with_retry_internal(filter, callback).await
+            self.subscribe_accounts_with_retry_internal(filter, callback)
+                .await
         } else {
             self.connect_if_needed().await?;
             self.subscribe_accounts_once(filter, callback).await
@@ -215,7 +216,11 @@ impl SolanaGrpcClient {
         }
     }
 
-    async fn subscribe_accounts_once<F, Fut>(&mut self, filter: AccountFilter, callback: F) -> Result<()>
+    async fn subscribe_accounts_once<F, Fut>(
+        &mut self,
+        filter: AccountFilter,
+        callback: F,
+    ) -> Result<()>
     where
         F: Fn(GrpcAccountUpdate) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Result<()>> + Send,
@@ -245,7 +250,10 @@ impl SolanaGrpcClient {
             .await
             .context("Failed to subscribe")?;
 
-        info!("Account subscription established for filter: {}", filter_name);
+        info!(
+            "Account subscription established for filter: {}",
+            filter_name
+        );
 
         let callback = Arc::new(callback);
         let mut stream = response;
@@ -298,12 +306,18 @@ impl SolanaGrpcClient {
                 }
             }
 
-            match self.subscribe_accounts_once(filter.clone(), callback.clone()).await {
+            match self
+                .subscribe_accounts_once(filter.clone(), callback.clone())
+                .await
+            {
                 Ok(_) => {
                     warn!("Account subscription ended, reconnecting in 5 seconds...");
                 }
                 Err(e) => {
-                    error!("Account subscription error: {}, reconnecting in 5 seconds...", e);
+                    error!(
+                        "Account subscription error: {}, reconnecting in 5 seconds...",
+                        e
+                    );
                 }
             }
 

@@ -48,7 +48,6 @@ impl RateLimiter {
         Self { inner, config }
     }
 
-
     pub fn try_acquire(&self) -> bool {
         self.try_acquire_n(1)
     }
@@ -115,8 +114,8 @@ impl RateLimiter {
             self.config.max_requests as f64 / self.config.window_duration.as_secs_f64();
         let tokens_to_add = elapsed.as_secs_f64() * refill_rate;
 
-        inner.available_tokens = (inner.available_tokens + tokens_to_add)
-            .min(self.config.burst_capacity as f64);
+        inner.available_tokens =
+            (inner.available_tokens + tokens_to_add).min(self.config.burst_capacity as f64);
         inner.last_refill = now;
     }
 
@@ -301,7 +300,7 @@ mod tests {
         assert!(!limiter.try_acquire());
 
         sleep(Duration::from_millis(500)).await;
-        
+
         for _ in 0..5 {
             assert!(limiter.try_acquire());
         }
