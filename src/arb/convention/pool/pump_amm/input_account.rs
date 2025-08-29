@@ -1,6 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, TradeDirection};
+use crate::arb::convention::pool::pump_amm::address_seed;
 use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::convention::pool::util::ata;
 use crate::arb::database::repositories::MintRecordRepository;
@@ -39,27 +40,6 @@ pub struct PumpAmmInputAccounts {
     pub coin_creator_vault_authority: AccountMeta,
     pub global_volume_accumulator: Option<AccountMeta>,
     pub user_volume_accumulator: Option<AccountMeta>,
-}
-
-fn get_coin_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
-    let (addr, _) = Pubkey::find_program_address(
-        &[b"creator_vault", coin_creator.as_ref()],
-        &PoolProgram::PUMP_AMM,
-    );
-    addr
-}
-
-fn get_global_volume_accumulator() -> Pubkey {
-    let (addr, _) =
-        Pubkey::find_program_address(&[b"global_volume_accumulator"], &PoolProgram::PUMP_AMM);
-    addr
-}
-fn get_user_volume_accumulator(user: &Pubkey) -> Pubkey {
-    let (addr, _) = Pubkey::find_program_address(
-        &[b"user_volume_accumulator", user.as_ref()],
-        &PoolProgram::PUMP_AMM,
-    );
-    addr
 }
 
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
@@ -112,9 +92,9 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             ))?;
         let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
         let coin_creator_vault_authority =
-            get_coin_creator_vault_authority(&pool_data.coin_creator);
+            address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
         Ok(PumpAmmInputAccounts {
-            pool: pool.to_writable(), // fuck, sometimes it is readonly
+            pool: pool.to_writable(), // fuck, sometimes it is readonly, related to buy/sell
             user: payer.to_signer(),
             global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
             base_mint: pool_data.base_mint.to_readonly(),
@@ -147,8 +127,12 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             )
             .to_writable(),
             coin_creator_vault_authority: coin_creator_vault_authority.to_readonly(),
-            global_volume_accumulator: Some(get_global_volume_accumulator().to_writable()),
-            user_volume_accumulator: Some(get_user_volume_accumulator(payer).to_writable()),
+            global_volume_accumulator: Some(
+                address_seed::get_global_volume_accumulator().to_writable(),
+            ),
+            user_volume_accumulator: Some(
+                address_seed::get_user_volume_accumulator(payer).to_writable(),
+            ),
         })
     }
 
@@ -199,5 +183,77 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         }
 
         accounts
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
+    use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
+    use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
+    use crate::arb::database::repositories::MintRecordRepository;
+    use crate::arb::global::constant::mint::Mints;
+    use crate::arb::global::state::rpc::rpc_client;
+    use crate::arb::pipeline::uploader::wallet::get_wallet;
+    use crate::arb::util::alias::AResult;
+    use crate::arb::util::traits::account_meta::ToAccountMeta;
+    use crate::arb::util::traits::pubkey::ToPubkey;
+    use crate::unit_ok;
+    use solana_sdk::signature::Signer;
+    use std::io::empty;
+
+    // this test is from https://solscan.io/tx/wBy8PeBU8i41hS9k4yP2oELazH36hVgiaYTBQkArzzRpoQPLtaKN654rxFVjBZfxwBxgbLLS7igSFtVE1vm17DM
+    #[tokio::test]
+    async fn test() -> AResult<()> {
+        let pool = "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_pubkey();
+        let payer = "77777T2qnynHFsA63FyfY766ciBTXizavU1f5HeZXwN".to_pubkey();
+        let account = rpc_client()
+            .get_account(&pool)
+            .await
+            .expect("Failed to fetch pool account from RPC");
+
+        let pool_data =
+            PumpAmmPoolData::load_data(&account.data).expect("Failed to load pool data from RPC");
+
+        MintRecordRepository::get_mint_from_cache(&pool_data.quote_mint).await?;
+        MintRecordRepository::get_mint_from_cache(&pool_data.base_mint).await?;
+
+        let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
+            &payer, &pool, &pool_data,
+        )
+        .unwrap();
+
+        let expected = PumpAmmInputAccounts {
+            pool: "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_readonly(),
+            user: "77777T2qnynHFsA63FyfY766ciBTXizavU1f5HeZXwN".to_signer(),
+            global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
+            base_mint: "4i6qgzGVhpE3zLQH3kVjFBaDBjoitvSiKmTY5Ho3pump".to_readonly(),
+            quote_mint: Mints::WSOL.to_readonly(),
+            user_base_token_account: "FkVWkbWQjKnpcFB634NT7TxYXjcPWxqKm9bZkb3Seao2".to_writable(),
+            user_quote_token_account: "8Edf3d9oiVUA3YphQo2z59B3hrtLWmeYpHxSt9ZGGVC9".to_writable(),
+            pool_base_token_account: "CTYA5KnKUzz4gUnggqK2Hi71nVjfgMn3Da2Z2ghWkgLG".to_writable(),
+            pool_quote_token_account: "92DSFgTnnhGmAW96Np1BhcSrFG6HAZ1Kh5aJrkmF3JUm".to_writable(),
+            protocol_fee_recipient: "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_program(),
+            protocol_fee_recipient_token_account: "DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn"
+                .to_writable(),
+            base_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
+            quote_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
+            system_program: "11111111111111111111111111111111".to_program(),
+            associated_token_program: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL".to_program(),
+            event_authority: "GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR".to_readonly(),
+            program: "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA".to_program(),
+            coin_creator_vault_ata: "G3LezYu5BKfHbERsxqUXXCBoN7NmqCzxtkJ4L6ykZrw8".to_writable(),
+            coin_creator_vault_authority: "HEpy9XAsaRenxzr4KrLpwrtwq1H17nH1h33Yh4dLELmj"
+                .to_readonly(),
+            global_volume_accumulator: Some(
+                "C2aFPdENg4A2HQsmrd5rTw5TaYBX5Ku887cWjbFKtZpw".to_writable(),
+            ),
+            user_volume_accumulator: Some(
+                "65PCyDCVET7UgAA1Rkd6PXR7dfoFG5jDMhDP7PjejyCS".to_writable(),
+            ),
+        };
+
+        assert_eq!(expected, accounts);
+        unit_ok!()
     }
 }
