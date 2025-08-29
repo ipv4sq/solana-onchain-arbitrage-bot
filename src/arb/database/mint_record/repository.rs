@@ -1,6 +1,6 @@
 use crate::arb::database::columns::PubkeyType;
-use crate::arb::database::entity::{mint_do, pool_do, MintRecord, MintRecordTable};
-use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
+use crate::arb::database::entity::{MintRecord, MintRecordTable};
+use crate::arb::database::mint_record::model;
 use crate::arb::global::db::get_db;
 use crate::arb::pipeline::pool_indexer::token_recorder::ensure_mint_record_exist;
 use crate::arb::util::alias::MintAddress;
@@ -10,10 +10,9 @@ use once_cell::sync::Lazy;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveValue::{NotSet, Set},
-    ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter,
+    ColumnTrait, EntityTrait, QueryFilter,
 };
 use solana_program::pubkey::Pubkey;
-use std::collections::HashMap;
 use std::time::Duration;
 
 static MINT_CACHE: Lazy<PersistentCache<MintAddress, MintRecord>> = Lazy::new(|| {
@@ -72,7 +71,7 @@ impl MintRecordRepository {
 impl MintRecordRepository {
     pub async fn upsert_mint(mint: MintRecord) -> Result<MintRecord> {
         let db = get_db();
-        let active_model = mint_do::ActiveModel {
+        let active_model = model::ActiveModel {
             address: Set(mint.address.clone()),
             symbol: Set(mint.symbol.clone()),
             decimals: Set(mint.decimals),
@@ -84,7 +83,7 @@ impl MintRecordRepository {
         // Try insert with on_conflict do nothing
         let result = MintRecordTable::insert(active_model)
             .on_conflict(
-                OnConflict::column(mint_do::Column::Address)
+                OnConflict::column(model::Column::Address)
                     .do_nothing()
                     .to_owned(),
             )
@@ -105,38 +104,8 @@ impl MintRecordRepository {
     pub async fn find_by_address(address: Pubkey) -> Result<Option<MintRecord>> {
         let db = get_db();
         Ok(MintRecordTable::find()
-            .filter(mint_do::Column::Address.eq(PubkeyType::from(address)))
+            .filter(model::Column::Address.eq(PubkeyType::from(address)))
             .one(db)
             .await?)
-    }
-
-    pub async fn find_all_with_pools() -> Result<HashMap<Pubkey, Vec<pool_do::Model>>> {
-        const PAGE_SIZE: u64 = 50;
-        let db = get_db();
-        let mut result = HashMap::new();
-        let mut page = 0u64;
-
-        loop {
-            let mints = MintRecordTable::find()
-                .paginate(db, PAGE_SIZE)
-                .fetch_page(page)
-                .await?;
-
-            if mints.is_empty() {
-                break;
-            }
-
-            for mint in mints {
-                let pubkey: Pubkey = mint.address.into();
-                let pools = PoolRecordRepository::find_by_any_mint(&pubkey).await?;
-                if !pools.is_empty() {
-                    result.insert(pubkey, pools);
-                }
-            }
-
-            page += 1;
-        }
-
-        Ok(result)
     }
 }

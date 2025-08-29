@@ -5,11 +5,11 @@ use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputA
 use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
-use crate::arb::database::entity::mev_simulation_log::{
+use crate::arb::database::mev_simulation_log::model::{
     MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount,
 };
-use crate::arb::database::repositories::mint_repo::MintRecordRepository;
-use crate::arb::database::repositories::MevSimulationLogRepository;
+use crate::arb::database::mev_simulation_log::repository::MevSimulationLogRepository;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;

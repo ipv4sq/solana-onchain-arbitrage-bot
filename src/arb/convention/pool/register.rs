@@ -98,17 +98,11 @@ impl AnyPoolConfig {
         let program_id_str = ix.program_id.to_string();
         match program_id_str.as_str() {
             x if x == PoolProgram::METEORA_DLMM.to_string().as_str() => {
-                use crate::arb::convention::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
-
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
-
-                let data_hex = hex::encode(&ix.data);
-                let ix_data = MeteoraDlmmIxData::load_ix_data(&data_hex);
 
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDlmm,
                     pool_address: accounts.lb_pair.pubkey,
-                    accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_x_mint.pubkey, accounts.token_y_mint.pubkey),
                 })
             }
@@ -123,7 +117,6 @@ impl AnyPoolConfig {
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
-                    accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.token_a_mint.pubkey, accounts.token_b_mint.pubkey),
                 })
             }
@@ -135,7 +128,6 @@ impl AnyPoolConfig {
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
-                    accounts: accounts.to_list().into_iter().cloned().collect(),
                     mints: MintPair(accounts.base_mint.pubkey, accounts.quote_mint.pubkey),
                 })
             }

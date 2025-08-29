@@ -1,5 +1,5 @@
 use crate::arb::convention::pool::register::AnyPoolConfig;
-use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
+use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::Trace;
@@ -153,7 +153,7 @@ pub async fn compute_brute_force(
 
 async fn check_pool_arbitrage(
     results: &mut Vec<ArbitrageResult>,
-    other_pool: &crate::arb::database::entity::pool_do::Model,
+    other_pool: &crate::arb::database::pool_record::model::Model,
     changed_pool: &PoolAddress,
     changed_config: &AnyPoolConfig,
     minor_mint: MintAddress,

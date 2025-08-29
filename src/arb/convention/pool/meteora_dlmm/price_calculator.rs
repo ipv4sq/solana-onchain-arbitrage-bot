@@ -1,6 +1,6 @@
 use crate::arb::convention::pool::interface::Direction;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::database::repositories::mint_repo::MintRecordRepository;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::util::alias::MintAddress;
 use anyhow::{anyhow, Result};
 use rust_decimal::Decimal;
@@ -62,7 +62,7 @@ impl MeteoraDlmmPoolData {
 mod tests {
     use super::*;
     use crate::arb::convention::pool::interface::PoolDataLoader;
-    use crate::arb::database::repositories::mint_repo::MintRecordRepository;
+    use crate::arb::database::mint_record::repository::MintRecordRepository;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;

@@ -4,7 +4,7 @@ use crate::arb::convention::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::convention::pool::pump_amm::address_seed;
 use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::convention::pool::util::ata;
-use crate::arb::database::repositories::MintRecordRepository;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::constant::token_program::{
@@ -191,7 +191,7 @@ mod tests {
     use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
     use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
     use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
-    use crate::arb::database::repositories::MintRecordRepository;
+    use crate::arb::database::mint_record::repository::MintRecordRepository;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::alias::AResult;

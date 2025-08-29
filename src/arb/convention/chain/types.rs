@@ -7,7 +7,6 @@ use solana_program::pubkey::Pubkey;
 pub struct SwapInstruction {
     pub dex_type: DexType,
     pub pool_address: Pubkey,
-    pub accounts: Vec<AccountMeta>,
     pub mints: MintPair,
 }
 

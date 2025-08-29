@@ -1,4 +1,4 @@
-use crate::arb::database::entity::pool_do::PoolRecordDescriptor;
+use crate::arb::database::pool_record::model::PoolRecordDescriptor;
 use sea_orm::sea_query::{ArrayType, ColumnType, Nullable, ValueType, ValueTypeErr};
 use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable, Value};
 
@@ -14,7 +14,7 @@ impl TryGetable for PoolRecordDescriptor {
         serde_json::from_value(json_value)
             .map_err(|e| TryGetError::DbErr(DbErr::Type(e.to_string())))
     }
-    
+
     fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
         let json_value = serde_json::Value::try_get_by(res, index)?;
         serde_json::from_value(json_value)

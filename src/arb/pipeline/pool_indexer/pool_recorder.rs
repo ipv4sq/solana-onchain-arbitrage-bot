@@ -1,7 +1,5 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
-use crate::arb::database::entity::pool_do::{
-    Model as PoolRecord, PoolRecordDescriptor,
-};
+use crate::arb::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::pipeline::pool_indexer::token_recorder;
 use crate::arb::util::traits::orm::ToOrm;

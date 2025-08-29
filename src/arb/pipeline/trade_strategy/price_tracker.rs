@@ -1,4 +1,4 @@
-use crate::arb::database::repositories::MintRecordRepository;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::util::alias::MintAddress;
 use dashmap::DashMap;
 use rust_decimal::Decimal;
@@ -77,7 +77,7 @@ impl MintPriceTracker {
 
         let min_buy = buy_prices.iter().next()?;
         let max_sell = sell_prices.iter().last()?;
-        
+
         // Skip if buy and sell are the same pool
         if min_buy.1.pool_address == max_sell.1.pool_address {
             return None;

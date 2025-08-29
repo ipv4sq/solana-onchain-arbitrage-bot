@@ -1,5 +1,6 @@
 use crate::arb::database::columns::CacheTypeColumn;
-use crate::arb::database::entity::{kv_cache, KvCache, KvCacheTable};
+use crate::arb::database::entity::{KvCache, KvCacheTable};
+use crate::arb::database::kv_cache::model;
 use crate::arb::global::db::get_db;
 use crate::arb::util::structs::cache_type::CacheType;
 use anyhow::Result;
@@ -16,19 +17,19 @@ pub struct KvCacheRepository;
 impl KvCacheRepository {
     pub async fn get(cache_type: CacheType, key: &str) -> Result<Option<KvCache>> {
         let db = get_db();
-        
+
         let now = Utc::now();
         let cache_type_column = CacheTypeColumn::from(cache_type);
         let result = KvCacheTable::find()
-            .filter(kv_cache::Column::Type.eq(cache_type_column))
-            .filter(kv_cache::Column::Key.eq(key))
-            .filter(kv_cache::Column::ValidUntil.gt(now))
+            .filter(model::Column::Type.eq(cache_type_column))
+            .filter(model::Column::Key.eq(key))
+            .filter(model::Column::ValidUntil.gt(now))
             .one(db)
             .await?;
-        
+
         Ok(result)
     }
-    
+
     pub async fn put(
         cache_type: CacheType,
         key: String,
@@ -36,8 +37,8 @@ impl KvCacheRepository {
         valid_until: DateTime<Utc>,
     ) -> Result<()> {
         let db = get_db();
-        
-        let active_model = kv_cache::ActiveModel {
+
+        let active_model = model::ActiveModel {
             r#type: Set(CacheTypeColumn::from(cache_type)),
             key: Set(key),
             value: Set(value),
@@ -45,44 +46,41 @@ impl KvCacheRepository {
             created_at: NotSet,
             updated_at: NotSet,
         };
-        
+
         KvCacheTable::insert(active_model)
             .on_conflict(
-                OnConflict::columns([kv_cache::Column::Type, kv_cache::Column::Key])
-                    .update_columns([
-                        kv_cache::Column::Value,
-                        kv_cache::Column::ValidUntil,
-                    ])
+                OnConflict::columns([model::Column::Type, model::Column::Key])
+                    .update_columns([model::Column::Value, model::Column::ValidUntil])
                     .to_owned(),
             )
             .exec(db)
             .await?;
-        
+
         Ok(())
     }
-    
+
     pub async fn evict(cache_type: CacheType, key: &str) -> Result<()> {
         let db = get_db();
-        
+
         let cache_type_column = CacheTypeColumn::from(cache_type);
         KvCacheTable::delete_many()
-            .filter(kv_cache::Column::Type.eq(cache_type_column))
-            .filter(kv_cache::Column::Key.eq(key))
+            .filter(model::Column::Type.eq(cache_type_column))
+            .filter(model::Column::Key.eq(key))
             .exec(db)
             .await?;
-        
+
         Ok(())
     }
-    
+
     pub async fn cleanup_expired() -> Result<u64> {
         let db = get_db();
-        
+
         let now = Utc::now();
         let result = KvCacheTable::delete_many()
-            .filter(kv_cache::Column::ValidUntil.lt(now))
+            .filter(model::Column::ValidUntil.lt(now))
             .exec(db)
             .await?;
-        
+
         Ok(result.rows_affected)
     }
 }

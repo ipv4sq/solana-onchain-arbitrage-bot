@@ -1,5 +1,5 @@
-use crate::arb::database::entity::mint_do::{Entity as MintEntity, Model as MintRecord};
-use crate::arb::database::repositories::MintRecordRepository;
+use crate::arb::database::mint_record::model::{Entity as MintEntity, Model as MintRecord};
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 #[allow(unused_imports)]
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;

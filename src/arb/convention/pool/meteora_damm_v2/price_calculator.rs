@@ -1,7 +1,7 @@
 use crate::arb::convention::pool::interface::Direction;
 use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::convention::pool::meteora_dlmm::price_calculator::DlmmQuote;
-use crate::arb::database::repositories::mint_repo::MintRecordRepository;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::util::alias::{AResult, MintAddress};
 use anyhow::anyhow;
 use rust_decimal::prelude::*;

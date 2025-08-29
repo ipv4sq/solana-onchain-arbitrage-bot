@@ -2,7 +2,7 @@
 
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::columns::PubkeyType;
-use crate::arb::database::entity::pool_do::{
+use crate::arb::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
 use crate::arb::global::db::get_db;
@@ -70,7 +70,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
             let addr = *addr;
             async move {
                 PoolRecordEntity::find()
-                    .filter(pool_do::Column::Address.eq(PubkeyType::from(addr)))
+                    .filter(model::Column::Address.eq(PubkeyType::from(addr)))
                     .one(get_db())
                     .await
                     .ok()
@@ -86,7 +86,7 @@ static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
         async move {
             Some(
                 PoolRecordEntity::find()
-                    .filter(pool_do::Column::Address.eq(PubkeyType::from(addr)))
+                    .filter(model::Column::Address.eq(PubkeyType::from(addr)))
                     .one(get_db())
                     .await
                     .ok()
@@ -119,7 +119,7 @@ impl PoolRecordRepository {
 impl PoolRecordRepository {
     async fn upsert_pool(pool: PoolRecord) -> Result<PoolRecord> {
         let db = get_db();
-        let active_model = pool_do::ActiveModel {
+        let active_model = model::ActiveModel {
             address: Set(pool.address.clone()),
             name: Set(pool.name.clone()),
             dex_type: Set(pool.dex_type.clone()),
@@ -135,7 +135,7 @@ impl PoolRecordRepository {
 
         let result = PoolRecordEntity::insert(active_model)
             .on_conflict(
-                OnConflict::column(pool_do::Column::Address)
+                OnConflict::column(model::Column::Address)
                     .do_nothing()
                     .to_owned(),
             )
@@ -159,12 +159,12 @@ impl PoolRecordRepository {
         let db = get_db();
         Ok(PoolRecordEntity::find()
             .filter(
-                pool_do::Column::BaseMint
+                model::Column::BaseMint
                     .eq(PubkeyType::from(*mint1))
-                    .and(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
-                    .or(pool_do::Column::BaseMint
+                    .and(model::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
+                    .or(model::Column::BaseMint
                         .eq(PubkeyType::from(*mint2))
-                        .and(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
+                        .and(model::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
             )
             .all(db)
             .await?)
@@ -173,7 +173,7 @@ impl PoolRecordRepository {
     pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
         let db = get_db();
         Ok(PoolRecordEntity::find()
-            .filter(pool_do::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
+            .filter(model::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
             .all(db)
             .await?)
     }
@@ -181,7 +181,7 @@ impl PoolRecordRepository {
     pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
         let db = get_db();
         Ok(PoolRecordEntity::find()
-            .filter(pool_do::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
+            .filter(model::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
             .all(db)
             .await?)
     }
@@ -190,9 +190,9 @@ impl PoolRecordRepository {
         let db = get_db();
         Ok(PoolRecordEntity::find()
             .filter(
-                pool_do::Column::BaseMint
+                model::Column::BaseMint
                     .eq(PubkeyType::from(*mint))
-                    .or(pool_do::Column::QuoteMint.eq(PubkeyType::from(*mint))),
+                    .or(model::Column::QuoteMint.eq(PubkeyType::from(*mint))),
             )
             .all(db)
             .await?)

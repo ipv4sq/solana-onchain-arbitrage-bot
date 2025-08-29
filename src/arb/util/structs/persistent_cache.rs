@@ -1,4 +1,4 @@
-use crate::arb::database::repositories::KvCacheRepository;
+use crate::arb::database::kv_cache::repository::KvCacheRepository;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use chrono::Utc;
