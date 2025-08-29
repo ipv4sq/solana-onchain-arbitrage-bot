@@ -32,9 +32,9 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
 });
 pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     RateLimiter::new(
-        5,
-        Duration::from_secs(1),
         8,
+        Duration::from_secs(1),
+        15,
         "MevBotRateLimiter".to_string(),
     )
 });
