@@ -14,4 +14,5 @@ impl PoolPrograms {
     pub const WHIRLPOOL: Pubkey = pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc");
     pub const SOLFI: Pubkey = pubkey!("SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe");
     pub const VERTIGO: Pubkey = pubkey!("vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ");
+    pub const PUMP_AMM: Pubkey = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
 }

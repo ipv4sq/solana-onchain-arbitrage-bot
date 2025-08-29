@@ -70,9 +70,100 @@ impl PumpAmmPoolData {
 #[allow(non_upper_case_globals)]
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::arb::global::state::rpc::rpc_client;
+    use crate::arb::util::traits::pubkey::ToPubkey;
+    use serde_json::Value;
+
     static PoolAddress: &str = "8uAAT95mo699fJ6CMpRw28DKfeVudGkonhEgmNPAEmCE";
     static PoolDataJson: &str = r#"
 {"pool_bump":{"type":"u8","data":254},"index":{"type":"u16","data":"0"},"creator":{"type":"pubkey","data":"F2JaD6abvdVmbbUFcHQEiAXSYWEc18nDFcsctiLqv8xR"},"base_mint":{"type":"pubkey","data":"GNHW5JetZmW85vAU35KyoDcYoSd3sNWtx5RPMTDJpump"},"quote_mint":{"type":"pubkey","data":"So11111111111111111111111111111111111111112"},"lp_mint":{"type":"pubkey","data":"6QerJjW7mQjU2dXttwzYgZXh1EUo3SZFZr8jM1HSPF93"},"pool_base_token_account":{"type":"pubkey","data":"BwUJWqSSQEyTxgYMzrvfRjgnjvLghrCDZbSAp483bX6D"},"pool_quote_token_account":{"type":"pubkey","data":"G85kUJohot7w9RB3LyVRP4tS2kVRqm6PnU4XK83GxfN3"},"lp_supply":{"type":"u64","data":"4193687021413"},"coin_creator":{"type":"pubkey","data":"GJ7mfMrEeYs3rjyN7Ed2UyJ6FApvQhuuEX5yZCWkZU8V"}}
     "#;
-    fn test_raw() {}
+
+    #[tokio::test]
+    async fn test_pool_data_matches_solscan() {
+        let pool_address = PoolAddress.to_pubkey();
+        let rpc = rpc_client();
+
+        let account = rpc
+            .get_account(&pool_address)
+            .await
+            .expect("Failed to fetch pool account from RPC");
+
+        let pool_data_from_rpc =
+            PumpAmmPoolData::load_data(&account.data).expect("Failed to load pool data from RPC");
+
+        let json_data: Value =
+            serde_json::from_str(PoolDataJson).expect("Failed to parse JSON data");
+
+        assert_eq!(
+            pool_data_from_rpc.pool_bump,
+            json_data["pool_bump"]["data"].as_u64().unwrap() as u8
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.index,
+            json_data["index"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.creator,
+            json_data["creator"]["data"].as_str().unwrap().to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.base_mint,
+            json_data["base_mint"]["data"].as_str().unwrap().to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.quote_mint,
+            json_data["quote_mint"]["data"]
+                .as_str()
+                .unwrap()
+                .to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.lp_mint,
+            json_data["lp_mint"]["data"].as_str().unwrap().to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.pool_base_token_account,
+            json_data["pool_base_token_account"]["data"]
+                .as_str()
+                .unwrap()
+                .to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.pool_quote_token_account,
+            json_data["pool_quote_token_account"]["data"]
+                .as_str()
+                .unwrap()
+                .to_pubkey()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.lp_supply,
+            json_data["lp_supply"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap()
+        );
+
+        assert_eq!(
+            pool_data_from_rpc.coin_creator,
+            json_data["coin_creator"]["data"]
+                .as_str()
+                .unwrap()
+                .to_pubkey()
+        );
+    }
 }

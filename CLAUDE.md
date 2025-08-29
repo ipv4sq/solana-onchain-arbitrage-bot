@@ -510,3 +510,5 @@ sqlx migrate run
 - **Blockhash Refresh**: Every 200ms via dedicated thread
 - **Database Pool**: 100 max connections, 5 min connections
 - please check compile error once you update files, unless you are told not to
+- if you need rpc client, you have 
+    use crate::arb::global::state::rpc::rpc_client;
