@@ -37,10 +37,10 @@ impl PumpAmmPoolData {
         let base_balance = base_vault.amount;
         let quote_balance = quote_vault.amount;
 
-        let base_decimals = MintRecordRepository::get_decimal_from_cache(&self.base_mint)
+        let base_decimals = MintRecordRepository::get_decimal(&self.base_mint)
             .await?
             .ok_or_else(|| anyhow!("Base mint decimals not found in cache"))?;
-        let quote_decimals = MintRecordRepository::get_decimal_from_cache(&self.quote_mint)
+        let quote_decimals = MintRecordRepository::get_decimal(&self.quote_mint)
             .await?
             .ok_or_else(|| anyhow!("Quote mint decimals not found in cache"))?;
 

@@ -11,8 +11,11 @@ use crate::arb::global::constant::token_program::{
     SystemProgram, TokenProgram, ASSOCIATED_TOKEN_ACCOUNT_PROGRAM,
 };
 use crate::arb::util::alias::AResult;
+use crate::arb::util::tokio_util::block_on;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
+use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
+use crate::f;
 use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -80,16 +83,11 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         pool: &Pubkey,
         pool_data: &PumpAmmPoolData,
     ) -> AResult<PumpAmmInputAccounts> {
-        let base_mint = MintRecordRepository::get_mint_from_cache_sync(&pool_data.base_mint)
-            .ok_or(anyhow!(
-                "Can't retrieve base mint from cache {}",
-                &pool_data.base_mint
-            ))?;
-        let quote_mint = MintRecordRepository::get_mint_from_cache_sync(&pool_data.quote_mint)
-            .ok_or(anyhow!(
-                "Can't retrieve quote mint from cache {}",
-                &pool_data.quote_mint
-            ))?;
+        let base_mint = block_on(MintRecordRepository::get_mint(&pool_data.base_mint))?
+            .or_err(f!("Can't retrieve base mint {}", &pool_data.base_mint))?;
+        let quote_mint = block_on(MintRecordRepository::get_mint(&pool_data.quote_mint))?
+            .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
+
         let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
         let coin_creator_vault_authority =
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
@@ -212,9 +210,6 @@ mod tests {
 
         let pool_data =
             PumpAmmPoolData::load_data(&account.data).expect("Failed to load pool data from RPC");
-
-        MintRecordRepository::get_mint_from_cache(&pool_data.quote_mint).await?;
-        MintRecordRepository::get_mint_from_cache(&pool_data.base_mint).await?;
 
         let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
             &payer, &pool, &pool_data,

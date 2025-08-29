@@ -1,4 +1,11 @@
 #[macro_export]
+macro_rules! f {
+    ($($arg:tt)*) => {
+        format!($($arg)*)
+    };
+}
+
+#[macro_export]
 macro_rules! return_ok_if_some {
     ($opt:expr) => {
         if let Some(val) = $opt {

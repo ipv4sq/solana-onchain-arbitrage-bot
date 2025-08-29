@@ -70,7 +70,7 @@ impl MintPriceTracker {
 
         let buy_prices = self.buy_prices.read().unwrap();
         let sell_prices = self.sell_prices.read().unwrap();
-        let mint_symbol = MintRecordRepository::get_symbol_from_cache_sync(&self.mint);
+        let mint_symbol = MintRecordRepository::get_symbol_if_present(&self.mint);
         if buy_prices.is_empty() || sell_prices.is_empty() {
             return None;
         }

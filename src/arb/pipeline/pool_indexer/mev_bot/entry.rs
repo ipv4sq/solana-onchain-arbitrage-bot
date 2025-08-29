@@ -3,7 +3,6 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
 pub use crate::arb::global::constant::mint::Mints;
 use crate::arb::pipeline::pool_indexer::mev_bot::logging::log_token_balances_of;
-use crate::arb::pipeline::pool_indexer::token_recorder::ensure_mint_record_exist;
 use crate::arb::program::mev_bot::ix;
 use crate::unit_ok;
 use anyhow::Result;
@@ -33,10 +32,10 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 }
 
 pub(crate) async fn record_pool_and_mints(lite_pool: &LitePool) -> Result<()> {
-    tokio::try_join!(
-        ensure_mint_record_exist(&lite_pool.mints.0),
-        ensure_mint_record_exist(&lite_pool.mints.1)
-    )?;
+    // tokio::try_join!(
+    // ensure_mint_record_exist(&lite_pool.mints.0),
+    // ensure_mint_record_exist(&lite_pool.mints.1)
+    // )?;
     PoolRecordRepository::ensure_exists(&lite_pool.pool_address).await;
     unit_ok!()
 }

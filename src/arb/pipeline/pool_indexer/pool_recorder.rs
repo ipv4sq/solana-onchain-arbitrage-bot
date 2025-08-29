@@ -1,10 +1,11 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::pipeline::pool_indexer::token_recorder;
+use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::orm::ToOrm;
+use crate::f;
 use anyhow::Result;
-use sea_orm::EntityTrait;
 use serde::Serialize;
 use solana_program::pubkey::Pubkey;
 
@@ -13,9 +14,10 @@ pub async fn build_model<T: PoolDataLoader + Serialize>(
     data: &T,
     dex_type: DexType,
 ) -> Result<PoolRecord> {
-    let base = token_recorder::ensure_mint_record_exist(&data.base_mint()).await?;
-    let quote = token_recorder::ensure_mint_record_exist(&data.quote_mint()).await?;
-    let name = format!("{} - {}", base.symbol, quote.symbol);
+    let base = MintRecordRepository::get_mint_err(&data.base_mint()).await?;
+    let quote = MintRecordRepository::get_mint_err(&data.quote_mint()).await?;
+
+    let name = f!("{} - {}", base.symbol, quote.symbol);
     Ok(PoolRecord {
         address: pool.to_orm(),
         name,

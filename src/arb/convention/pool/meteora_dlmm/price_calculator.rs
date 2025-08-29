@@ -32,11 +32,11 @@ impl MeteoraDlmmPoolData {
         let base = Decimal::ONE + Decimal::from(self.bin_step) / Decimal::from(10_000u32);
         let px = base.powi(self.active_id as i64);
 
-        let x_dec: u8 = MintRecordRepository::get_decimal_from_cache(&self.token_x_mint)
+        let x_dec: u8 = MintRecordRepository::get_decimal(&self.token_x_mint)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for token_x"))?;
 
-        let y_dec: u8 = MintRecordRepository::get_decimal_from_cache(&self.token_y_mint)
+        let y_dec: u8 = MintRecordRepository::get_decimal(&self.token_y_mint)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for token_y"))?;
 
@@ -73,10 +73,6 @@ mod tests {
 
         let usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
         let sol_mint = Mints::WSOL;
-
-        // Ensure mints are in cache (will fetch from chain if needed)
-        let _ = MintRecordRepository::get_mint_from_cache(&usdc_mint).await;
-        let _ = MintRecordRepository::get_mint_from_cache(&sol_mint).await;
 
         let account_data = rpc_client().get_account_data(&pool_address).await.unwrap();
 
@@ -125,10 +121,6 @@ mod tests {
         // TRUMP token mint (from pool data)
         let trump_mint = "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN".to_pubkey();
         let usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
-
-        // Ensure mints are in cache (will fetch from chain if needed)
-        let _ = MintRecordRepository::get_mint_from_cache(&trump_mint).await;
-        let _ = MintRecordRepository::get_mint_from_cache(&usdc_mint).await;
 
         let account_data = rpc_client().get_account_data(&pool_address).await.unwrap();
 

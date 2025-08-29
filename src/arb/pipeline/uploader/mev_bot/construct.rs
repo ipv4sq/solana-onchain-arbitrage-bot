@@ -50,7 +50,7 @@ pub async fn build_tx(
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
     let wallet_pub = wallet.pubkey();
-    let mint_token_program = MintRecordRepository::get_mint_from_cache(minor_mint)
+    let mint_token_program = MintRecordRepository::get_mint(minor_mint)
         .await?
         .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
         .program
@@ -296,10 +296,10 @@ pub async fn log_mev_simulation(
 
     let pool_types: Vec<String> = pools.iter().map(|p| p.dex_type().to_string()).collect();
 
-    let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint)
+    let minor_mint_record = MintRecordRepository::get_mint(minor_mint)
         .await?
         .ok_or_else(|| anyhow!("Minor mint not found"))?;
-    let desired_mint_record = MintRecordRepository::get_mint_from_cache(desired_mint)
+    let desired_mint_record = MintRecordRepository::get_mint(desired_mint)
         .await?
         .ok_or_else(|| anyhow!("Desired mint not found"))?;
 

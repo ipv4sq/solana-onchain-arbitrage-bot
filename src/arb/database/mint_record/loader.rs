@@ -16,14 +16,6 @@ use solana_program::pubkey::Pubkey;
 use spl_token::state::Mint;
 use spl_token_2022::extension::StateWithExtensions;
 
-pub async fn ensure_mint_record_exist(mint: &Pubkey) -> Result<MintRecord> {
-    let existed = MintEntity::find_by_id(mint.to_orm()).one(get_db()).await?;
-    return_ok_if_some!(existed);
-
-    let record = load_mint_from_address(mint).await?;
-    Ok(MintRecordRepository::upsert_mint(record).await?)
-}
-
 pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
     let client = rpc_client();
     let account = client

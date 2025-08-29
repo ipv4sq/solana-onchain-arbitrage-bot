@@ -40,11 +40,11 @@ impl MeteoraDammV2PoolData {
             Direction::YtoX => price_b_per_a,
         };
 
-        let from_dec: u8 = MintRecordRepository::get_decimal_from_cache(from)
+        let from_dec: u8 = MintRecordRepository::get_decimal(from)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", from))?;
 
-        let to_dec: u8 = MintRecordRepository::get_decimal_from_cache(to)
+        let to_dec: u8 = MintRecordRepository::get_decimal(to)
             .await?
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", to))?;
 
