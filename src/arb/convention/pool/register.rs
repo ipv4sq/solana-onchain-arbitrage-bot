@@ -8,7 +8,8 @@ use crate::arb::convention::pool::meteora_damm_v2::pool_data::MeteoraDammV2PoolD
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::convention::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
+use crate::arb::convention::pool::pump_amm::pool_config::PumpAmmPoolConfig;
+use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
@@ -31,6 +32,7 @@ lazy_static! {
 pub enum AnyPoolConfig {
     MeteoraDlmm(MeteoraDlmmPoolConfig),
     MeteoraDammV2(MeteoraDammV2Config),
+    PumpAmm(PumpAmmPoolConfig),
     Unsupported,
 }
 
@@ -68,6 +70,7 @@ impl AnyPoolConfig {
         match self {
             MeteoraDlmm(_) => DexType::MeteoraDlmm,
             MeteoraDammV2(_) => DexType::MeteoraDammV2,
+            PumpAmm(_) => DexType::PumpAmm,
             AnyPoolConfig::Unsupported => DexType::Unknown,
         }
     }

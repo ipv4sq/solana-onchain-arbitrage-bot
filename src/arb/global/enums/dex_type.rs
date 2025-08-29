@@ -18,6 +18,8 @@ pub enum DexType {
     RaydiumClmm,
     #[sea_orm(string_value = "Pump")]
     Pump,
+    #[sea_orm(string_value = "PumpAmm")]
+    PumpAmm,
     #[sea_orm(string_value = "MeteoraDlmm")]
     MeteoraDlmm,
     #[sea_orm(string_value = "MeteoraDamm")]
@@ -74,6 +76,7 @@ impl DexType {
     // Convert to database string representation (matches Debug format)
     pub fn to_db_string(&self) -> &'static str {
         match self {
+            DexType::PumpAmm => "PumpAmm",
             DexType::RaydiumV4 => "RaydiumV4",
             DexType::RaydiumCp => "RaydiumCp",
             DexType::RaydiumClmm => "RaydiumClmm",

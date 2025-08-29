@@ -1,7 +1,7 @@
-mod address_seed;
-mod input_account;
-mod input_data;
-mod pool_config;
-mod pool_data;
+pub mod address_seed;
+pub mod input_account;
+pub mod input_data;
+pub mod pool_config;
+pub mod pool_data;
 #[cfg(test)]
 mod test;

@@ -57,6 +57,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
                     AnyPoolConfig::MeteoraDammV2(c) => {
                         build_model(&addr, &c.data, dex_type).await.ok()
                     }
+                    AnyPoolConfig::PumpAmm(c) => build_model(&addr, &c.data, dex_type).await.ok(),
                     AnyPoolConfig::Unsupported => None,
                 }
             }

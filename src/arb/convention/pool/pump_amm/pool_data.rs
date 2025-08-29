@@ -51,8 +51,6 @@ impl PoolDataLoader for PumpAmmPoolData {
     }
 }
 
-pub type PumpAmmPoolConfig = PoolConfig<PumpAmmPoolData>;
-
 impl PumpAmmPoolData {
     pub(crate) fn get_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
         Pubkey::find_program_address(

@@ -2,6 +2,7 @@ use crate::arb::convention::chain::util::simulation::SimulationResult;
 use crate::arb::convention::pool::interface::{InputAccountUtil, PoolDataLoader};
 use crate::arb::convention::pool::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::convention::pool::util::{ata, ata_sol_token};
 use crate::arb::database::entity::mev_simulation_log::{
@@ -28,6 +29,7 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use std::io::sink;
 use tracing::{error, info};
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
@@ -151,6 +153,27 @@ pub fn create_invoke_mev_instruction(
                     built.token_b_vault,
                 ]);
             }
+            AnyPoolConfig::PumpAmm(c) => {
+                let built = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
+                    signer, &c.pool, &c.data,
+                )?;
+                let v = vec![
+                    built.program,
+                    //
+                    c.data.pair().desired_mint()?.to_readonly(),
+                    built.global_config,
+                    built.event_authority,
+                    built.protocol_fee_recipient,
+                    built.pool,
+                    built.pool_base_token_account,
+                    built.pool_quote_token_account,
+                    built.protocol_fee_recipient_token_account,
+                    built.coin_creator_vault_ata,
+                    built.coin_creator_vault_authority,
+                    built.global_volume_accumulator.unwrap(),
+                    built.user_volume_accumulator.unwrap(),
+                ];
+            }
             AnyPoolConfig::Unsupported => return Err(anyhow!("Unsupported pool type")),
         };
     }
@@ -265,6 +288,7 @@ pub async fn log_mev_simulation(
         .map(|p| match p {
             AnyPoolConfig::MeteoraDlmm(c) => c.pool.to_string(),
             AnyPoolConfig::MeteoraDammV2(c) => c.pool.to_string(),
+            AnyPoolConfig::PumpAmm(c) => c.pool.to_string(),
             AnyPoolConfig::Unsupported => "unsupported".to_string(),
         })
         .collect();
