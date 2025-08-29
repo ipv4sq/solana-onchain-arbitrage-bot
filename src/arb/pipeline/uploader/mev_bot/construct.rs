@@ -19,12 +19,12 @@ use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
-use solana_program::address_lookup_table::AddressLookupTableAccount;
-use solana_program::hash::Hash;
+use solana_sdk::hash::Hash;
 use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::message::v0::Message;
+use solana_sdk::message::v0::Message;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
+use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
@@ -293,10 +293,7 @@ pub async fn log_mev_simulation(
         })
         .collect();
 
-    let pool_types: Vec<String> = pools
-        .iter()
-        .map(|p| p.dex_type().to_string())
-        .collect();
+    let pool_types: Vec<String> = pools.iter().map(|p| p.dex_type().to_string()).collect();
 
     let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint)
         .await?

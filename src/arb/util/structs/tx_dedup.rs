@@ -101,14 +101,21 @@ unsafe impl Sync for TxDeduplicator {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::Rng;
+    
+    fn new_unique_pubkey() -> Pubkey {
+        let mut rng = rand::thread_rng();
+        let bytes: [u8; 32] = rng.gen();
+        Pubkey::new_from_array(bytes)
+    }
     use solana_program::pubkey::Pubkey;
 
     #[test]
     fn test_basic_dedup() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));
         
-        let mint = Pubkey::new_unique();
-        let pools = vec![Pubkey::new_unique(), Pubkey::new_unique()];
+        let mint = new_unique_pubkey();
+        let pools = vec![new_unique_pubkey(), new_unique_pubkey()];
         
         assert!(dedup.can_send(&mint, &pools));
         assert!(!dedup.can_send(&mint, &pools));
@@ -121,9 +128,9 @@ mod tests {
     fn test_pool_order_independence() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));
         
-        let mint = Pubkey::new_unique();
-        let pool1 = Pubkey::new_unique();
-        let pool2 = Pubkey::new_unique();
+        let mint = new_unique_pubkey();
+        let pool1 = new_unique_pubkey();
+        let pool2 = new_unique_pubkey();
         
         let pools_forward = vec![pool1, pool2];
         let pools_reverse = vec![pool2, pool1];
@@ -136,9 +143,9 @@ mod tests {
     fn test_different_mints() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));
         
-        let mint1 = Pubkey::new_unique();
-        let mint2 = Pubkey::new_unique();
-        let pools = vec![Pubkey::new_unique(), Pubkey::new_unique()];
+        let mint1 = new_unique_pubkey();
+        let mint2 = new_unique_pubkey();
+        let pools = vec![new_unique_pubkey(), new_unique_pubkey()];
         
         assert!(dedup.can_send(&mint1, &pools));
         assert!(dedup.can_send(&mint2, &pools));
@@ -148,9 +155,9 @@ mod tests {
     fn test_different_pools() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));
         
-        let mint = Pubkey::new_unique();
-        let pools1 = vec![Pubkey::new_unique(), Pubkey::new_unique()];
-        let pools2 = vec![Pubkey::new_unique(), Pubkey::new_unique()];
+        let mint = new_unique_pubkey();
+        let pools1 = vec![new_unique_pubkey(), new_unique_pubkey()];
+        let pools2 = vec![new_unique_pubkey(), new_unique_pubkey()];
         
         assert!(dedup.can_send(&mint, &pools1));
         assert!(dedup.can_send(&mint, &pools2));
@@ -160,8 +167,8 @@ mod tests {
     fn test_check_without_marking() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));
         
-        let mint = Pubkey::new_unique();
-        let pools = vec![Pubkey::new_unique()];
+        let mint = new_unique_pubkey();
+        let pools = vec![new_unique_pubkey()];
         
         assert!(dedup.check_without_marking(&mint, &pools));
         assert!(dedup.check_without_marking(&mint, &pools));

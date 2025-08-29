@@ -137,34 +137,34 @@ impl RaydiumClmmPoolInfo {
 
         let mut amm_config = [0u8; 32];
         amm_config.copy_from_slice(&data[offset..offset + 32]);
-        let amm_config = Pubkey::new_from_array(amm_config);
+        let amm_config = Pubkey::from(amm_config);
         offset += 32;
 
         offset += 32;
 
         let mut token_mint_0 = [0u8; 32];
         token_mint_0.copy_from_slice(&data[offset..offset + 32]);
-        let token_mint_0 = Pubkey::new_from_array(token_mint_0);
+        let token_mint_0 = Pubkey::from(token_mint_0);
         offset += 32;
 
         let mut token_mint_1 = [0u8; 32];
         token_mint_1.copy_from_slice(&data[offset..offset + 32]);
-        let token_mint_1 = Pubkey::new_from_array(token_mint_1);
+        let token_mint_1 = Pubkey::from(token_mint_1);
         offset += 32;
 
         let mut token_vault_0 = [0u8; 32];
         token_vault_0.copy_from_slice(&data[offset..offset + 32]);
-        let token_vault_0 = Pubkey::new_from_array(token_vault_0);
+        let token_vault_0 = Pubkey::from(token_vault_0);
         offset += 32;
 
         let mut token_vault_1 = [0u8; 32];
         token_vault_1.copy_from_slice(&data[offset..offset + 32]);
-        let token_vault_1 = Pubkey::new_from_array(token_vault_1);
+        let token_vault_1 = Pubkey::from(token_vault_1);
         offset += 32;
 
         let mut observation_key = [0u8; 32];
         observation_key.copy_from_slice(&data[offset..offset + 32]);
-        let observation_key = Pubkey::new_from_array(observation_key);
+        let observation_key = Pubkey::from(observation_key);
         offset += 32;
 
         offset += 2;

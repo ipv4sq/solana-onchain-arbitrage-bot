@@ -6,7 +6,7 @@ use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress};
 use anyhow::anyhow;
 use rust_decimal::Decimal;
-use solana_program::program_pack::Pack;
+use spl_token::solana_program::program_pack::Pack;
 use spl_token::state::Account as TokenAccount;
 
 impl PumpAmmPoolData {
@@ -31,8 +31,8 @@ impl PumpAmmPoolData {
             .get_account(&self.pool_quote_token_account)
             .await?;
 
-        let base_vault = TokenAccount::unpack(&base_account.data)?;
-        let quote_vault = TokenAccount::unpack(&quote_account.data)?;
+        let base_vault = TokenAccount::unpack_from_slice(&base_account.data)?;
+        let quote_vault = TokenAccount::unpack_from_slice(&quote_account.data)?;
 
         let base_balance = base_vault.amount;
         let quote_balance = quote_vault.amount;

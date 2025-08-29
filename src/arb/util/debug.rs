@@ -16,13 +16,20 @@ pub fn log_account_metas(accounts: &[AccountMeta], context: &str) {
 mod tests {
     use super::*;
     use solana_program::pubkey::Pubkey;
+    use rand::Rng;
+
+    fn new_unique_pubkey() -> Pubkey {
+        let mut rng = rand::thread_rng();
+        let bytes: [u8; 32] = rng.gen();
+        Pubkey::new_from_array(bytes)
+    }
 
     #[test]
     fn test_log_account_metas() {
         let accounts = vec![
-            AccountMeta::new(Pubkey::new_unique(), true),
-            AccountMeta::new_readonly(Pubkey::new_unique(), false),
-            AccountMeta::new(Pubkey::new_unique(), false),
+            AccountMeta::new(new_unique_pubkey(), true),
+            AccountMeta::new_readonly(new_unique_pubkey(), false),
+            AccountMeta::new(new_unique_pubkey(), false),
         ];
         
         log_account_metas(&accounts, "test context");

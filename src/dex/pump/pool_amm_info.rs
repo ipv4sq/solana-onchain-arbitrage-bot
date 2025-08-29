@@ -45,16 +45,16 @@ impl PumpAmmInfo {
         let pool_data = bytemuck::try_from_bytes::<PumpPoolData>(&data[..EXPECTED_MIN_SIZE])
             .map_err(|e| anyhow::anyhow!("Failed to parse PumpPoolData: {:?}", e))?;
 
-        let base_mint = Pubkey::new_from_array(pool_data.base_mint);
-        let quote_mint = Pubkey::new_from_array(pool_data.quote_mint);
-        let pool_base_token_account = Pubkey::new_from_array(pool_data.pool_base_token_account);
-        let pool_quote_token_account = Pubkey::new_from_array(pool_data.pool_quote_token_account);
+        let base_mint = Pubkey::from(pool_data.base_mint);
+        let quote_mint = Pubkey::from(pool_data.quote_mint);
+        let pool_base_token_account = Pubkey::from(pool_data.pool_base_token_account);
+        let pool_quote_token_account = Pubkey::from(pool_data.pool_quote_token_account);
 
         // Extract coin creator and derive vault authority
         let coin_creator = if pool_data.coin_creator == [0u8; 32] {
             Pubkey::default()
         } else {
-            Pubkey::new_from_array(pool_data.coin_creator)
+            Pubkey::from(pool_data.coin_creator)
         };
 
         let pump_program_id = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA".to_pubkey();

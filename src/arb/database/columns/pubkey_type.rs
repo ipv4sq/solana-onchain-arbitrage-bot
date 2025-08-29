@@ -47,6 +47,19 @@ impl TryGetable for PubkeyType {
         array.copy_from_slice(&bytes);
         Ok(PubkeyType(Pubkey::from(array)))
     }
+    
+    fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
+        let bytes: Vec<u8> = Vec::<u8>::try_get_by(res, index)?;
+        if bytes.len() != 32 {
+            return Err(TryGetError::DbErr(DbErr::Type(format!(
+                "Invalid pubkey length: expected 32, got {}",
+                bytes.len()
+            ))));
+        }
+        let mut array = [0u8; 32];
+        array.copy_from_slice(&bytes);
+        Ok(PubkeyType(Pubkey::from(array)))
+    }
 }
 
 impl ValueType for PubkeyType {
@@ -73,7 +86,7 @@ impl ValueType for PubkeyType {
     }
 
     fn column_type() -> ColumnType {
-        ColumnType::Binary(sea_orm::sea_query::BlobSize::Blob(Some(32)))
+        ColumnType::Binary(32)
     }
 }
 

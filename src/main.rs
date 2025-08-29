@@ -15,7 +15,7 @@ use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
 use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
 use arb::pipeline::pool_indexer;
 use arb::{global, pipeline, program};
-use clap::{App, Arg};
+use clap::{Command, Arg};
 use tracing::info;
 
 #[tokio::main]
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 //
 //     info!("Starting Solana Onchain Bot");
 //
-//     let matches = App::new("Solana Onchain Arbitrage Bot")
+//     let matches = Command::new("Solana Onchain Arbitrage Bot")
 //         .version("0.1.0")
 //         .author("Cetipo")
 //         .about("A simplified Solana onchain arbitrage bot")

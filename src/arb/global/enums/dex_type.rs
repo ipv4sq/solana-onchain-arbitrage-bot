@@ -3,36 +3,29 @@ use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveActiveEnum, EnumIter as SeaOrmEnumIter};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
+use std::fmt;
 
 // DEX types that can be identified in the transaction
 #[derive(
     Debug, Clone, PartialEq, Eq, Copy, SeaOrmEnumIter, DeriveActiveEnum, Serialize, Deserialize,
 )]
-#[sea_orm(rs_type = "String", db_type = "String(None)")]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "String(StringLen::None)",
+    rename_all = "PascalCase"
+)]
 pub enum DexType {
-    #[sea_orm(string_value = "RaydiumV4")]
     RaydiumV4,
-    #[sea_orm(string_value = "RaydiumCp")]
     RaydiumCp,
-    #[sea_orm(string_value = "RaydiumClmm")]
     RaydiumClmm,
-    #[sea_orm(string_value = "Pump")]
     Pump,
-    #[sea_orm(string_value = "PumpAmm")]
     PumpAmm,
-    #[sea_orm(string_value = "MeteoraDlmm")]
     MeteoraDlmm,
-    #[sea_orm(string_value = "MeteoraDamm")]
     MeteoraDamm,
-    #[sea_orm(string_value = "MeteoraDammV2")]
     MeteoraDammV2,
-    #[sea_orm(string_value = "OrcaWhirlpool")]
     OrcaWhirlpool,
-    #[sea_orm(string_value = "Solfi")]
     Solfi,
-    #[sea_orm(string_value = "Vertigo")]
     Vertigo,
-    #[sea_orm(string_value = "Unknown")]
     Unknown,
 }
 
@@ -94,6 +87,12 @@ impl DexType {
     }
 }
 
+impl fmt::Display for DexType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_db_string())
+    }
+}
+
 // in dex_type_def.rs
 
 #[macro_export]
@@ -111,7 +110,7 @@ macro_rules! define_dex_types {
         #[derive(
             Debug, Clone, PartialEq, Eq, Copy, SeaOrmEnumIter, DeriveActiveEnum, Serialize, Deserialize,
         )]
-        #[sea_orm(rs_type = "String", db_type = "String(None)")]
+        #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
         pub enum DexType {
             $(
                 #[sea_orm(string_value = $db)]

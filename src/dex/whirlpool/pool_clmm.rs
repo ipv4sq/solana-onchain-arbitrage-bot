@@ -120,7 +120,7 @@ impl WhirlpoolInfo {
 
         let mut whirlpools_config = [0u8; 32];
         whirlpools_config.copy_from_slice(&data[offset..offset + 32]);
-        let whirlpools_config = Pubkey::new_from_array(whirlpools_config);
+        let whirlpools_config = Pubkey::from(whirlpools_config);
         offset += 32;
 
         let mut whirlpool_bump = [0u8; 1];
@@ -167,12 +167,12 @@ impl WhirlpoolInfo {
 
         let mut token_mint_a_bytes = [0u8; 32];
         token_mint_a_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let token_mint_a = Pubkey::new_from_array(token_mint_a_bytes);
+        let token_mint_a = Pubkey::from(token_mint_a_bytes);
         offset += 32;
 
         let mut token_vault_a_bytes = [0u8; 32];
         token_vault_a_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let token_vault_a = Pubkey::new_from_array(token_vault_a_bytes);
+        let token_vault_a = Pubkey::from(token_vault_a_bytes);
         offset += 32;
 
         let mut fee_growth_global_a_bytes = [0u8; 16];
@@ -182,12 +182,12 @@ impl WhirlpoolInfo {
 
         let mut token_mint_b_bytes = [0u8; 32];
         token_mint_b_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let token_mint_b = Pubkey::new_from_array(token_mint_b_bytes);
+        let token_mint_b = Pubkey::from(token_mint_b_bytes);
         offset += 32;
 
         let mut token_vault_b_bytes = [0u8; 32];
         token_vault_b_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let token_vault_b = Pubkey::new_from_array(token_vault_b_bytes);
+        let token_vault_b = Pubkey::from(token_vault_b_bytes);
         offset += 32;
 
         let mut fee_growth_global_b_bytes = [0u8; 16];
@@ -211,17 +211,17 @@ impl WhirlpoolInfo {
         for i in 0..NUM_REWARDS {
             let mut mint_bytes = [0u8; 32];
             mint_bytes.copy_from_slice(&data[offset..offset + 32]);
-            reward_infos[i].mint = Pubkey::new_from_array(mint_bytes);
+            reward_infos[i].mint = Pubkey::from(mint_bytes);
             offset += 32;
 
             let mut vault_bytes = [0u8; 32];
             vault_bytes.copy_from_slice(&data[offset..offset + 32]);
-            reward_infos[i].vault = Pubkey::new_from_array(vault_bytes);
+            reward_infos[i].vault = Pubkey::from(vault_bytes);
             offset += 32;
 
             let mut authority_bytes = [0u8; 32];
             authority_bytes.copy_from_slice(&data[offset..offset + 32]);
-            reward_infos[i].authority = Pubkey::new_from_array(authority_bytes);
+            reward_infos[i].authority = Pubkey::from(authority_bytes);
             offset += 32;
 
             let mut emissions_bytes = [0u8; 16];

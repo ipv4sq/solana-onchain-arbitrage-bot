@@ -140,6 +140,7 @@ impl SolanaGrpcClient {
             commitment: Some(CommitmentLevel::Confirmed as i32),
             accounts_data_slice: vec![],
             ping: None,
+            from_slot: None,
         };
 
         let (_subscribe_tx, response) = client
@@ -236,6 +237,7 @@ impl SolanaGrpcClient {
             commitment: Some(CommitmentLevel::Confirmed as i32),
             accounts_data_slice: vec![],
             ping: None,
+            from_slot: None,
         };
 
         let (_subscribe_tx, response) = client
@@ -424,6 +426,7 @@ impl AccountFilter {
             account: self.account,
             owner: self.owner,
             filters: self.filters,
+            nonempty_txn_signature: None,
         }
     }
 }

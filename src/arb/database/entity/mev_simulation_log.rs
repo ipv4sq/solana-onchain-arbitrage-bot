@@ -1,6 +1,7 @@
 use crate::arb::database::columns::PubkeyType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
+use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use solana_program::pubkey::Pubkey;
@@ -17,6 +18,7 @@ pub struct Model {
     pub pools: Vec<String>,
     pub pool_types: Vec<String>,
     pub profitable: Option<bool>,
+    #[sea_orm(column_type = "Json")]
     pub details: MevSimulationLogDetails,
     pub profitability: Option<i64>,
     pub tx_size: Option<i32>,
@@ -24,6 +26,7 @@ pub struct Model {
     pub compute_units_consumed: Option<i64>,
     pub error_message: Option<String>,
     pub logs: Option<Vec<String>>,
+    #[sea_orm(column_type = "Json")]
     pub return_data: Option<ReturnData>,
     pub units_per_byte: Option<i64>,
     pub trace: Option<JsonValue>,
@@ -49,6 +52,7 @@ pub struct ReturnData {
     pub program_id: String,
     pub data: Vec<u8>,
 }
+
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MevSimulationLogParams {

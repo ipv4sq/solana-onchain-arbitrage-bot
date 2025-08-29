@@ -10,10 +10,10 @@ pub struct SolfiInfo {
 
 impl SolfiInfo {
     pub fn load_checked(data: &[u8]) -> Result<Self> {
-        let base_mint = Pubkey::new(&data[2664..2696]);
-        let quote_mint = Pubkey::new(&data[2696..2728]);
-        let base_vault = Pubkey::new(&data[2736..2768]);
-        let quote_vault = Pubkey::new(&data[2768..2800]);
+        let base_mint = Pubkey::new_from_array(data[2664..2696].try_into()?);
+        let quote_mint = Pubkey::new_from_array(data[2696..2728].try_into()?);
+        let base_vault = Pubkey::new_from_array(data[2736..2768].try_into()?);
+        let quote_vault = Pubkey::new_from_array(data[2768..2800].try_into()?);
 
         Ok(Self {
             base_mint,

@@ -2,6 +2,7 @@ use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use solana_program::pubkey::Pubkey;
 use std::time::Duration;
+use rand::Rng;
 
 pub struct CacheManager {
     pool_cache: PersistentCache<Pubkey, serde_json::Value>,
@@ -92,7 +93,9 @@ impl CacheManager {
 pub async fn example_usage() {
     let cache_manager = CacheManager::new();
     
-    let pool = Pubkey::new_unique();
+    let mut rng = rand::thread_rng();
+    let bytes: [u8; 32] = rng.gen();
+    let pool = Pubkey::new_from_array(bytes);
     if let Some(pool_data) = cache_manager.get_pool_data(&pool).await {
         println!("Pool data: {:?}", pool_data);
     }

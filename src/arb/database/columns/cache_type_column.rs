@@ -36,6 +36,17 @@ impl TryGetable for CacheTypeColumn {
         };
         Ok(CacheTypeColumn(cache_type))
     }
+    
+    fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
+        let value = res.try_get_by::<String, I>(index).map_err(TryGetError::DbErr)?;
+        let cache_type = match value.as_str() {
+            "mint_record" => CacheType::MintRecord,
+            // Support legacy values for backward compatibility
+            "mint_info" => CacheType::MintRecord,
+            custom => CacheType::Custom(custom.to_string()),
+        };
+        Ok(CacheTypeColumn(cache_type))
+    }
 }
 
 impl sea_orm::TryFromU64 for CacheTypeColumn {
@@ -77,7 +88,7 @@ impl sea_orm::sea_query::ValueType for CacheTypeColumn {
     }
 
     fn column_type() -> sea_orm::sea_query::ColumnType {
-        sea_orm::sea_query::ColumnType::String(Some(255))
+        sea_orm::sea_query::ColumnType::String(sea_orm::sea_query::StringLen::N(255))
     }
 }
 

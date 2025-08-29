@@ -14,6 +14,12 @@ impl TryGetable for PoolRecordDescriptor {
         serde_json::from_value(json_value)
             .map_err(|e| TryGetError::DbErr(DbErr::Type(e.to_string())))
     }
+    
+    fn try_get_by<I: sea_orm::ColIdx>(res: &QueryResult, index: I) -> Result<Self, TryGetError> {
+        let json_value = serde_json::Value::try_get_by(res, index)?;
+        serde_json::from_value(json_value)
+            .map_err(|e| TryGetError::DbErr(DbErr::Type(e.to_string())))
+    }
 }
 
 impl ValueType for PoolRecordDescriptor {
