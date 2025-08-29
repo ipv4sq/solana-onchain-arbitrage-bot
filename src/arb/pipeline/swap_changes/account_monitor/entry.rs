@@ -1,8 +1,9 @@
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::rpc::rpc_client;
-use crate::arb::global::trace::types::{StepType, Trace};
+use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::pipeline::trade_strategy::entry::on_pool_update;

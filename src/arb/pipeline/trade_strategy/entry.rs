@@ -1,7 +1,8 @@
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
-use crate::arb::global::trace::types::{StepType, Trace};
+use crate::arb::global::enums::step_type::StepType;
+use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_tracker::get_minor_mint_for_pool;
 use crate::arb::pipeline::swap_changes::cache::PoolConfigCache;
 use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
@@ -120,7 +121,8 @@ pub async fn compute_brute_force(
             changed_config,
             *minor_mint,
             input_sol,
-        ).await;
+        )
+        .await;
     }
 
     results.sort_by(|a, b| b.output_sol.cmp(&a.output_sol));
@@ -160,7 +162,10 @@ async fn check_pool_arbitrage(
     let other_config = match PoolConfigCache.get(&other_pool.address.0).await {
         Some(config) => config,
         None => {
-            info!("Failed to get config for pool {}, skipping", other_pool.address.0);
+            info!(
+                "Failed to get config for pool {}, skipping",
+                other_pool.address.0
+            );
             return;
         }
     };

@@ -1,8 +1,9 @@
 use crate::arb::convention::chain::AccountState;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::pool_program::PoolProgram;
-use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
-use crate::arb::global::trace::types::{StepType, Trace};
+use crate::arb::global::enums::step_type::StepType;
+use crate::arb::global::enums::step_type::StepType::AccountUpdateDebounced;
+use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;

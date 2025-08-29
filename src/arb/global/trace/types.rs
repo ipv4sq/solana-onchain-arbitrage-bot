@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::arb::global::enums::step_type::StepType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -7,6 +8,7 @@ use solana_program::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use strum_macros::{AsRefStr, Display};
 
 static TRACE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -22,29 +24,6 @@ pub struct Step {
     pub step_type: StepType,
     pub attributes: HashMap<String, String>,
     pub happened_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum StepType {
-    AccountUpdateReceived,
-    AccountUpdateDebouncing,
-    AccountUpdateDebounced,
-    ReceivePoolUpdate,
-    IsAccountPoolData,
-    TradeStrategyStarted,
-    DetermineOpportunityStarted,
-    DetermineOpportunityFinished,
-    MevTxFired,
-    MevTxTryToFile,
-    MevTxReadyToBuild,
-    MevIxBuilding,
-    MevIxBuilt,
-    MevSimulationTxRpcCall,
-    MevSimulationTxRpcReturned,
-    MevRealTxBuilding,
-    MevRealTxRpcCall,
-    MevRealTxRpcReturned,
-    Custom(String),
 }
 
 impl Trace {
@@ -84,6 +63,7 @@ impl Trace {
             happened_at: Utc::now(),
         });
     }
+
     pub fn step_with(
         &self,
         step_type: StepType,
@@ -93,17 +73,6 @@ impl Trace {
         let mut attributes = HashMap::new();
         attributes.insert(attr_name.into(), attr_value.into());
 
-        let mut steps = self.steps.lock().unwrap();
-        let sequence = steps.len() as u32;
-        steps.push(Step {
-            sequence,
-            step_type,
-            attributes,
-            happened_at: Utc::now(),
-        });
-    }
-
-    pub fn step_with_attrs(&self, step_type: StepType, attributes: HashMap<String, String>) {
         let mut steps = self.steps.lock().unwrap();
         let sequence = steps.len() as u32;
         steps.push(Step {
@@ -133,25 +102,8 @@ impl Trace {
                 json!({
                     "sequence": step.sequence,
                     "type": match &step.step_type {
-                        StepType::AccountUpdateReceived => "AccountUpdateReceived",
-                        StepType::AccountUpdateDebouncing => "AccountUpdateDebouncing",
-                        StepType::AccountUpdateDebounced => "AccountUpdateDebounced",
-                        StepType::TradeStrategyStarted => "TradeStrategyStarted",
-                        StepType::DetermineOpportunityStarted => "DetermineOpportunityStarted",
-                        StepType::DetermineOpportunityFinished => "DetermineOpportunityFinished",
-                        StepType::MevTxFired => "MevTxFired",
-                        StepType::MevTxTryToFile => "MevTxTryToFile",
-                        StepType::MevTxReadyToBuild => "MevTxReadyToBuild",
-                        StepType::MevIxBuilding => "MevIxBuilding",
-                        StepType::MevIxBuilt => "MevIxBuilt",
-                        StepType::MevSimulationTxRpcCall => "MevSimulationTxRpcCall",
-                        StepType::MevSimulationTxRpcReturned => "MevSimulationTxRpcReturned",
                         StepType::Custom(s) => s.as_str(),
-                        StepType::ReceivePoolUpdate => "ReceivePoolUpdate",
-                        StepType::IsAccountPoolData => "IsAccountPoolData",
-                        StepType::MevRealTxBuilding => "MevRealTxBuilding",
-                        StepType::MevRealTxRpcCall => "MevRealTxRpcCall",
-                        StepType::MevRealTxRpcReturned => "MevRealTxRpcReturned",
+                        other => other.as_ref(),
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),
                     "relative_ms": relative_ms,
@@ -167,7 +119,7 @@ impl Trace {
         })
     }
 
-    pub fn dump(&self) -> String {
+    pub fn dump_pretty(&self) -> String {
         serde_json::to_string_pretty(&self.dump_json()).unwrap()
     }
 }

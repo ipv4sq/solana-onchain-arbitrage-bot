@@ -5,7 +5,7 @@ use solana_program::pubkey::Pubkey;
 use tracing::{info, warn};
 
 pub fn print_log_to_console(result: SimulationResult, wallet_address: &Pubkey, trace: Trace) {
-    info!("Finished simulation: {}", trace.dump());
+    info!("Finished simulation: {}", trace.dump_pretty());
     if let Some(err) = result.err {
         tracing::error!("TX aborted: {}", err);
         return;
