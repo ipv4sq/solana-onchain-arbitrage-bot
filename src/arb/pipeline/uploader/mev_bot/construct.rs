@@ -293,6 +293,11 @@ pub async fn log_mev_simulation(
         })
         .collect();
 
+    let pool_types: Vec<String> = pools
+        .iter()
+        .map(|p| p.dex_type().to_string())
+        .collect();
+
     let minor_mint_record = MintRecordRepository::get_mint_from_cache(minor_mint)
         .await?
         .ok_or_else(|| anyhow!("Minor mint not found"))?;
@@ -420,6 +425,7 @@ pub async fn log_mev_simulation(
         minor_mint_sym: minor_mint_record.symbol,
         desired_mint_sym: desired_mint_record.symbol,
         pools: pool_addresses,
+        pool_types,
         profitable,
         profitability,
         details: MevSimulationLogDetails { accounts },

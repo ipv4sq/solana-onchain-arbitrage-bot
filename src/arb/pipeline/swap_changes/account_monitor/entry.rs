@@ -1,8 +1,10 @@
+use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
+use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::pipeline::trade_strategy::entry::on_pool_update;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
@@ -56,19 +58,32 @@ pub static NonPoolBlocklist: Lazy<PersistentCache<Pubkey, BlocklistEntry>> = Laz
     )
 });
 
-pub async fn process_pool_update(update: PoolUpdate, trace: Trace) -> Result<()> {
-    let pool_addr = update.pool();
+pub async fn process_pool_update(trigger: Trigger, trace: Trace) -> Result<()> {
+    let pool_addr = *trigger.pool();
     trace.step(StepType::ReceivePoolUpdate);
-    if update.is_initial() {
-        return Ok(());
-    }
 
-    if !update.data_changed() {
-        return Ok(());
-    }
+    match trigger {
+        Trigger::PoolUpdate(update) => {
+            if update.is_initial() {
+                return Ok(());
+            }
 
-    info!("Pool data changed for: {}", pool_addr);
-    on_pool_update(update, trace).await;
+            if !update.data_changed() {
+                return Ok(());
+            }
+
+            info!("Pool data changed for: {}", pool_addr);
+            // update pool
+            let updated_config =
+                AnyPoolConfig::from_account_update(&update.current, &Mints::WSOL).await?;
+            on_pool_update(pool_addr, updated_config, trace).await;
+        }
+        Trigger::PoolAddress(addr) => {
+            info!("Pool triggered directly for: {}", addr);
+            let updated_config = AnyPoolConfig::from(&pool_addr).await?;
+            on_pool_update(pool_addr, updated_config, trace).await;
+        }
+    }
 
     unit_ok!()
 }

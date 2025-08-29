@@ -5,6 +5,7 @@ use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
 use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
+use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::sdk::yellowstone::{AccountFilter, GrpcAccountUpdate, SolanaGrpcClient};
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::structs::lazy_cache::LazyCache;
@@ -20,16 +21,16 @@ use tracing::{debug, error, info};
 #[allow(non_upper_case_globals)]
 pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
-pub static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(PoolUpdate, Trace)>>> = lazy_arc!({
+pub static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(Trigger, Trace)>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 8,
         channel_buffer_size: 5000,
         name: "PoolUpdateProcessor".to_string(),
     };
 
-    PubSubProcessor::new(config, |(update, trace): (PoolUpdate, Trace)| {
+    PubSubProcessor::new(config, |(trigger, trace): (Trigger, Trace)| {
         Box::pin(async move {
-            entry::process_pool_update(update, trace).await?;
+            entry::process_pool_update(trigger, trace).await?;
             Ok(())
         })
     })
@@ -64,7 +65,7 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                 };
                 trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
                 if PoolRecordRepository::is_pool_recorded(pool_update.pool()).await {
-                    if let Err(e) = POOL_UPDATE_CONSUMER.publish((pool_update, trace)).await {
+                    if let Err(e) = POOL_UPDATE_CONSUMER.publish((Trigger::PoolUpdate(pool_update), trace)).await {
                         error!("Failed to publish pool update: {}", e);
                     }
                 } else {

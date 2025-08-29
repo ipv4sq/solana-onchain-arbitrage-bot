@@ -39,6 +39,7 @@ impl MevSimulationLogRepository {
             minor_mint_sym: Set(params.minor_mint_sym),
             desired_mint_sym: Set(params.desired_mint_sym),
             pools: Set(params.pools),
+            pool_types: Set(params.pool_types),
             profitable: Set(params.profitable),
             details: Set(params.details),
             profitability: Set(params.profitability),

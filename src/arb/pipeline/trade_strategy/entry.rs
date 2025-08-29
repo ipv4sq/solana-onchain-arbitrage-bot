@@ -16,13 +16,13 @@ use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use tracing::info;
 
-pub async fn on_pool_update(update: PoolUpdate, trace: Trace) -> Option<()> {
-    let pool_address: PoolAddress = update.pool().clone();
+pub async fn on_pool_update(
+    pool_address: PoolAddress,
+    updated_config: AnyPoolConfig,
+    trace: Trace,
+) -> Option<()> {
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
-    // update pool
-    let updated_config = AnyPoolConfig::from_account_update(&update.current, &Mints::WSOL)
-        .await
-        .ok()?;
+
     PoolConfigCache.put(pool_address, updated_config).await;
 
     info!("🔍 on_pool_update triggered for pool: {}", pool_address);
