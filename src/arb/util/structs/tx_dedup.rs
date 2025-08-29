@@ -1,6 +1,6 @@
 use parking_lot::RwLock;
 use solana_program::pubkey::Pubkey;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -102,7 +102,7 @@ unsafe impl Sync for TxDeduplicator {}
 mod tests {
     use super::*;
     use solana_program::pubkey::Pubkey;
-    
+
     #[test]
     fn test_basic_dedup() {
         let dedup = TxDeduplicator::new(Duration::from_millis(100));

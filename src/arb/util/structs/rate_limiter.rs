@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

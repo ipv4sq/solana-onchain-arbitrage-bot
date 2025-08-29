@@ -1,13 +1,10 @@
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
 use crate::arb::database::repositories::MintRecordRepository;
-use crate::arb::pipeline::swap_changes::cache::MintWithPools;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
-use crate::arb::util::structs::lazy_cache::LazyCache;
 use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
-use sea_orm::EntityTrait;
 use solana_program::pubkey::Pubkey;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 #[allow(non_upper_case_globals)]
 pub async fn list_all_pools() -> Result<HashSet<Pubkey>> {

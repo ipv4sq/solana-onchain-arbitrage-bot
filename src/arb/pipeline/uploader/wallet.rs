@@ -1,4 +1,3 @@
-use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_sdk::signature::{read_keypair_file, Keypair};
 

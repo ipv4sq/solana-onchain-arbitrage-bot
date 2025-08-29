@@ -1,11 +1,10 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::entity::mev_simulation_log::{
-    MevSimulationLogDetails, MevSimulationLogParams, ReturnData, SimulationAccount,
+    MevSimulationLogParams, SimulationAccount,
 };
 use crate::arb::database::entity::{mev_simulation_log, MevSimulationLog, MevSimulationLogTable};
 use crate::arb::global::db::get_db;
 use anyhow::Result;
-use sea_orm::sea_query::OnConflict;
 use sea_orm::{
     ActiveValue::{NotSet, Set},
     ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,

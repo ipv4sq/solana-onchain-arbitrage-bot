@@ -1,14 +1,10 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
-use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::entity::pool_do::{
-    Entity as PoolRecordEntity, Model as PoolRecord, PoolRecordDescriptor,
+    Model as PoolRecord, PoolRecordDescriptor,
 };
-use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
-use crate::arb::global::db::get_db;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::pipeline::pool_indexer::token_recorder;
 use crate::arb::util::traits::orm::ToOrm;
-use crate::return_ok_if_some;
 use anyhow::Result;
 use sea_orm::EntityTrait;
 use serde::Serialize;

@@ -2,8 +2,8 @@
 mod tests {
     use crate::arb::util::structs::cache_type::CacheType;
     use crate::arb::util::structs::persistent_cache::PersistentCache;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use std::time::Duration;
     use tokio::time::sleep;
 

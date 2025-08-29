@@ -1,6 +1,5 @@
 #![allow(non_upper_case_globals)]
 
-use crate::arb::convention::chain::AccountState;
 use crate::arb::convention::pool::register::AnyPoolConfig;
 use crate::arb::database::entity::PoolRecord;
 use crate::arb::util::alias::MintAddress;
