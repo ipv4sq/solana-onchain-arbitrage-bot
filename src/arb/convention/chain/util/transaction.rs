@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::instruction::{InnerInstructions, Instruction};
 use crate::arb::convention::chain::types::SwapInstruction;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::convention::pool::register::{AnyPoolConfig, RECOGNIZED_POOL_OWNER_PROGRAMS};
+use crate::arb::convention::pool::register::AnyPoolConfig;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 
@@ -114,7 +114,7 @@ pub fn inner_to_filtered_map(
     inner_instructions
         .instructions
         .iter()
-        .filter(|ix| (*RECOGNIZED_POOL_OWNER_PROGRAMS).contains(&ix.program_id))
+        .filter(|ix| AnyPoolConfig::recognized(&ix.program_id))
         .filter(|ix| ix.accounts.len() >= 5)
         .map(|ix| (ix.program_id, ix))
         .collect()

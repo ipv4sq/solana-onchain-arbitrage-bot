@@ -5,13 +5,20 @@ use sea_orm::{DeriveActiveEnum, EnumIter as SeaOrmEnumIter};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 use strum_macros::Display;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq,
-    SeaOrmEnumIter, DeriveActiveEnum,
-    Serialize, Deserialize,
-    Display
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    SeaOrmEnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    Display,
 )]
 #[sea_orm(
     rs_type = "String",
@@ -35,25 +42,39 @@ pub enum DexType {
 }
 
 static PROGRAM_TO_DEX: Lazy<HashMap<Pubkey, DexType>> = Lazy::new(|| {
-    [
-        (PoolProgram::RAYDIUM_V4, DexType::RaydiumV4),
-        (PoolProgram::RAYDIUM_CPMM, DexType::RaydiumCp),
-        (PoolProgram::RAYDIUM_CLMM, DexType::RaydiumClmm),
-        (PoolProgram::PUMP, DexType::Pump),
-        (PoolProgram::PUMP_AMM, DexType::PumpAmm),
-        (PoolProgram::METEORA_DLMM, DexType::MeteoraDlmm),
-        (PoolProgram::METEORA_DAMM, DexType::MeteoraDamm),
-        (PoolProgram::METEORA_DAMM_V2, DexType::MeteoraDammV2),
-        (PoolProgram::WHIRLPOOL, DexType::OrcaWhirlpool),
-        (PoolProgram::SOLFI, DexType::Solfi),
-        (PoolProgram::VERTIGO, DexType::Vertigo),
-    ]
-    .into_iter()
-    .collect()
+    DexType::iter()
+        .filter_map(|dex| {
+            let program = match dex {
+                DexType::RaydiumV4 => PoolProgram::RAYDIUM_V4,
+                DexType::RaydiumCp => PoolProgram::RAYDIUM_CPMM,
+                DexType::RaydiumClmm => PoolProgram::RAYDIUM_CLMM,
+                DexType::Pump => PoolProgram::PUMP,
+                DexType::PumpAmm => PoolProgram::PUMP_AMM,
+                DexType::MeteoraDlmm => PoolProgram::METEORA_DLMM,
+                DexType::MeteoraDamm => PoolProgram::METEORA_DAMM,
+                DexType::MeteoraDammV2 => PoolProgram::METEORA_DAMM_V2,
+                DexType::OrcaWhirlpool => PoolProgram::WHIRLPOOL,
+                DexType::Solfi => PoolProgram::SOLFI,
+                DexType::Vertigo => PoolProgram::VERTIGO,
+                DexType::Unknown => return None,
+            };
+            Some((program, dex))
+        })
+        .collect()
 });
 
 impl DexType {
     pub fn determine_from(program_id: &Pubkey) -> Self {
-        PROGRAM_TO_DEX.get(program_id).copied().unwrap_or(DexType::Unknown)
+        PROGRAM_TO_DEX
+            .get(program_id)
+            .copied()
+            .unwrap_or(DexType::Unknown)
+    }
+
+    pub fn owner_program_id(&self) -> Pubkey {
+        PROGRAM_TO_DEX
+            .iter()
+            .find_map(|(program, dex)| (*dex == *self).then_some(*program))
+            .unwrap_or_default()
     }
 }

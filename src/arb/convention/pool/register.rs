@@ -11,26 +11,13 @@ use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::convention::pool::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::convention::pool::pump_amm::input_data::PumpAmmIxData;
 use crate::arb::convention::pool::pump_amm::pool_config::PumpAmmPoolConfig;
-use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::structs::mint_pair::MintPair;
 use anyhow::Result;
-use lazy_static::lazy_static;
 use solana_program::pubkey::Pubkey;
-use std::collections::HashSet;
-
-lazy_static! {
-    pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {
-        let mut set = HashSet::new();
-        set.insert(PoolProgram::METEORA_DLMM);
-        set.insert(PoolProgram::METEORA_DAMM_V2);
-        set.insert(PoolProgram::PUMP_AMM);
-        set
-    };
-}
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub enum AnyPoolConfig {
@@ -38,6 +25,25 @@ pub enum AnyPoolConfig {
     MeteoraDammV2(MeteoraDammV2Config),
     PumpAmm(PumpAmmPoolConfig),
     Unsupported,
+}
+
+impl AnyPoolConfig {
+    pub fn recognized(program: &Pubkey) -> bool {
+        [
+            PoolProgram::METEORA_DLMM,
+            PoolProgram::PUMP_AMM,
+            PoolProgram::METEORA_DAMM_V2,
+        ]
+        .contains(&program)
+    }
+    pub fn dex_type(&self) -> DexType {
+        match self {
+            MeteoraDlmm(_) => DexType::MeteoraDlmm,
+            MeteoraDammV2(_) => DexType::MeteoraDammV2,
+            PumpAmm(_) => DexType::PumpAmm,
+            AnyPoolConfig::Unsupported => DexType::Unknown,
+        }
+    }
 }
 
 impl AnyPoolConfig {
@@ -68,15 +74,6 @@ impl AnyPoolConfig {
         let account = rpc_client().get_account(pool_address).await?;
         let dex_type = DexType::determine_from(&account.owner);
         Self::from_address(pool_address, dex_type).await
-    }
-
-    pub fn dex_type(&self) -> DexType {
-        match self {
-            MeteoraDlmm(_) => DexType::MeteoraDlmm,
-            MeteoraDammV2(_) => DexType::MeteoraDammV2,
-            PumpAmm(_) => DexType::PumpAmm,
-            AnyPoolConfig::Unsupported => DexType::Unknown,
-        }
     }
 
     pub async fn from_address(pool: &Pubkey, dex_type: DexType) -> Result<AnyPoolConfig> {
