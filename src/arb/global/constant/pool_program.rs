@@ -1,9 +1,9 @@
 use solana_program::pubkey::Pubkey;
 use solana_sdk::pubkey;
 
-pub struct PoolPrograms;
+pub struct PoolProgram;
 
-impl PoolPrograms {
+impl PoolProgram {
     pub const RAYDIUM_V4: Pubkey = pubkey!("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
     pub const RAYDIUM_CPMM: Pubkey = pubkey!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");
     pub const RAYDIUM_CLMM: Pubkey = pubkey!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");

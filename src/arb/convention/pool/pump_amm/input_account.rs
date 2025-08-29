@@ -2,8 +2,17 @@ use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::convention::pool::interface::{InputAccountUtil, TradeDirection};
 use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::convention::pool::util::ata;
+use crate::arb::database::repositories::MintRecordRepository;
+use crate::arb::global::constant::mint::Mints;
+use crate::arb::global::constant::pool_program::PoolProgram;
+use crate::arb::global::constant::token_program::{
+    SystemProgram, TokenProgram, ASSOCIATED_TOKEN_ACCOUNT_PROGRAM,
+};
 use crate::arb::util::alias::AResult;
+use crate::arb::util::traits::account_meta::ToAccountMeta;
+use crate::arb::util::traits::pubkey::ToPubkey;
+use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -32,9 +41,30 @@ pub struct PumpAmmInputAccounts {
     pub user_volume_accumulator: Option<AccountMeta>,
 }
 
+fn get_coin_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
+    let (addr, _) = Pubkey::find_program_address(
+        &[b"creator_vault", coin_creator.as_ref()],
+        &PoolProgram::PUMP_AMM,
+    );
+    addr
+}
+
+fn get_global_volume_accumulator() -> Pubkey {
+    let (addr, _) =
+        Pubkey::find_program_address(&[b"global_volume_accumulator"], &PoolProgram::PUMP_AMM);
+    addr
+}
+fn get_user_volume_accumulator(user: &Pubkey) -> Pubkey {
+    let (addr, _) = Pubkey::find_program_address(
+        &[b"user_volume_accumulator", user.as_ref()],
+        &PoolProgram::PUMP_AMM,
+    );
+    addr
+}
+
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
     fn restore_from(ix: &Instruction, tx: &Transaction) -> AResult<PumpAmmInputAccounts> {
-        if ix.program_id != PoolPrograms::PUMP_AMM {
+        if ix.program_id != PoolProgram::PUMP_AMM {
             Err(anyhow::anyhow!(
                 "This is not a pump amm ix! {}",
                 ix.program_id
@@ -60,6 +90,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             program: ix.account_at(16)?,
             coin_creator_vault_ata: ix.account_at(17)?,
             coin_creator_vault_authority: ix.account_at(18)?,
+            global_volume_accumulator: ix.account_at(19).ok(),
+            user_volume_accumulator: ix.account_at(20).ok(),
         })
     }
 
@@ -67,8 +99,57 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &PumpAmmPoolData,
-    ) -> anyhow::Result<PumpAmmInputAccounts> {
-        todo!()
+    ) -> AResult<PumpAmmInputAccounts> {
+        let base_mint = MintRecordRepository::get_mint_from_cache_sync(&pool_data.base_mint)
+            .ok_or(anyhow!(
+                "Can't retrieve base mint from cache {}",
+                &pool_data.base_mint
+            ))?;
+        let quote_mint = MintRecordRepository::get_mint_from_cache_sync(&pool_data.quote_mint)
+            .ok_or(anyhow!(
+                "Can't retrieve quote mint from cache {}",
+                &pool_data.quote_mint
+            ))?;
+        let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
+        let coin_creator_vault_authority =
+            get_coin_creator_vault_authority(&pool_data.coin_creator);
+        Ok(PumpAmmInputAccounts {
+            pool: pool.to_writable(), // fuck, sometimes it is readonly
+            user: payer.to_signer(),
+            global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
+            base_mint: pool_data.base_mint.to_readonly(),
+            quote_mint: pool_data.quote_mint.to_readonly(),
+            user_base_token_account: ata(payer, &base_mint.address.0, &base_mint.program.0)
+                .to_writable(),
+            user_quote_token_account: ata(payer, &quote_mint.address.0, &quote_mint.program.0)
+                .to_writable(),
+            pool_base_token_account: ata(pool, &base_mint.address.0, &base_mint.program.0)
+                .to_writable(),
+            pool_quote_token_account: ata(pool, &quote_mint.address.0, &quote_mint.program.0)
+                .to_writable(),
+            protocol_fee_recipient: pump_fee_recipient.to_readonly(),
+            protocol_fee_recipient_token_account: ata(
+                pool,
+                &Mints::WSOL,
+                &TokenProgram::TOKEN_2022,
+            )
+            .to_writable(),
+            base_token_program: base_mint.program.0.to_program(),
+            quote_token_program: quote_mint.program.0.to_program(),
+            system_program: SystemProgram.to_program(),
+            associated_token_program: ASSOCIATED_TOKEN_ACCOUNT_PROGRAM.to_program(),
+            event_authority: "GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR".to_program(),
+            program: PoolProgram::PUMP_AMM.to_program(),
+            coin_creator_vault_ata: ata(
+                &coin_creator_vault_authority,
+                &quote_mint.program.0,
+                &quote_mint.program.0,
+            )
+            .to_writable(),
+            coin_creator_vault_authority: coin_creator_vault_authority.to_readonly(),
+            global_volume_accumulator: Some(get_global_volume_accumulator().to_writable()),
+            user_volume_accumulator: Some(get_user_volume_accumulator(payer).to_writable()),
+        })
     }
 
     fn build_accounts_with_direction_and_size(
@@ -88,7 +169,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
     }
 
     fn to_list(&self) -> Vec<&AccountMeta> {
-        return vec![
+        let mut accounts = vec![
             &self.pool,
             &self.user,
             &self.global_config,
@@ -109,5 +190,14 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             &self.coin_creator_vault_ata,
             &self.coin_creator_vault_authority,
         ];
+
+        if let Some(ref global_volume) = self.global_volume_accumulator {
+            accounts.push(global_volume);
+        }
+        if let Some(ref user_volume) = self.user_volume_accumulator {
+            accounts.push(user_volume);
+        }
+
+        accounts
     }
 }

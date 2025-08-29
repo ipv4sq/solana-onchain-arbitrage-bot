@@ -1,5 +1,5 @@
 use crate::arb::convention::pool::interface::{PoolConfig, PoolDataLoader};
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,7 @@ impl PumpAmmPoolData {
     pub(crate) fn get_creator_vault_authority(coin_creator: &Pubkey) -> Pubkey {
         Pubkey::find_program_address(
             &[b"creator_vault", coin_creator.as_ref()],
-            &PoolPrograms::PUMP,
+            &PoolProgram::PUMP,
         )
         .0
     }

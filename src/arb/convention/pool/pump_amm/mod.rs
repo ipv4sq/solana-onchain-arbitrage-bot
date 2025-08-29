@@ -1,3 +1,4 @@
+mod address_seed;
 mod input_account;
 mod input_data;
 mod pool_config;

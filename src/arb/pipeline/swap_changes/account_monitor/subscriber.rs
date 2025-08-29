@@ -1,6 +1,6 @@
 use crate::arb::convention::chain::AccountState;
 use crate::arb::database::repositories::pool_repo::PoolRecordRepository;
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::trace::types::StepType::AccountUpdateDebounced;
 use crate::arb::global::trace::types::{StepType, Trace};
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
@@ -92,7 +92,7 @@ impl PoolAccountMonitor {
         info!("Starting pool account subscription for Meteora DLMM and DAMM V2 programs");
 
         let filter = AccountFilter::new("meteora_pools")
-            .with_owners(&[PoolPrograms::METEORA_DLMM, PoolPrograms::METEORA_DAMM_V2]);
+            .with_owners(&[PoolProgram::METEORA_DLMM, PoolProgram::METEORA_DAMM_V2]);
 
         self.client
             .subscribe_accounts(

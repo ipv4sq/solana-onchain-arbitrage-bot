@@ -1,5 +1,5 @@
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::state::rpc::rpc_client;
 use solana_program::pubkey::Pubkey;
 
@@ -14,7 +14,7 @@ pub async fn calculate_bin_arrays_for_swap(
     // First try to get bin arrays based on liquidity
     let (bitmap_extension_key, _bump) = Pubkey::find_program_address(
         &[b"bitmap_extension", pool.as_ref()],
-        &PoolPrograms::METEORA_DLMM,
+        &PoolProgram::METEORA_DLMM,
     );
 
     let bitmap_extension = rpc_client()
@@ -171,7 +171,7 @@ pub fn get_bin_array_pda(pool: &Pubkey, bin_array_index: i32) -> Pubkey {
     let index_bytes = (bin_array_index as i64).to_le_bytes();
     Pubkey::find_program_address(
         &[b"bin_array", pool.as_ref(), &index_bytes],
-        &PoolPrograms::METEORA_DLMM,
+        &PoolProgram::METEORA_DLMM,
     )
     .0
 }

@@ -9,7 +9,7 @@ use crate::arb::convention::pool::meteora_dlmm::input_account::MeteoraDlmmInputA
 use crate::arb::convention::pool::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::convention::pool::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::convention::pool::register::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm};
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::structs::mint_pair::MintPair;
@@ -21,8 +21,8 @@ use std::collections::HashSet;
 lazy_static! {
     pub static ref RECOGNIZED_POOL_OWNER_PROGRAMS: HashSet<Pubkey> = {
         let mut set = HashSet::new();
-        set.insert(PoolPrograms::METEORA_DLMM);
-        set.insert(PoolPrograms::METEORA_DAMM_V2);
+        set.insert(PoolProgram::METEORA_DLMM);
+        set.insert(PoolProgram::METEORA_DAMM_V2);
         set
     };
 }
@@ -89,7 +89,7 @@ impl AnyPoolConfig {
     pub fn from_ix(ix: &Instruction, tx: &Transaction) -> Result<SwapInstruction> {
         let program_id_str = ix.program_id.to_string();
         match program_id_str.as_str() {
-            x if x == PoolPrograms::METEORA_DLMM.to_string().as_str() => {
+            x if x == PoolProgram::METEORA_DLMM.to_string().as_str() => {
                 use crate::arb::convention::pool::meteora_dlmm::input_data::MeteoraDlmmIxData;
 
                 let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
@@ -106,7 +106,7 @@ impl AnyPoolConfig {
                     amount_out: ix_data.min_amount_out,
                 })
             }
-            x if x == PoolPrograms::METEORA_DAMM_V2.to_string().as_str() => {
+            x if x == PoolProgram::METEORA_DAMM_V2.to_string().as_str() => {
                 use crate::arb::convention::pool::meteora_damm_v2::input_data::MeteoraDammV2InputData;
 
                 let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;

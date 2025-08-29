@@ -1,5 +1,5 @@
 use crate::arb::convention::pool::interface::PoolDataLoader;
-use crate::arb::global::constant::pool_program::PoolPrograms;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
@@ -61,7 +61,7 @@ impl PoolDataLoader for WhirlpoolPoolData {
 
 impl WhirlpoolPoolData {
     pub(crate) fn get_oracle(pool: &Pubkey) -> Pubkey {
-        Pubkey::find_program_address(&[b"oracle", pool.as_ref()], &PoolPrograms::WHIRLPOOL).0
+        Pubkey::find_program_address(&[b"oracle", pool.as_ref()], &PoolProgram::WHIRLPOOL).0
     }
 
     pub(crate) fn get_tick_arrays(&self, pool: &Pubkey) -> Vec<Pubkey> {
@@ -93,7 +93,7 @@ impl WhirlpoolPoolData {
         let start_tick_str = start_tick_index.to_string();
         Pubkey::find_program_address(
             &[b"tick_array", pool.as_ref(), start_tick_str.as_bytes()],
-            &PoolPrograms::WHIRLPOOL,
+            &PoolProgram::WHIRLPOOL,
         )
         .0
     }

@@ -11,3 +11,9 @@ impl TokenProgram {
     // Token 2022 program
     pub const TOKEN_2022: Pubkey = pubkey!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 }
+
+#[allow(non_upper_case_globals)]
+pub static SystemProgram: Pubkey = pubkey!("11111111111111111111111111111111");
+
+pub static ASSOCIATED_TOKEN_ACCOUNT_PROGRAM: Pubkey =
+    pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
