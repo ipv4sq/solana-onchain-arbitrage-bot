@@ -203,6 +203,32 @@ async fn calculate_pool_prices(
             info!("Unsupported pool config type");
             None
         }
-        AnyPoolConfig::PumpAmm(_) => {}
+        AnyPoolConfig::PumpAmm(ref c) => {
+            info!("Calculating prices for PumpAmm pool");
+            let sol_to_token = c
+                .data
+                .mid_price_for_quick_estimate(sol_mint, &token_mint)
+                .await
+                .ok()?;
+            let token_to_sol = c
+                .data
+                .mid_price_for_quick_estimate(&token_mint, sol_mint)
+                .await
+                .ok()?;
+
+            info!(
+                "Raw prices - sol_to_token: {} tokens per SOL, token_to_sol: {} SOL per token",
+                sol_to_token.mid_price, token_to_sol.mid_price
+            );
+
+            let buy_price = Decimal::ONE / sol_to_token.mid_price;
+            let sell_price = token_to_sol.mid_price;
+
+            info!(
+                "PumpAmm prices calculated - Buy: {} SOL per token, Sell: {} SOL per token",
+                buy_price, sell_price
+            );
+            Some((buy_price, sell_price))
+        }
     }
 }
