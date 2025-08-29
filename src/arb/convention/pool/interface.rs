@@ -40,8 +40,6 @@ pub struct PoolConfig<Data: PoolDataLoader> {
     pub data: Data,
     pub desired_mint: Pubkey,
     pub minor_mint: Pubkey,
-    pub desired_mint_token_program: Pubkey,
-    pub minor_mint_token_program: Pubkey,
 }
 
 pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {

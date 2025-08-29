@@ -109,9 +109,9 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
                 .to_writable(),
             protocol_fee_recipient: pump_fee_recipient.to_readonly(),
             protocol_fee_recipient_token_account: ata(
-                pool,
+                &pump_fee_recipient,
                 &Mints::WSOL,
-                &TokenProgram::TOKEN_2022,
+                &TokenProgram::SPL_TOKEN,
             )
             .to_writable(),
             base_token_program: base_mint.program.0.to_program(),
@@ -122,7 +122,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             program: PoolProgram::PUMP_AMM.to_program(),
             coin_creator_vault_ata: ata(
                 &coin_creator_vault_authority,
-                &quote_mint.program.0,
+                &quote_mint.address.0,
                 &quote_mint.program.0,
             )
             .to_writable(),
@@ -194,13 +194,11 @@ mod tests {
     use crate::arb::database::repositories::MintRecordRepository;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::rpc_client;
-    use crate::arb::pipeline::uploader::wallet::get_wallet;
     use crate::arb::util::alias::AResult;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::unit_ok;
     use solana_sdk::signature::Signer;
-    use std::io::empty;
 
     // this test is from https://solscan.io/tx/wBy8PeBU8i41hS9k4yP2oELazH36hVgiaYTBQkArzzRpoQPLtaKN654rxFVjBZfxwBxgbLLS7igSFtVE1vm17DM
     #[tokio::test]
@@ -220,11 +218,10 @@ mod tests {
 
         let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
             &payer, &pool, &pool_data,
-        )
-        .unwrap();
+        )?;
 
         let expected = PumpAmmInputAccounts {
-            pool: "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_readonly(),
+            pool: "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_writable(),
             user: "77777T2qnynHFsA63FyfY766ciBTXizavU1f5HeZXwN".to_signer(),
             global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
             base_mint: "4i6qgzGVhpE3zLQH3kVjFBaDBjoitvSiKmTY5Ho3pump".to_readonly(),

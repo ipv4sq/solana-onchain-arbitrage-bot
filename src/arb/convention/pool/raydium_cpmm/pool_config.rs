@@ -21,8 +21,6 @@ impl PoolConfigInit<RaydiumCpmmAPoolData> for RaydiumCpmmPoolConfig {
             data: account_data,
             desired_mint,
             minor_mint: account_data.pair().minor_mint()?,
-            desired_mint_token_program: TokenProgram::SPL_TOKEN,
-            minor_mint_token_program: TokenProgram::TOKEN_2022,
         })
     }
 

@@ -5,5 +5,6 @@ pub mod logging;
 pub mod macros;
 pub mod serde_helpers;
 pub mod structs;
+pub mod tokio_util;
 pub mod traits;
 pub mod worker;
