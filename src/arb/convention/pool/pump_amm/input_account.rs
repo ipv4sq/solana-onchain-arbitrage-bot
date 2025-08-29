@@ -28,6 +28,8 @@ pub struct PumpAmmInputAccounts {
     pub program: AccountMeta,
     pub coin_creator_vault_ata: AccountMeta,
     pub coin_creator_vault_authority: AccountMeta,
+    pub global_volume_accumulator: Option<AccountMeta>,
+    pub user_volume_accumulator: Option<AccountMeta>,
 }
 
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
@@ -78,7 +80,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> anyhow::Result<PumpAmmInputAccounts> {
-        todo!()
+        Self::build_accounts_no_matter_direction_size(payer, pool, pool_data)
     }
 
     fn get_trade_direction(self) -> AResult<TradeDirection> {
