@@ -25,7 +25,7 @@ pub struct PoolRecordRepository;
 
 static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
-        100_000,
+        100_000_000,
         Duration::MAX,
         |_mint: &MintAddress| async move { None },
         |_mint: MintAddress, _pools: HashSet<PoolRecord>, _duration: Duration| async move {},
@@ -43,7 +43,7 @@ static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = 
 
 static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
-        100_000,
+        100_000_000,
         Duration::MAX,
         |addr| {
             let addr = *addr;
