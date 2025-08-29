@@ -66,3 +66,13 @@ impl PumpAmmPoolData {
         spl_associated_token_account::get_associated_token_address(vault_authority, token_mint)
     }
 }
+
+#[allow(non_upper_case_globals)]
+#[cfg(test)]
+mod tests {
+    static PoolAddress: &str = "8uAAT95mo699fJ6CMpRw28DKfeVudGkonhEgmNPAEmCE";
+    static PoolDataJson: &str = r#"
+{"pool_bump":{"type":"u8","data":254},"index":{"type":"u16","data":"0"},"creator":{"type":"pubkey","data":"F2JaD6abvdVmbbUFcHQEiAXSYWEc18nDFcsctiLqv8xR"},"base_mint":{"type":"pubkey","data":"GNHW5JetZmW85vAU35KyoDcYoSd3sNWtx5RPMTDJpump"},"quote_mint":{"type":"pubkey","data":"So11111111111111111111111111111111111111112"},"lp_mint":{"type":"pubkey","data":"6QerJjW7mQjU2dXttwzYgZXh1EUo3SZFZr8jM1HSPF93"},"pool_base_token_account":{"type":"pubkey","data":"BwUJWqSSQEyTxgYMzrvfRjgnjvLghrCDZbSAp483bX6D"},"pool_quote_token_account":{"type":"pubkey","data":"G85kUJohot7w9RB3LyVRP4tS2kVRqm6PnU4XK83GxfN3"},"lp_supply":{"type":"u64","data":"4193687021413"},"coin_creator":{"type":"pubkey","data":"GJ7mfMrEeYs3rjyN7Ed2UyJ6FApvQhuuEX5yZCWkZU8V"}}
+    "#;
+    fn test_raw() {}
+}

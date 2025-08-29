@@ -1,5 +1,5 @@
 use crate::arb::convention::pool::interface::{PoolConfigInit, PoolDataLoader};
-use crate::arb::convention::pool::pump_amm::data::{PumpAmmPoolConfig, PumpAmmPoolData};
+use crate::arb::convention::pool::pump_amm::pool_data::{PumpAmmPoolConfig, PumpAmmPoolData};
 use crate::arb::global::constant::token_program::TokenProgram;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;

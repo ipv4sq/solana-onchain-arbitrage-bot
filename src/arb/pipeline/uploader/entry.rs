@@ -58,7 +58,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         350_000,    //
         20_000,     //
         &configs,   //
-        50000,      //
+        20000,      //
         true,       //
         trace,
     )

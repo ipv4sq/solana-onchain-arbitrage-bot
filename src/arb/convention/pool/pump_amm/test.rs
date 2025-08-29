@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::convention::pool::interface::PoolDataLoader;
-    use crate::arb::convention::pool::pump_amm::data::PumpAmmPoolData;
+    use crate::arb::convention::pool::pump_amm::pool_data::PumpAmmPoolData;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[test]
