@@ -11,7 +11,7 @@ use solana_program::pubkey::Pubkey;
 pub static MintWithPools: LazyCache<MintAddress, Vec<PoolRecord>> = LazyCache::new();
 
 pub static PoolConfigCache: Lazy<LoadingCache<Pubkey, AnyPoolConfig>> = Lazy::new(|| {
-    LoadingCache::new(1_000_000_000, |pool: &Pubkey| {
+    LoadingCache::new(10_000_000, |pool: &Pubkey| {
         let pool = *pool;
         async move { AnyPoolConfig::from(&pool).await.ok() }
     })
