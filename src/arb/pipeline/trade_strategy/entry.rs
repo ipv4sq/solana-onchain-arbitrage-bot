@@ -203,5 +203,6 @@ async fn calculate_pool_prices(
             info!("Unsupported pool config type");
             None
         }
+        AnyPoolConfig::PumpAmm(_) => todo!(),
     }
 }
