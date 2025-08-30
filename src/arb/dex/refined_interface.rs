@@ -8,6 +8,8 @@ use borsh::schema::add_definition;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(bound = "Data: serde::Serialize + for<'a> serde::Deserialize<'a>")]
 pub struct PoolBase<Data: PoolDataLoader> {
     pub pool_address: PoolAddress,
     pub base_mint: MintAddress,
@@ -31,7 +33,7 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     where
         Self: Sized;
 
-    fn extract_pool_from(ix: Instruction) -> AResult<(DexType, PoolAddress)>;
+    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)>;
 
     fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
 

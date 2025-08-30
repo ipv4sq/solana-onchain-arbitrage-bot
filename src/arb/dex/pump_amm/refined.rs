@@ -10,7 +10,7 @@ use crate::arb::util::traits::account_meta::ToAccountMeta;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-type PumpAmmRefinedConfig = PoolBase<PumpAmmPoolData>;
+pub type PumpAmmRefinedConfig = PoolBase<PumpAmmPoolData>;
 
 impl RefinedPoolConfig<PumpAmmPoolData> for PumpAmmRefinedConfig {
     fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self> {
@@ -24,7 +24,7 @@ impl RefinedPoolConfig<PumpAmmPoolData> for PumpAmmRefinedConfig {
         })
     }
 
-    fn extract_pool_from(ix: Instruction) -> AResult<(DexType, PoolAddress)> {
+    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
         ix.expect_program_id(&DexType::PumpAmm.owner_program_id())?;
         let address = ix.account_at(0)?.pubkey;
         Ok((DexType::PumpAmm, address))

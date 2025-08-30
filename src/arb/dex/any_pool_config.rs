@@ -6,22 +6,27 @@ use crate::arb::dex::interface::{InputAccountUtil, PoolConfigInit, PoolDataLoade
 use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::dex::meteora_damm_v2::legacy::pool_config::MeteoraDammV2Config;
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
+use crate::arb::dex::meteora_damm_v2::refined::MeteoraDammV2RefinedConfig;
 use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::dex::meteora_dlmm::legacy::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::dex::meteora_dlmm::refined::MeteoraDlmmRefinedConfig;
 use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::dex::pump_amm::legacy::pool_config::PumpAmmPoolConfig;
+use crate::arb::dex::pump_amm::refined::PumpAmmRefinedConfig;
+use crate::arb::dex::refined_interface::RefinedPoolConfig;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
-use anyhow::Result;
+use crate::f;
+use anyhow::{anyhow, Result};
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub enum AnyPoolConfig {
-    MeteoraDlmm(MeteoraDlmmPoolConfig),
-    MeteoraDammV2(MeteoraDammV2Config),
-    PumpAmm(PumpAmmPoolConfig),
+    MeteoraDlmm(MeteoraDlmmRefinedConfig),
+    MeteoraDammV2(MeteoraDammV2RefinedConfig),
+    PumpAmm(PumpAmmRefinedConfig),
     Unsupported,
 }
 
@@ -92,40 +97,19 @@ impl AnyPoolConfig {
         }
     }
 
-    pub fn from_ix(ix: &Instruction, tx: &Transaction) -> Result<SwapInstruction> {
-        let program_id_str = ix.program_id.to_string();
-        match program_id_str.as_str() {
-            x if x == PoolProgram::METEORA_DLMM.to_string().as_str() => {
-                let accounts = MeteoraDlmmInputAccounts::restore_from(ix, tx)?;
+    pub fn from_ix(ix: &Instruction) -> Result<SwapInstruction> {
+        let program_id = ix.program_id;
+        let dex_type = DexType::determine_from(&program_id);
+        let (dex, address) = match dex_type {
+            DexType::MeteoraDlmm => MeteoraDlmmRefinedConfig::extract_pool_from(ix),
+            DexType::MeteoraDammV2 => MeteoraDammV2RefinedConfig::extract_pool_from(ix),
+            DexType::PumpAmm => PumpAmmRefinedConfig::extract_pool_from(ix),
+            _ => Err(anyhow!(f!("Unsppord dex {}", dex_type))),
+        }?;
 
-                Ok(SwapInstruction {
-                    dex_type: DexType::MeteoraDlmm,
-                    pool_address: accounts.lb_pair.pubkey,
-                })
-            }
-            x if x == PoolProgram::METEORA_DAMM_V2.to_string().as_str() => {
-                use crate::arb::dex::meteora_damm_v2::legacy::input_data::MeteoraDammV2InputData;
-
-                let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
-
-                let data_hex = hex::encode(&ix.data);
-                let ix_data = MeteoraDammV2InputData::load_from_hex(&data_hex)?;
-
-                Ok(SwapInstruction {
-                    dex_type: DexType::MeteoraDammV2,
-                    pool_address: accounts.pool.pubkey,
-                })
-            }
-            x if x == PoolProgram::PUMP_AMM.to_string().as_str() => {
-                let accounts = PumpAmmInputAccounts::restore_from(ix, tx)?;
-
-                let data_hex = hex::encode(&ix.data);
-                Ok(SwapInstruction {
-                    dex_type: DexType::MeteoraDammV2,
-                    pool_address: accounts.pool.pubkey,
-                })
-            }
-            _ => Err(anyhow::anyhow!("Unsupported program: {}", program_id_str)),
-        }
+        Ok(SwapInstruction {
+            dex_type: dex,
+            pool_address: address,
+        })
     }
 }

@@ -41,7 +41,7 @@ impl Transaction {
         filtered
             .values()
             .into_iter()
-            .filter_map(|x| AnyPoolConfig::from_ix(x, self).ok())
+            .filter_map(|x| AnyPoolConfig::from_ix(x).ok())
             .collect()
     }
 
