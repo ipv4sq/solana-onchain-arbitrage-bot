@@ -1,12 +1,10 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
-use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::util::traits::orm::ToOrm;
 use crate::f;
-use anyhow::Result;
 
-pub async fn build_model(config: AnyPoolConfig) -> Result<PoolRecord> {
+pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
     let base = MintRecordRepository::get_mint_err(&config.base_mint()).await?;
     let quote = MintRecordRepository::get_mint_err(&config.quote_mint()).await?;
 

@@ -1,12 +1,12 @@
 #![allow(non_upper_case_globals)]
 
 use crate::arb::database::columns::PubkeyType;
+use crate::arb::database::pool_record::converter::build_model;
 use crate::arb::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::state::db::get_db;
-use crate::arb::pipeline::pool_indexer::pool_recorder::build_model;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::arb::util::structs::persistent_cache::PersistentCache;

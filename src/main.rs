@@ -11,7 +11,7 @@ pub mod test;
 mod transaction;
 pub mod util;
 
-use crate::arb::pipeline::pool_indexer::registrar::bootstrap_indexer;
+use crate::arb::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
 use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
 use arb::global;
 use tracing::info;
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Blockhash holder initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
-    let listener_handle = spawn_with_error_handling!("MEV bot subscriber", bootstrap_indexer());
+    let listener_handle = spawn_with_error_handling!("MEV bot subscriber", bootstrap_subscriber());
 
     let handle = spawn_with_error_handling!("Pool account subscriber", start_pool_monitor());
 
