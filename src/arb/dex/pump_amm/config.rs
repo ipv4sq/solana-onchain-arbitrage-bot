@@ -1,51 +1,58 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::interface::{PoolBase, PoolDataLoader, RefinedPoolConfig};
 use crate::arb::dex::legacy_interface::InputAccountUtil;
-use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
+use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::global::enums::dex_type::DexType;
-use crate::arb::global::enums::dex_type::DexType::MeteoraDammV2;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-pub type MeteoraDammV2RefinedConfig = PoolBase<MeteoraDammV2PoolData>;
+pub type PumpAmmRefinedConfig = PoolBase<PumpAmmPoolData>;
 
-impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
+impl RefinedPoolConfig<PumpAmmPoolData> for PumpAmmRefinedConfig {
     fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self> {
-        let pool_data = MeteoraDammV2PoolData::load_data(data)?;
-        Ok(MeteoraDammV2RefinedConfig {
+        let pool_data = PumpAmmPoolData::load_data(data)?;
+        Ok(PumpAmmRefinedConfig {
             pool_address: address,
-            base_mint: pool_data.token_a_mint,
-            quote_mint: pool_data.token_b_mint,
+            base_mint: pool_data.base_mint,
+            quote_mint: pool_data.quote_mint,
             dex_type,
             pool_data,
         })
     }
 
     fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
-        ix.expect_program_id(&MeteoraDammV2.owner_program_id())?;
-        let address = ix.account_at(1)?.pubkey;
-        Ok((MeteoraDammV2, address))
+        ix.expect_program_id(&DexType::PumpAmm.owner_program_id())?;
+        let address = ix.account_at(0)?.pubkey;
+        Ok((DexType::PumpAmm, address))
     }
 
     fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>> {
-        let built = MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
+        let built = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
             payer,
             &self.pool_address,
             &self.pool_data,
         )?;
+
         let accounts: Vec<AccountMeta> = vec![
-            built.meteora_program,
+            built.program,
             self.pool_data.pair().desired_mint()?.to_readonly(),
+            built.global_config,
             built.event_authority,
-            built.pool_authority,
-            self.pool_address.to_writable(),
-            built.token_a_vault,
-            built.token_b_vault,
+            built.protocol_fee_recipient,
+            built.pool,
+            built.pool_base_token_account,
+            built.pool_quote_token_account,
+            built.protocol_fee_recipient_token_account,
+            built.coin_creator_vault_ata,
+            built.coin_creator_vault_authority,
+            built.global_volume_accumulator.unwrap(),
+            built.user_volume_accumulator.unwrap(),
         ];
+
         Ok(accounts)
     }
 
@@ -54,8 +61,8 @@ impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
     }
 }
 
-impl AsRef<PoolBase<MeteoraDammV2PoolData>> for MeteoraDammV2RefinedConfig {
-    fn as_ref(&self) -> &PoolBase<MeteoraDammV2PoolData> {
+impl AsRef<PoolBase<PumpAmmPoolData>> for PoolBase<PumpAmmPoolData> {
+    fn as_ref(&self) -> &PoolBase<PumpAmmPoolData> {
         self
     }
 }

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::dex::meteora_dlmm::bin_array;
+    use crate::arb::dex::meteora_dlmm::misc::bin_array;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use anyhow::Result;

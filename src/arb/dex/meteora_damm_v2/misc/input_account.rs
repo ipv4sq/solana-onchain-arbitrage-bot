@@ -185,7 +185,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 mod tests {
     use crate::arb::convention::chain::Transaction;
     use crate::arb::dex::legacy_interface::InputAccountUtil;
-    use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
+    use crate::arb::dex::meteora_damm_v2::misc::input_account::MeteoraDammV2InputAccount;
     use crate::arb::dex::meteora_damm_v2::misc::input_data::is_meteora_damm_v2_swap;
     use crate::arb::dex::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::arb::global::constant::pool_program::PoolProgram;

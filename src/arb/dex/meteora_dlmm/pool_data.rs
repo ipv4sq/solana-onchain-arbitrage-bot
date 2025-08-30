@@ -1,5 +1,5 @@
 use crate::arb::dex::interface::PoolDataLoader;
-use crate::arb::dex::meteora_dlmm::pool_data_type::{
+use crate::arb::dex::meteora_dlmm::misc::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,
 };
 use borsh::{BorshDeserialize, BorshSerialize};

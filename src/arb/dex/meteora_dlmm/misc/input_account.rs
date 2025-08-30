@@ -69,7 +69,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::dex::meteora_dlmm::bin_array;
+        use crate::arb::dex::meteora_dlmm::misc::bin_array;
         use crate::arb::global::constant::pool_program::PoolProgram;
         use crate::arb::global::constant::token_program::TokenProgram;
         use crate::arb::util::traits::account_meta::ToAccountMeta;
@@ -127,7 +127,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         input_amount: Option<u64>,
         _output_amount: Option<u64>,
     ) -> Result<MeteoraDlmmInputAccounts> {
-        use crate::arb::dex::meteora_dlmm::bin_array;
+        use crate::arb::dex::meteora_dlmm::misc::bin_array;
         use crate::arb::global::constant::pool_program::PoolProgram;
         use crate::arb::global::constant::token_program::TokenProgram;
         use crate::arb::util::traits::account_meta::ToAccountMeta;
@@ -253,7 +253,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::dex::legacy_interface::InputAccountUtil;
-    use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
+    use crate::arb::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::dex::meteora_dlmm::misc::input_data::is_meteora_dlmm_swap;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::global::constant::pool_program::PoolProgram;

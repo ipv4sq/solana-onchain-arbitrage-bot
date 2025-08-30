@@ -2,7 +2,7 @@ use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::dex::legacy_interface::InputAccountUtil;
-use crate::arb::dex::pump_amm::address_seed;
+use crate::arb::dex::pump_amm::misc::address_seed;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
@@ -188,7 +188,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::dex::legacy_interface::InputAccountUtil;
-    use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
+    use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
     use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::global::state::rpc::rpc_client;
