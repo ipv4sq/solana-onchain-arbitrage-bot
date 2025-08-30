@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 use tracing::{error, info, warn};
@@ -77,23 +78,52 @@ impl SolanaGrpcClient {
     }
 
     async fn connect(&mut self) -> Result<()> {
+        info!("Attempting to connect to gRPC endpoint: {}", self.endpoint);
+        info!("Token present: {}", !self.token.is_empty());
+        
         let endpoint = tonic::transport::Endpoint::from_shared(self.endpoint.clone())
+            .map_err(|e| {
+                error!("Failed to create endpoint from URL '{}': {}", self.endpoint, e);
+                e
+            })
             .context("Failed to create endpoint")?
-            .tls_config(tonic::transport::ClientTlsConfig::new())
+            .tls_config(tonic::transport::ClientTlsConfig::new().with_native_roots())
+            .map_err(|e| {
+                error!("Failed to configure TLS with native roots: {}", e);
+                e
+            })
             .context("Failed to configure TLS")?;
 
+        info!("Endpoint configured, attempting to establish connection...");
+        
         let channel = endpoint
             .connect()
             .await
+            .map_err(|e| {
+                error!("Failed to connect to gRPC endpoint '{}': {}", self.endpoint, e);
+                error!("Connection error type: {:?}", e);
+                if let Some(source) = e.source() {
+                    error!("Error source: {}", source);
+                }
+                e
+            })
             .context("Failed to connect to gRPC endpoint")?;
+        
+        info!("Successfully connected to gRPC endpoint");
 
         use tonic::metadata::AsciiMetadataValue;
         use tonic_health::pb::health_client::HealthClient;
         use yellowstone_grpc_proto::geyser::geyser_client::GeyserClient;
 
+        info!("Creating authentication token for gRPC...");
         let x_token = AsciiMetadataValue::try_from(self.token.clone())
+            .map_err(|e| {
+                error!("Failed to create metadata value from token: {}", e);
+                e
+            })
             .context("Failed to create metadata value")?;
 
+        info!("Setting up interceptors with authentication token...");
         let interceptor = yellowstone_grpc_client::InterceptorXToken {
             x_token: Some(x_token.clone()),
             x_request_snapshot: false,
@@ -104,17 +134,19 @@ impl SolanaGrpcClient {
             x_request_snapshot: false,
         };
 
+        info!("Creating health and geyser services with interceptors...");
         let health_service =
             tonic::service::interceptor::InterceptedService::new(channel.clone(), interceptor);
         let geyser_service =
             tonic::service::interceptor::InterceptedService::new(channel, interceptor2);
 
+        info!("Initializing health and geyser clients...");
         let health_client = HealthClient::new(health_service);
         let geyser_client = GeyserClient::new(geyser_service);
 
         self.client = Some(GeyserGrpcClient::new(health_client, geyser_client));
 
-        info!("Connected to gRPC endpoint: {}", self.endpoint);
+        info!("gRPC client successfully initialized for endpoint: {}", self.endpoint);
         Ok(())
     }
 
@@ -194,8 +226,11 @@ impl SolanaGrpcClient {
             info!("Starting gRPC subscription...");
 
             if self.client.is_none() {
+                info!("Client not connected, attempting to establish connection...");
                 if let Err(e) = self.connect().await {
-                    error!("Failed to connect: {}, retrying in 5 seconds...", e);
+                    error!("Failed to connect: {}", e);
+                    error!("Error details: {:?}", e);
+                    error!("Retrying in 5 seconds...");
                     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                     continue;
                 }
@@ -298,8 +333,11 @@ impl SolanaGrpcClient {
             info!("Starting gRPC account subscription...");
 
             if self.client.is_none() {
+                info!("Client not connected, attempting to establish connection...");
                 if let Err(e) = self.connect().await {
-                    error!("Failed to connect: {}, retrying in 5 seconds...", e);
+                    error!("Failed to connect: {}", e);
+                    error!("Error details: {:?}", e);
+                    error!("Retrying in 5 seconds...");
                     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                     continue;
                 }

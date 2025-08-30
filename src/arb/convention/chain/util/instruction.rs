@@ -1,6 +1,10 @@
 use crate::arb::convention::chain::instruction::{Instruction, ParsedTransferChecked};
 use crate::arb::global::constant::token_program::TokenProgram;
+use crate::arb::util::alias::AResult;
+use crate::{f, unit_ok};
+use anyhow::anyhow;
 use solana_program::instruction::AccountMeta;
+use solana_sdk::pubkey::Pubkey;
 use spl_token::instruction::TokenInstruction;
 
 impl Instruction {
@@ -49,5 +53,17 @@ impl Instruction {
         // The AccountMeta in the instruction already has the correct writability
         // information after our refactoring, so we can just return it directly
         Ok(account.clone())
+    }
+
+    pub fn expect_program_id(&self, expected_program_id: &Pubkey) -> AResult<()> {
+        if self.program_id != *expected_program_id {
+            Err(anyhow!(f!(
+                "program_id not correct, expected: {:?}, actual: {:?}",
+                expected_program_id,
+                self.program_id
+            )))
+        } else {
+            unit_ok!()
+        }
     }
 }
