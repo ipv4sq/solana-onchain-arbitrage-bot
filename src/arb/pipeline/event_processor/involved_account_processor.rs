@@ -10,6 +10,8 @@ use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
+use crate::arb::util::alias::{AResult, PoolAddress};
+use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, return_error, unit_ok};
 use once_cell::sync::Lazy;
@@ -30,45 +32,35 @@ pub static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<TxWithTrace>>> =
     PubSubProcessor::new(config, process_involved_account_transaction)
 });
 
-pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow::Result<()> {
+pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResult<()> {
     let (update, trace) = update;
     trace.step_with(
         StepType::Custom("ProcessingTransaction".to_string()),
         "signature",
         &update.signature,
     );
-    info!("processing involved account transaction");
+    info!("Processing involved account transaction");
 
-    let transaction = update.to_unified()?;
-    let Some((_ix, inners)) =
-        transaction.extract_ix_and_inners(|program_id| *program_id == PoolProgram::PUMP_AMM)
-    else {
-        return_error!("Transaction does not contain involved accounts");
-    };
+    let tx = update.to_unified()?;
+    let (_, inners) = tx
+        .extract_ix_and_inners(|p| *p == PoolProgram::PUMP_AMM)
+        .or_err("Not a pump amm account")?;
+    let pump_amm_pool = find_pump_swap_pool(&inners.instructions).or_err("Not a pump amm pool")?;
 
-    if let Some(pool_account) = find_pump_swap_pool(&inners.instructions) {
-        info!(
-            "Found Pump AMM swap instruction with pool: {}",
-            pool_account
-        );
-        if !PoolRecordRepository::is_pool_recorded(&pool_account).await {
-            // this could be a new pool, we did not know, then we try to record it
-            NewPoolProcessor
-                .publish(WithTrace(pool_account, trace))
-                .await?;
-        } else {
-            // this is something we know, so trigger arbitrage opportunity.
-            PoolUpdateProcessor
-                .publish(WithTrace(Trigger::PoolAddress(pool_account), trace))
-                .await
-                .ok();
-        }
+    if PoolRecordRepository::is_pool_recorded(&pump_amm_pool).await {
+        PoolUpdateProcessor
+            .publish(WithTrace(Trigger::PoolAddress(pump_amm_pool), trace))
+            .await?;
+    } else {
+        NewPoolProcessor
+            .publish(WithTrace(pump_amm_pool, trace))
+            .await?;
     }
 
     unit_ok!()
 }
 
-fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<Pubkey> {
+fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<PoolAddress> {
     let wsol = Mints::WSOL;
 
     instructions.iter().find_map(|ix| {
