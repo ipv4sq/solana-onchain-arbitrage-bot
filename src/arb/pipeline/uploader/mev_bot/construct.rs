@@ -121,61 +121,9 @@ pub fn create_invoke_mev_instruction(
         ata(signer, minor_mint, token_program).to_writable(),
     ]);
 
-    // let the_other_mint_account = ata(&signer(), )
     for pool in pools {
-        match pool {
-            AnyPoolConfig::MeteoraDlmm(c) => {
-                let built = MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
-                    signer, &c.pool, &c.data,
-                )?;
-                accounts.extend(vec![
-                    built.program,
-                    c.data.pair().desired_mint()?.to_readonly(),
-                    built.event_authority,
-                    built.lb_pair,
-                    built.reverse_x,
-                    built.reverse_y,
-                    built.oracle,
-                ]);
-                accounts.extend(built.bin_arrays);
-            }
-            AnyPoolConfig::MeteoraDammV2(c) => {
-                let built = MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
-                    signer, &c.pool, &c.data,
-                )?;
-                accounts.extend(vec![
-                    built.meteora_program,
-                    c.data.pair().desired_mint()?.to_readonly(),
-                    built.event_authority,
-                    built.pool_authority,
-                    c.pool.to_writable(),
-                    built.token_a_vault,
-                    built.token_b_vault,
-                ]);
-            }
-            AnyPoolConfig::PumpAmm(c) => {
-                let built = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
-                    signer, &c.pool, &c.data,
-                )?;
-                let v = vec![
-                    built.program,
-                    //
-                    c.data.pair().desired_mint()?.to_readonly(),
-                    built.global_config,
-                    built.event_authority,
-                    built.protocol_fee_recipient,
-                    built.pool,
-                    built.pool_base_token_account,
-                    built.pool_quote_token_account,
-                    built.protocol_fee_recipient_token_account,
-                    built.coin_creator_vault_ata,
-                    built.coin_creator_vault_authority,
-                    built.global_volume_accumulator.unwrap(),
-                    built.user_volume_accumulator.unwrap(),
-                ];
-            }
-            AnyPoolConfig::Unsupported => return Err(anyhow!("Unsupported pool type")),
-        };
+        let specific_accounts = pool.build_mev_bot_ix_accounts(signer)?;
+        accounts.extend(specific_accounts);
     }
 
     // Create instruction data
@@ -283,15 +231,7 @@ pub async fn log_mev_simulation(
         None
     };
 
-    let pool_addresses: Vec<String> = pools
-        .iter()
-        .map(|p| match p {
-            AnyPoolConfig::MeteoraDlmm(c) => c.pool.to_string(),
-            AnyPoolConfig::MeteoraDammV2(c) => c.pool.to_string(),
-            AnyPoolConfig::PumpAmm(c) => c.pool.to_string(),
-            AnyPoolConfig::Unsupported => "unsupported".to_string(),
-        })
-        .collect();
+    let pool_addresses: Vec<String> = pools.iter().map(|p| p.pool().to_string()).collect();
 
     let pool_types: Vec<String> = pools.iter().map(|p| p.dex_type().to_string()).collect();
 
