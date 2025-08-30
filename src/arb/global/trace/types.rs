@@ -37,6 +37,24 @@ impl Trace {
         }
     }
 
+    pub fn since_last_step(&self) -> u32 {
+        let steps = self.steps.lock().unwrap();
+        if let Some(last_step) = steps.last() {
+            (Utc::now() - last_step.happened_at).num_milliseconds() as u32
+        } else {
+            0
+        }
+    }
+
+    pub fn since_begin(&self) -> u32 {
+        let steps = self.steps.lock().unwrap();
+        if let Some(first_step) = steps.first() {
+            (Utc::now() - first_step.happened_at).num_milliseconds() as u32
+        } else {
+            0
+        }
+    }
+
     pub fn step(&self, step_type: StepType) {
         let mut steps = self.steps.lock().unwrap();
         let sequence = steps.len() as u32;
@@ -47,6 +65,11 @@ impl Trace {
             happened_at: Utc::now(),
         });
     }
+
+    pub fn step_with_custom(&self, step_type: &str) {
+        self.step(StepType::Custom(step_type.to_string()));
+    }
+
     pub fn step_with_address(
         &self,
         step_type: StepType,

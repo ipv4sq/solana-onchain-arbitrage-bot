@@ -28,13 +28,20 @@ pub async fn on_pool_update(
 
     let mint = get_minor_mint_for_pool(&pool_address).await?;
 
+    if trace.since_begin() > 10_000 {
+        // not do anything if it's buffered too long, so we can quickly catch up.
+        return None;
+    }
+
     trace.step_with_address(
         StepType::DetermineOpportunityStarted,
         "pool_address",
         pool_address,
     );
 
-    if let Some(opportunities) = compute_brute_force(&mint, &pool_address, &updated_config).await {
+    if let Some(opportunities) =
+        compute_brute_force(&mint, &pool_address, &updated_config, &trace).await
+    {
         if !opportunities.is_empty() {
             trace.step_with(
                 StepType::DetermineOpportunityFinished,
@@ -83,11 +90,13 @@ pub async fn compute_brute_force(
     minor_mint: &MintAddress,
     changed_pool: &PoolAddress,
     changed_config: &AnyPoolConfig,
+    trace: &Trace,
 ) -> Option<Vec<ArbitrageResult>> {
     info!(
         "🔧 Computing brute force arbitrage for mint: {}",
         minor_mint
     );
+    trace.step(StepType::DetermineOpportunityLoadingRelatedMints);
 
     let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint)
         .await?
@@ -98,6 +107,12 @@ pub async fn compute_brute_force(
                     || (pool.quote_mint.0 == Mints::WSOL && pool.base_mint.0 == *minor_mint))
         })
         .collect::<Vec<_>>();
+
+    trace.step_with(
+        StepType::DetermineOpportunityLoadedRelatedMints,
+        "amount",
+        related_pools.len().to_string(),
+    );
 
     info!(
         "Found {} other pools for brute force with changed pool {}",
@@ -113,6 +128,8 @@ pub async fn compute_brute_force(
     let input_sol = Decimal::ONE;
     let mut results = Vec::new();
 
+    trace.step_with_custom("Checking arbitrage of each pool");
+
     for other_pool in related_pools.iter() {
         check_pool_arbitrage(
             &mut results,
@@ -124,6 +141,8 @@ pub async fn compute_brute_force(
         )
         .await;
     }
+
+    trace.step_with_custom("Checked arbitrage of each pool");
 
     results.sort_by(|a, b| b.output_sol.cmp(&a.output_sol));
 

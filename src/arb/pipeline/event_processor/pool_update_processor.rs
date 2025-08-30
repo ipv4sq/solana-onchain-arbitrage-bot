@@ -15,8 +15,8 @@ use tracing::info;
 #[allow(non_upper_case_globals)]
 pub static PoolUpdateProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Trigger>>>> = lazy_arc!({
     let config = PubSubConfig {
-        worker_pool_size: 24,
-        channel_buffer_size: 5000,
+        worker_pool_size: 32,
+        channel_buffer_size: 50000,
         name: "PoolUpdateProcessor".to_string(),
     };
 
@@ -31,14 +31,6 @@ pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<(
 
     match trigger {
         Trigger::PoolUpdate(update) => {
-            if update.is_initial() {
-                return Ok(());
-            }
-
-            if !update.data_changed() {
-                return Ok(());
-            }
-
             info!("Pool data changed for: {}", pool_addr);
             // update pool
             let updated_config = AnyPoolConfig::from_owner_and_data(
