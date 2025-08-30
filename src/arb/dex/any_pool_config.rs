@@ -121,7 +121,6 @@ impl AnyPoolConfig {
                 let accounts = PumpAmmInputAccounts::restore_from(ix, tx)?;
 
                 let data_hex = hex::encode(&ix.data);
-                let ix_data = PumpAmmIxData::load_ix_data(&data_hex);
                 Ok(SwapInstruction {
                     dex_type: DexType::MeteoraDammV2,
                     pool_address: accounts.pool.pubkey,
