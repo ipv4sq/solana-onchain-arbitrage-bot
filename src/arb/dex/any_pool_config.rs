@@ -4,7 +4,7 @@ use crate::arb::convention::chain::{AccountState, Transaction};
 use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
 use crate::arb::dex::interface::{InputAccountUtil, PoolConfigInit, PoolDataLoader};
 use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::dex::meteora_damm_v2::pool_config::MeteoraDammV2Config;
+use crate::arb::dex::meteora_damm_v2::legacy::pool_config::MeteoraDammV2Config;
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::dex::meteora_dlmm::legacy::pool_config::MeteoraDlmmPoolConfig;
@@ -104,7 +104,7 @@ impl AnyPoolConfig {
                 })
             }
             x if x == PoolProgram::METEORA_DAMM_V2.to_string().as_str() => {
-                use crate::arb::dex::meteora_damm_v2::input_data::MeteoraDammV2InputData;
+                use crate::arb::dex::meteora_damm_v2::legacy::input_data::MeteoraDammV2InputData;
 
                 let accounts = MeteoraDammV2InputAccount::restore_from(ix, tx)?;
 
