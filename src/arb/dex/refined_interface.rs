@@ -4,6 +4,7 @@ use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
+use borsh::schema::add_definition;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -15,6 +16,7 @@ pub struct PoolBase<Data: PoolDataLoader> {
     pub pool_data: Data,
 }
 
+#[allow(async_fn_in_trait)]
 pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     async fn from_address(address: &PoolAddress) -> AResult<Self>
     where
@@ -46,7 +48,11 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
 
     // not sure if needed in the future
-    fn refresh_pool_data(&mut self, data: &[u8]) -> AResult<&Self>
+    fn refresh_pool_data(&mut self, data: &[u8]) -> AResult<Self>
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        let x = self.as_ref();
+        Self::from_data(x.pool_address, x.dex_type, data)
+    }
 }
