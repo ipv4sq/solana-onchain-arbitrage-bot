@@ -1,9 +1,9 @@
-use crate::dex::meteora::config::{MeteoraDAmmPool, MeteoraDAmmV2Pool, MeteoraDlmmPool};
-use crate::dex::pump::PumpPool;
-use crate::dex::raydium::config::{RaydiumClmmPool, RaydiumCpPool, RaydiumPool};
-use crate::dex::solfi::config::SolfiPool;
-use crate::dex::vertigo::config::VertigoPool;
-use crate::dex::whirlpool::config::WhirlpoolPool;
+use crate::legacy_dex::meteora::config::{MeteoraDAmmPool, MeteoraDAmmV2Pool, MeteoraDlmmPool};
+use crate::legacy_dex::pump::PumpPool;
+use crate::legacy_dex::raydium::config::{RaydiumClmmPool, RaydiumCpPool, RaydiumPool};
+use crate::legacy_dex::solfi::config::SolfiPool;
+use crate::legacy_dex::vertigo::config::VertigoPool;
+use crate::legacy_dex::whirlpool::config::WhirlpoolPool;
 use solana_program::pubkey::Pubkey;
 use std::str::FromStr;
 

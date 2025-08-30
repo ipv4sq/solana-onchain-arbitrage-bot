@@ -1,7 +1,7 @@
 use crate::config::Config;
-use crate::dex::raydium::{raydium_authority, raydium_cp_authority};
-use crate::dex::solfi::constants::solfi_program_id;
-use crate::dex::vertigo::constants::vertigo_program_id;
+use crate::legacy_dex::raydium::{raydium_authority, raydium_cp_authority};
+use crate::legacy_dex::solfi::constants::solfi_program_id;
+use crate::legacy_dex::vertigo::constants::vertigo_program_id;
 use crate::pools::MintPoolData;
 use crate::util::random_select;
 use solana_client::rpc_client::RpcClient;
@@ -20,15 +20,15 @@ use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::state::rpc;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::dex::meteora::constants::{
+use crate::legacy_dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
     dlmm_event_authority, dlmm_program_id, vault_program_id,
 };
-use crate::dex::pump::{PUMP_FEE_WALLET, PUMP_PROGRAM_ID};
-use crate::dex::raydium::constants::{
+use crate::legacy_dex::pump::{PUMP_FEE_WALLET, PUMP_PROGRAM_ID};
+use crate::legacy_dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
 };
-use crate::dex::whirlpool::constants::whirlpool_program_id;
+use crate::legacy_dex::whirlpool::constants::whirlpool_program_id;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;

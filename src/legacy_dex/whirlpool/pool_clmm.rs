@@ -94,8 +94,8 @@ impl Tick {
 pub const TICK_ARRAY_SIZE: usize = 88;
 
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::dex::pool_checker::PoolChecker;
-use crate::dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
+use crate::legacy_dex::pool_checker::PoolChecker;
+use crate::legacy_dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
 use std::io::{Error, ErrorKind, Result};
 
 impl WhirlpoolInfo {

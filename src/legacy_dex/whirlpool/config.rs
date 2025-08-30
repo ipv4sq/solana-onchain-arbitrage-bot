@@ -1,11 +1,11 @@
 use crate::arb::convention::chain::util::ownership::expect_owner;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::dex::pool_checker::PoolChecker;
-use crate::dex::pool_fetch::PoolFetch;
-use crate::dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
-use crate::dex::whirlpool::get_tick_arrays;
-use crate::dex::whirlpool::pool_clmm::WhirlpoolInfo;
+use crate::legacy_dex::pool_checker::PoolChecker;
+use crate::legacy_dex::pool_fetch::PoolFetch;
+use crate::legacy_dex::whirlpool::constants::WHIRLPOOL_PROGRAM_ID;
+use crate::legacy_dex::whirlpool::get_tick_arrays;
+use crate::legacy_dex::whirlpool::pool_clmm::WhirlpoolInfo;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 

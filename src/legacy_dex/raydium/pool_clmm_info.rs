@@ -1,6 +1,6 @@
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::dex::pool_checker::PoolChecker;
-use crate::dex::raydium::RAYDIUM_CLMM_PROGRAM_ID;
+use crate::legacy_dex::pool_checker::PoolChecker;
+use crate::legacy_dex::raydium::RAYDIUM_CLMM_PROGRAM_ID;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 

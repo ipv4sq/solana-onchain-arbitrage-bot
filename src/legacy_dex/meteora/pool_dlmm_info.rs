@@ -1,5 +1,5 @@
-use crate::dex::meteora::constants::{dlmm_program_id, BIN_ARRAY};
-use crate::dex::pool_checker::PoolChecker;
+use crate::legacy_dex::meteora::constants::{dlmm_program_id, BIN_ARRAY};
+use crate::legacy_dex::pool_checker::PoolChecker;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;

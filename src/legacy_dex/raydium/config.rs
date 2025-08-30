@@ -1,9 +1,9 @@
 use crate::arb::convention::chain::util::ownership::expect_owner;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::dex::pool_checker::PoolChecker;
-use crate::dex::pool_fetch::PoolFetch;
-use crate::dex::raydium::{
+use crate::legacy_dex::pool_checker::PoolChecker;
+use crate::legacy_dex::pool_fetch::PoolFetch;
+use crate::legacy_dex::raydium::{
     RaydiumAmmInfo, RaydiumClmmPoolInfo, RaydiumCpAmmInfo, RAYDIUM_CLMM_PROGRAM_ID,
     RAYDIUM_CP_PROGRAM_ID, RAYDIUM_PROGRAM_ID,
 };
