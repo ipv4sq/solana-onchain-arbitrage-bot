@@ -14,8 +14,6 @@ pub struct Model {
     pub dex_type: DexType,
     pub base_mint: PubkeyType,
     pub quote_mint: PubkeyType,
-    pub base_vault: PubkeyType,
-    pub quote_vault: PubkeyType,
     #[sea_orm(column_type = "JsonBinary")]
     pub description: PoolRecordDescriptor,
     #[sea_orm(column_type = "JsonBinary")]

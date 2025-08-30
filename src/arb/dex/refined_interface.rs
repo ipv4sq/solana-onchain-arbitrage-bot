@@ -4,7 +4,7 @@ use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
-use borsh::schema::add_definition;
+use serde_json::{json, Value};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -56,5 +56,25 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     {
         let x = self.as_ref();
         Self::from_data(x.pool_address, x.dex_type, data)
+    }
+
+    fn pool(&self) -> PoolAddress {
+        self.as_ref().pool_address
+    }
+
+    fn base_mint(&self) -> MintAddress {
+        self.as_ref().base_mint
+    }
+
+    fn quote_mint(&self) -> MintAddress {
+        self.as_ref().quote_mint
+    }
+
+    fn dex_type(&self) -> DexType {
+        self.as_ref().dex_type
+    }
+
+    fn pool_data_json(&self) -> Value {
+        json!(self.as_ref().pool_data)
     }
 }

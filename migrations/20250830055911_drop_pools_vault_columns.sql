@@ -1,0 +1,3 @@
+ALTER TABLE pools
+DROP COLUMN IF EXISTS base_vault,
+DROP COLUMN IF EXISTS quote_vault;

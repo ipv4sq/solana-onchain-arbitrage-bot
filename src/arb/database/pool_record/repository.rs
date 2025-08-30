@@ -49,21 +49,10 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
             let addr = *addr;
             async move {
                 let config = AnyPoolConfig::from(&addr).await.ok()?;
-                let dex_type = config.dex_type();
-                match config {
-                    AnyPoolConfig::MeteoraDlmm(c) => {
-                        build_model(&addr, &c.data, dex_type).await.ok()
-                    }
-                    AnyPoolConfig::MeteoraDammV2(c) => {
-                        build_model(&addr, &c.data, dex_type).await.ok()
-                    }
-                    AnyPoolConfig::PumpAmm(c) => build_model(&addr, &c.data, dex_type).await.ok(),
-                    AnyPoolConfig::Unsupported => None,
-                }
+                build_model(config).await.ok()
             }
         },
         |_mint, record, _duration| async move {
-            //
             let _ = PoolRecordRepository::upsert_pool(record).await;
         },
         |addr| {
@@ -125,8 +114,6 @@ impl PoolRecordRepository {
             dex_type: Set(pool.dex_type.clone()),
             base_mint: Set(pool.base_mint.clone()),
             quote_mint: Set(pool.quote_mint.clone()),
-            base_vault: Set(pool.base_vault.clone()),
-            quote_vault: Set(pool.quote_vault.clone()),
             description: Set(pool.description.clone()),
             data_snapshot: Set(pool.data_snapshot.clone()),
             created_at: NotSet,

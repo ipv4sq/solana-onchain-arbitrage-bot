@@ -1,38 +1,30 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
+use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::dex::interface::PoolDataLoader;
-use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::traits::orm::ToOrm;
 use crate::f;
 use anyhow::Result;
-use serde::Serialize;
-use solana_program::pubkey::Pubkey;
 
-pub async fn build_model<T: PoolDataLoader + Serialize>(
-    pool: &Pubkey,
-    data: &T,
-    dex_type: DexType,
-) -> Result<PoolRecord> {
-    let base = MintRecordRepository::get_mint_err(&data.base_mint()).await?;
-    let quote = MintRecordRepository::get_mint_err(&data.quote_mint()).await?;
+pub async fn build_model(config: AnyPoolConfig) -> Result<PoolRecord> {
+    let base = MintRecordRepository::get_mint_err(&config.base_mint()).await?;
+    let quote = MintRecordRepository::get_mint_err(&config.quote_mint()).await?;
 
     let name = f!("{} - {}", base.symbol, quote.symbol);
     Ok(PoolRecord {
-        address: pool.to_orm(),
+        address: config.pool().to_orm(),
         name,
-        dex_type,
-        base_mint: data.base_mint().to_orm(),
-        quote_mint: data.quote_mint().to_orm(),
-        base_vault: data.base_vault().to_orm(),
-        quote_vault: data.quote_vault().to_orm(),
+        dex_type: config.dex_type(),
+        base_mint: config.base_mint().to_orm(),
+        quote_mint: config.quote_mint().to_orm(),
         description: PoolRecordDescriptor {
             base_symbol: base.symbol,
             quote_symbol: quote.symbol,
-            base: data.base_mint().to_string(),
-            quote: data.quote_mint().to_string(),
-            pool_address: pool.to_string(),
+            base: config.base_mint().to_string(),
+            quote: config.quote_mint().to_string(),
+            pool_address: config.pool().to_string(),
         },
-        data_snapshot: serde_json::json!(data),
+        data_snapshot: config.pool_data_json(),
         created_at: None,
         updated_at: None,
     })
