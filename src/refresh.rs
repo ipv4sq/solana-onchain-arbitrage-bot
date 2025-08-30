@@ -8,7 +8,6 @@ use crate::legacy_dex::solfi::constants::solfi_program_id;
 use crate::legacy_dex::solfi::pool_info::SolfiInfo;
 use crate::legacy_dex::vertigo::{derive_vault_address, vertigo_program_id, VertigoInfo};
 use crate::pools::*;
-use futures::StreamExt;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;

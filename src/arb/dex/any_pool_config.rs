@@ -13,7 +13,7 @@ use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::return_error;
 use anyhow::Result;
 use delegate::delegate;
-use serde_json::{json, Value};
+use serde_json::Value;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 

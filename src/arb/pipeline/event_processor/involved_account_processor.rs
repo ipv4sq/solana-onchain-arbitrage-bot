@@ -12,7 +12,6 @@ use crate::arb::pipeline::swap_changes::account_monitor::subscriber::{
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
-use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use anyhow::anyhow;
@@ -22,22 +21,25 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
 
-#[allow(non_upper_case_globals)]
-static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<(GrpcTransactionUpdate, Trace)>>> =
-    lazy_arc!({
-        let config = PubSubConfig {
-            worker_pool_size: 16,
-            channel_buffer_size: 10_000,
-            name: "InvolvedAccountTransactionProcessor".to_string(),
-        };
+pub type TxWithTrace = (GrpcTransactionUpdate, Trace);
 
-        PubSubProcessor::new(config, |(update, trace): (GrpcTransactionUpdate, Trace)| {
-            Box::pin(async move {
-                process_involved_account_transaction(update, trace).await?;
-                Ok(())
-            })
-        })
-    });
+#[allow(non_upper_case_globals)]
+static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<TxWithTrace>>> = lazy_arc!({
+    let config = PubSubConfig {
+        worker_pool_size: 16,
+        channel_buffer_size: 10_000,
+        name: "InvolvedAccountTransactionProcessor".to_string(),
+    };
+
+    // PubSubProcessor::new(config, |(update, trace): (GrpcTransactionUpdate, Trace)| {
+    //     Box::pin(async move {
+    //         process_involved_account_transaction(update, trace).await?;
+    //         Ok(())
+    //     })
+    // });
+
+    PubSubProcessor::new(config, process_involved_account_transaction)
+});
 
 #[allow(non_upper_case_globals)]
 pub static InvolvedAccountTxDebouncer: Lazy<
@@ -58,10 +60,8 @@ pub static InvolvedAccountTxDebouncer: Lazy<
     )
 });
 
-pub async fn process_involved_account_transaction(
-    update: GrpcTransactionUpdate,
-    trace: Trace,
-) -> anyhow::Result<()> {
+pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow::Result<()> {
+    let (update, trace) = update;
     trace.step_with(
         StepType::Custom("ProcessingTransaction".to_string()),
         "signature",
