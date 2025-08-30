@@ -60,7 +60,7 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
         })
     }
 
-    fn build_accounts_no_matter_direction_size(
+    async fn build_accounts_no_matter_direction_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &MeteoraDammV2PoolData,
@@ -74,9 +74,10 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
             None,
             None,
         )
+        .await
     }
 
-    fn build_accounts_with_direction_and_size(
+    async fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &MeteoraDammV2PoolData,
@@ -242,8 +243,8 @@ mod tests {
         assert_eq!(expected, result);
     }
 
-    #[test]
-    fn test_build_accounts() {
+    #[tokio::test]
+    async fn test_build_accounts() {
         let pool = "6CXXieC355gteamwofSzJn8DiyrbKyYyXc3eBKmB81CF".to_pubkey();
         let pool_data = load_pool_data();
         let input_mint = "So11111111111111111111111111111111111111112".to_pubkey();
@@ -258,6 +259,7 @@ mod tests {
             Some(3226352439),
             Some(0),
         )
+        .await
         .unwrap();
 
         let expected = expected_account();

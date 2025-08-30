@@ -12,7 +12,6 @@ use crate::arb::global::constant::token_program::{
 use crate::arb::global::enums::direction::TradeDirection;
 use crate::arb::util::alias::AResult;
 use crate::arb::util::solana::pda::ata;
-use crate::arb::util::tokio_util::block_on;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
@@ -78,14 +77,16 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         })
     }
 
-    fn build_accounts_no_matter_direction_size(
+    async fn build_accounts_no_matter_direction_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &PumpAmmPoolData,
     ) -> AResult<PumpAmmInputAccounts> {
-        let base_mint = block_on(MintRecordRepository::get_mint(&pool_data.base_mint))?
+        let base_mint = MintRecordRepository::get_mint(&pool_data.base_mint)
+            .await?
             .or_err(f!("Can't retrieve base mint {}", &pool_data.base_mint))?;
-        let quote_mint = block_on(MintRecordRepository::get_mint(&pool_data.quote_mint))?
+        let quote_mint = MintRecordRepository::get_mint(&pool_data.quote_mint)
+            .await?
             .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
 
         let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
@@ -134,7 +135,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         })
     }
 
-    fn build_accounts_with_direction_and_size(
+    async fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &PumpAmmPoolData,
@@ -143,7 +144,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         input_amount: Option<u64>,
         output_amount: Option<u64>,
     ) -> anyhow::Result<PumpAmmInputAccounts> {
-        Self::build_accounts_no_matter_direction_size(payer, pool, pool_data)
+        Self::build_accounts_no_matter_direction_size(payer, pool, pool_data).await
     }
 
     fn get_trade_direction(self) -> AResult<TradeDirection> {
@@ -213,7 +214,8 @@ mod tests {
 
         let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
             &payer, &pool, &pool_data,
-        )?;
+        )
+        .await?;
 
         let expected = PumpAmmInputAccounts {
             pool: "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_writable(),

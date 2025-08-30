@@ -6,6 +6,5 @@ pub mod macros;
 pub mod serde_helpers;
 pub mod solana;
 pub mod structs;
-pub mod tokio_util;
 pub mod traits;
 pub mod worker;

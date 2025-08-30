@@ -37,7 +37,7 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
 
     fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)>;
 
-    fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
+    async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
 
     fn dir(&self, from: &MintAddress, to: &MintAddress) -> Direction {
         let pool_base = self.as_ref();

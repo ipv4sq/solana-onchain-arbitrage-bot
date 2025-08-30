@@ -66,7 +66,8 @@ pub async fn build_tx(
         pools,
         minimum_profit,
         never_abort,
-    )?;
+    )
+    .await?;
     instructions.push(swap_ix);
 
     let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
@@ -77,7 +78,7 @@ pub async fn build_tx(
     Ok(tx)
 }
 
-pub fn create_invoke_mev_instruction(
+pub async fn create_invoke_mev_instruction(
     signer: &Pubkey,
     minor_mint: &MintAddress,
     token_program: &TokenProgramAddress,
@@ -117,7 +118,7 @@ pub fn create_invoke_mev_instruction(
     ]);
 
     for pool in pools {
-        let specific_accounts = pool.build_mev_bot_ix_accounts(signer)?;
+        let specific_accounts = pool.build_mev_bot_ix_accounts(signer).await?;
         accounts.extend(specific_accounts);
     }
 

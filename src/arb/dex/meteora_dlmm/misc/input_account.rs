@@ -64,7 +64,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         })
     }
 
-    fn build_accounts_no_matter_direction_size(
+    async fn build_accounts_no_matter_direction_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
@@ -118,7 +118,7 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
         })
     }
 
-    fn build_accounts_with_direction_and_size(
+    async fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &MeteoraDlmmPoolData,
@@ -298,8 +298,8 @@ mod tests {
         let data = general_purpose::STANDARD.decode(onchain_data)?;
         MeteoraDlmmPoolData::load_data(&data)
     }
-    #[test]
-    fn test_build_accounts() {
+    #[tokio::test]
+    async fn test_build_accounts() {
         let result = MeteoraDlmmInputAccounts::build_accounts_with_direction_and_size(
             &PAYER.to_pubkey(),
             &"FrQ9w1xEiypynrBt2qWPWLcFQ1Ht1LLfyrcWLKfzcXcs".to_pubkey(),
@@ -309,6 +309,7 @@ mod tests {
             Some(543235989680078),
             Some(0),
         )
+        .await
         .unwrap();
         assert_eq!(result, expected_result())
     }

@@ -19,6 +19,11 @@ pub async fn on_pool_update(
     updated_config: AnyPoolConfig,
     trace: Trace,
 ) -> Option<()> {
+    let mint_pair = MintPair(updated_config.base_mint(), updated_config.quote_mint());
+    if mint_pair.shall_contain(&Mints::WSOL).is_err() {
+        return None;
+    }
+
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
 
     PoolConfigCache

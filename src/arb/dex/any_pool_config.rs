@@ -99,11 +99,11 @@ impl AnyPoolConfig {
 impl AnyPoolConfig {
     delegate! {
         to match self {
-            MeteoraDlmm(c) => c,
-            MeteoraDammV2(c) => c,
+            MeteoraDlmm(a) => a,
+            MeteoraDammV2(b) => b,
             PumpAmm(c) => c,
         } {
-            pub fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
+            pub async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
             pub fn pool(&self) -> PoolAddress;
             pub fn base_mint(&self) -> MintAddress;
             pub fn quote_mint(&self) -> MintAddress;

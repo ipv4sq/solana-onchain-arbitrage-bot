@@ -31,12 +31,13 @@ impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
         Ok((MeteoraDammV2, address))
     }
 
-    fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>> {
+    async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>> {
         let built = MeteoraDammV2InputAccount::build_accounts_no_matter_direction_size(
             payer,
             &self.pool_address,
             &self.pool_data,
-        )?;
+        )
+        .await?;
         let accounts: Vec<AccountMeta> = vec![
             built.meteora_program,
             self.pool_data.pair().desired_mint()?.to_readonly(),

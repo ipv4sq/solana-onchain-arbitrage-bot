@@ -13,14 +13,14 @@ pub trait InputAccountUtil<Account, Data>: Sized {
     1. This is just for building the right list of accounts with correct permission set.
     2. If there is any bin array, it would quickly estimate.
      */
-    fn build_accounts_no_matter_direction_size(
+    async fn build_accounts_no_matter_direction_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &Data,
     ) -> Result<Account>;
 
     // This is the most accurate version, for you to generate swap instructions directly in the future
-    fn build_accounts_with_direction_and_size(
+    async fn build_accounts_with_direction_and_size(
         payer: &Pubkey,
         pool: &Pubkey,
         pool_data: &Data,
