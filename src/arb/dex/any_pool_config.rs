@@ -18,6 +18,7 @@ use crate::arb::dex::refined_interface::RefinedPoolConfig;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::f;
 use anyhow::{anyhow, Result};
 use solana_program::pubkey::Pubkey;
@@ -50,51 +51,45 @@ impl AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
-    pub async fn from_account_update(
-        update: &AccountState,
-        desired_mint: &Pubkey,
-    ) -> Result<AnyPoolConfig> {
-        let dex_type = DexType::determine_from(&update.owner);
-        let c = match dex_type {
-            DexType::MeteoraDlmm => {
-                let data = MeteoraDlmmPoolData::load_data(&update.data)?;
-                let config =
-                    MeteoraDlmmPoolConfig::from_pool_data(&update.pubkey, data, *desired_mint)?;
-                MeteoraDlmm(config)
-            }
-            DexType::MeteoraDammV2 => {
-                let data = MeteoraDammV2PoolData::load_data(&update.data)?;
-                let config =
-                    MeteoraDammV2Config::from_pool_data(&update.pubkey, data, *desired_mint)?;
-                MeteoraDammV2(config)
-            }
+    pub fn from_basis(
+        pool_address: PoolAddress,
+        dex_type: DexType,
+        data: &[u8],
+    ) -> AResult<AnyPoolConfig> {
+        let r = match dex_type {
+            DexType::MeteoraDlmm => MeteoraDlmm(MeteoraDlmmRefinedConfig::from_data(
+                pool_address,
+                dex_type,
+                data,
+            )?),
+            DexType::MeteoraDammV2 => MeteoraDammV2(MeteoraDammV2RefinedConfig::from_data(
+                pool_address,
+                dex_type,
+                data,
+            )?),
+            DexType::PumpAmm => PumpAmm(PumpAmmRefinedConfig::from_data(
+                pool_address,
+                dex_type,
+                data,
+            )?),
             _ => AnyPoolConfig::Unsupported,
         };
-        Ok(c)
+        Ok(r)
+    }
+
+    pub fn from_owner_and_data(
+        pool_address: &PoolAddress,
+        owner: &Pubkey,
+        data: &[u8],
+    ) -> AResult<AnyPoolConfig> {
+        let dex_type = DexType::determine_from(owner);
+        Self::from_basis(*pool_address, dex_type, data)
     }
 
     pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
         let account = rpc_client().get_account(pool_address).await?;
         let dex_type = DexType::determine_from(&account.owner);
-        Self::from_address(pool_address, dex_type).await
-    }
-
-    pub async fn from_address(pool: &Pubkey, dex_type: DexType) -> Result<AnyPoolConfig> {
-        match dex_type {
-            DexType::MeteoraDlmm => {
-                let c = MeteoraDlmmPoolConfig::from_address(&pool).await?;
-                Ok(MeteoraDlmm(c))
-            }
-            DexType::MeteoraDammV2 => {
-                let config = MeteoraDammV2Config::from_address(&pool).await?;
-                Ok(MeteoraDammV2(config))
-            }
-            DexType::PumpAmm => {
-                let c = PumpAmmPoolConfig::from_address(&pool).await?;
-                Ok(PumpAmm(c))
-            }
-            _ => Ok(AnyPoolConfig::Unsupported),
-        }
+        Self::from_basis(*pool_address, dex_type, &account.data)
     }
 
     pub fn from_ix(ix: &Instruction) -> Result<SwapInstruction> {

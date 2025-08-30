@@ -73,8 +73,11 @@ pub async fn process_pool_update(trigger: Trigger, trace: Trace) -> Result<()> {
 
             info!("Pool data changed for: {}", pool_addr);
             // update pool
-            let updated_config =
-                AnyPoolConfig::from_account_update(&update.current, &Mints::WSOL).await?;
+            let updated_config = AnyPoolConfig::from_owner_and_data(
+                update.pool(),
+                &update.current.owner,
+                &update.current.data,
+            )?;
             on_pool_update(pool_addr, updated_config, trace).await;
         }
         Trigger::PoolAddress(addr) => {
