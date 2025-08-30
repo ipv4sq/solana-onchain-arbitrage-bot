@@ -23,10 +23,8 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
             channel_buffer_size: 1000,
             name: "VaultUpdateProcessor".to_string(),
         },
-        |event: MevBotFire| {
-            Box::pin(
-                async move { fire_mev_bot(&event.minor_mint, &event.pools, event.trace).await },
-            )
+        |event: MevBotFire| async move {
+            fire_mev_bot(&event.minor_mint, &event.pools, event.trace).await
         },
     )
 });

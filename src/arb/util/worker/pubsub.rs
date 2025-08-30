@@ -29,15 +29,15 @@ pub struct PubSubProcessor<T: Send + 'static> {
 }
 
 impl<T: Send + 'static> PubSubProcessor<T> {
-    pub fn from_async_fn<F, Fut>(config: PubSubConfig, processor: F) -> Self
+    pub fn new<F, Fut>(config: PubSubConfig, processor: F) -> Self
     where
         F: Fn(T) -> Fut + Send + Sync + 'static + Clone,
         Fut: std::future::Future<Output = Result<()>> + Send + 'static,
     {
-        Self::new(config, move |msg| Box::pin(processor(msg)))
+        Self::from_boxed_fn(config, move |msg| Box::pin(processor(msg)))
     }
 
-    pub fn new<F>(config: PubSubConfig, processor: F) -> Self
+    pub fn from_boxed_fn<F>(config: PubSubConfig, processor: F) -> Self
     where
         F: Fn(T) -> futures::future::BoxFuture<'static, Result<()>> + Send + Sync + 'static + Clone,
     {
@@ -144,12 +144,12 @@ mod tests {
 
         let processor = PubSubProcessor::new(config, move |msg: i32| {
             let counter = counter_clone.clone();
-            Box::pin(async move {
+            async move {
                 let mut count = counter.lock().await;
                 *count += msg;
                 info!("Processed message: {}, total: {}", msg, *count);
                 Ok(())
-            })
+            }
         });
 
         for i in 1..=10 {

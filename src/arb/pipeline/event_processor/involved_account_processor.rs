@@ -5,9 +5,9 @@ use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
-use crate::arb::global::trace::types::Trace;
+use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::swap_changes::account_monitor::subscriber::{
-    NEW_POOL_CONSUMER, POOL_UPDATE_CONSUMER,
+    NewPoolConsumer, PoolUpdateConsumer,
 };
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
@@ -24,33 +24,14 @@ use tracing::{error, info};
 pub type TxWithTrace = (GrpcTransactionUpdate, Trace);
 
 #[allow(non_upper_case_globals)]
-static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<TxWithTrace>>> = lazy_arc!({
+pub static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<TxWithTrace>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 16,
         channel_buffer_size: 10_000,
         name: "InvolvedAccountTransactionProcessor".to_string(),
     };
 
-    PubSubProcessor::from_async_fn(config, process_involved_account_transaction)
-});
-
-#[allow(non_upper_case_globals)]
-pub static InvolvedAccountTxDebouncer: Lazy<
-    Arc<BufferedDebouncer<String, (GrpcTransactionUpdate, Trace)>>,
-> = lazy_arc!({
-    BufferedDebouncer::new(
-        Duration::from_millis(5),
-        |(update, trace): (GrpcTransactionUpdate, Trace)| async move {
-            trace.step_with(
-                StepType::Custom("TransactionDebounced".to_string()),
-                "signature",
-                &update.signature,
-            );
-            if let Err(e) = InvolvedAccountTxProcessor.publish((update, trace)).await {
-                error!("Failed to publish transaction update: {}", e);
-            }
-        },
-    )
+    PubSubProcessor::new(config, process_involved_account_transaction)
 });
 
 pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow::Result<()> {
@@ -76,11 +57,13 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow
         );
         if !PoolRecordRepository::is_pool_recorded(&pool_account).await {
             // this could be a new pool, we did not know, then we try to record it
-            NEW_POOL_CONSUMER.publish((pool_account, trace)).await?;
+            NewPoolConsumer
+                .publish(WithTrace(pool_account, trace))
+                .await?;
         } else {
             // this is something we know, so trigger arbitrage opportunity.
-            POOL_UPDATE_CONSUMER
-                .publish((Trigger::PoolAddress(pool_account), trace.clone()))
+            PoolUpdateConsumer
+                .publish(WithTrace(Trigger::PoolAddress(pool_account), trace))
                 .await
                 .ok();
         }

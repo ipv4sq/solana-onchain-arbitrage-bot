@@ -11,6 +11,8 @@ use std::sync::{Arc, Mutex};
 
 static TRACE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+pub struct WithTrace<T>(pub T, pub Trace);
+
 #[derive(Clone)]
 pub struct Trace {
     pub id: String,

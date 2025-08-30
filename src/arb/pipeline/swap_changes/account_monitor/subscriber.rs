@@ -3,7 +3,7 @@ use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::enums::step_type::StepType::AccountUpdateDebounced;
-use crate::arb::global::trace::types::Trace;
+use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::swap_changes::account_monitor::entry;
 use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
@@ -22,38 +22,29 @@ use tracing::{debug, error, info};
 #[allow(non_upper_case_globals)]
 pub static PoolAccountCache: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
-pub static POOL_UPDATE_CONSUMER: Lazy<Arc<PubSubProcessor<(Trigger, Trace)>>> = lazy_arc!({
+#[allow(non_upper_case_globals)]
+pub static PoolUpdateConsumer: Lazy<Arc<PubSubProcessor<WithTrace<Trigger>>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 24,
         channel_buffer_size: 5000,
         name: "PoolUpdateProcessor".to_string(),
     };
 
-    PubSubProcessor::new(config, |(trigger, trace): (Trigger, Trace)| {
-        Box::pin(async move {
-            entry::process_pool_update(trigger, trace).await?;
-            Ok(())
-        })
-    })
+    PubSubProcessor::new(config, entry::process_pool_update)
 });
 
-pub static NEW_POOL_CONSUMER: Lazy<Arc<PubSubProcessor<(Pubkey, Trace)>>> = lazy_arc!({
+#[allow(non_upper_case_globals)]
+pub static NewPoolConsumer: Lazy<Arc<PubSubProcessor<WithTrace<Pubkey>>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 32,
         channel_buffer_size: 100_000,
         name: "NewPoolProcesseor".to_string(),
     };
-
-    PubSubProcessor::new(config, |(pool_address, trace): (Pubkey, Trace)| {
-        Box::pin(async move {
-            entry::on_new_pool_received(pool_address, trace).await?;
-            Ok(())
-        })
-    })
+    PubSubProcessor::new(config, entry::on_new_pool_received)
 });
 
-#[allow(unused)]
-static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpdate, Trace)>>> =
+#[allow(non_upper_case_globals)]
+static PoolUpdateDebouncer: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpdate, Trace)>>> =
     lazy_arc!({
         BufferedDebouncer::new(
             Duration::from_millis(1),
@@ -66,15 +57,15 @@ static POOL_UPDATE_DEBOUNCER: Lazy<Arc<BufferedDebouncer<Pubkey, (GrpcAccountUpd
                 };
                 trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
                 if PoolRecordRepository::is_pool_recorded(pool_update.pool()).await {
-                    if let Err(e) = POOL_UPDATE_CONSUMER
-                        .publish((Trigger::PoolUpdate(pool_update), trace))
+                    if let Err(e) = PoolUpdateConsumer
+                        .publish(WithTrace(Trigger::PoolUpdate(pool_update), trace))
                         .await
                     {
                         error!("Failed to publish pool update: {}", e);
                     }
                 } else {
-                    if let Err(e) = NEW_POOL_CONSUMER
-                        .publish((*pool_update.pool(), trace))
+                    if let Err(e) = NewPoolConsumer
+                        .publish(WithTrace(*pool_update.pool(), trace))
                         .await
                     {
                         error!("Failed to publish new pool update: {}", e);
@@ -129,7 +120,7 @@ impl PoolAccountMonitor {
             "account_address",
             update.account,
         );
-        POOL_UPDATE_DEBOUNCER.update(update.account, (update, trace));
+        PoolUpdateDebouncer.update(update.account, (update, trace));
 
         unit_ok!()
     }

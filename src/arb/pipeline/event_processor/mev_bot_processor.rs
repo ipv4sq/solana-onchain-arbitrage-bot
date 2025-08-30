@@ -13,10 +13,8 @@ pub static MevBotTxProcessor: Lazy<Arc<PubSubProcessor<Transaction>>> = lazy_arc
         name: "SolanaMevBotTransactionDetector".to_string(),
     };
 
-    PubSubProcessor::new(config, |tx: Transaction| {
-        Box::pin(async move {
-            entry::entry(&tx).await?;
-            Ok(())
-        })
+    PubSubProcessor::new(config, |tx: Transaction| async move {
+        entry::entry(&tx).await?;
+        Ok(())
     })
 });

@@ -1,7 +1,7 @@
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::Trace;
-use crate::arb::pipeline::event_processor::involved_account_processor::InvolvedAccountTxDebouncer;
+use crate::arb::pipeline::event_processor::involved_account_processor::InvolvedAccountTxProcessor;
 use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
 use crate::unit_ok;
 use anyhow::Result;
@@ -41,7 +41,7 @@ impl InvolvedAccountSubscriber {
             "signature",
             &update.signature,
         );
-        InvolvedAccountTxDebouncer.update(update.signature.clone(), (update, trace));
+        InvolvedAccountTxProcessor.publish((update, trace)).await?;
         unit_ok!()
     }
 }

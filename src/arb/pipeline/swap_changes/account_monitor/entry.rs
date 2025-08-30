@@ -3,7 +3,7 @@ use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::rpc::rpc_client;
-use crate::arb::global::trace::types::Trace;
+use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::pipeline::trade_strategy::entry::on_pool_update;
 use crate::arb::util::structs::cache_type::CacheType;
@@ -57,7 +57,9 @@ pub static NonPoolBlocklist: Lazy<PersistentCache<Pubkey, BlocklistEntry>> = Laz
     )
 });
 
-pub async fn process_pool_update(trigger: Trigger, trace: Trace) -> Result<()> {
+pub async fn process_pool_update(update: WithTrace<Trigger>) -> Result<()> {
+    let WithTrace(trigger, trace) = update;
+
     let pool_addr = *trigger.pool();
     trace.step(StepType::ReceivePoolUpdate);
 
@@ -90,7 +92,8 @@ pub async fn process_pool_update(trigger: Trigger, trace: Trace) -> Result<()> {
     unit_ok!()
 }
 
-pub async fn on_new_pool_received(pool_address: Pubkey, trace: Trace) -> Result<()> {
+pub async fn on_new_pool_received(with_trace: WithTrace<Pubkey>) -> Result<()> {
+    let WithTrace(pool_address, trace) = with_trace;
     trace.step(StepType::IsAccountPoolData);
 
     record_if_real_pool(&pool_address).await;
