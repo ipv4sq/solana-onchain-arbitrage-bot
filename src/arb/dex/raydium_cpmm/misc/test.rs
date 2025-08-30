@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::dex::raydium_cpmm::data::RaydiumCpmmAPoolData;
+    use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmAPoolData;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;

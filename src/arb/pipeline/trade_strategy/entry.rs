@@ -11,7 +11,7 @@ use crate::arb::util::alias::PoolAddress;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
-use tracing::info;
+use tracing::{info, warn};
 
 pub async fn on_pool_update(
     pool_address: PoolAddress,
@@ -30,6 +30,7 @@ pub async fn on_pool_update(
 
     if trace.since_begin() > 10_000 {
         // not do anything if it's buffered too long, so we can quickly catch up.
+        warn!("skipping oppotunity calculation because it's too long");
         return None;
     }
 

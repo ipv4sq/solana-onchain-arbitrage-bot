@@ -45,6 +45,7 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     let (_, inners) = tx
         .extract_ix_and_inners(|p| *p == PoolProgram::PUMP_AMM)
         .or_err("Not a pump amm account")?;
+
     let pump_amm_pool = find_pump_swap_pool(&inners.instructions).or_err("Not a pump amm pool")?;
 
     if PoolRecordRepository::is_pool_recorded(&pump_amm_pool).await {
