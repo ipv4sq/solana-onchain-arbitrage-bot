@@ -223,31 +223,6 @@ async fn simulate_swap(
     from_mint: &Pubkey,
     to_mint: &Pubkey,
 ) -> Option<Decimal> {
-    match config {
-        AnyPoolConfig::MeteoraDlmm(ref c) => {
-            let price_result = c
-                .data
-                .mid_price_for_quick_estimate(from_mint, to_mint)
-                .await
-                .ok()?;
-            Some(input_amount * price_result.mid_price)
-        }
-        AnyPoolConfig::MeteoraDammV2(ref c) => {
-            let price_result = c
-                .data
-                .mid_price_for_quick_estimate(from_mint, to_mint)
-                .await
-                .ok()?;
-            Some(input_amount * price_result.mid_price)
-        }
-        AnyPoolConfig::PumpAmm(ref c) => {
-            let price_result = c
-                .data
-                .mid_price_for_quick_estimate(from_mint, to_mint)
-                .await
-                .ok()?;
-            Some(input_amount * price_result.mid_price)
-        }
-        AnyPoolConfig::Unsupported => None,
-    }
+    let quote = config.mid_price(from_mint, to_mint).await.ok()?;
+    Some(input_amount * quote.mid_price)
 }

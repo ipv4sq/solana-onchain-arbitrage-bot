@@ -2,6 +2,7 @@ use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
 use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
 use crate::arb::dex::meteora_damm_v2::refined::MeteoraDammV2RefinedConfig;
+use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::meteora_dlmm::refined::MeteoraDlmmRefinedConfig;
 use crate::arb::dex::pump_amm::refined::PumpAmmRefinedConfig;
 use crate::arb::dex::refined_interface::RefinedPoolConfig;
@@ -35,23 +36,6 @@ impl AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
-    delegate! {
-        to match self {
-            MeteoraDlmm(c) => c,
-            MeteoraDammV2(c) => c,
-            PumpAmm(c) => c,
-        } {
-            pub fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
-            pub fn pool(&self) -> PoolAddress;
-            pub fn base_mint(&self) -> MintAddress;
-            pub fn quote_mint(&self) -> MintAddress;
-            pub fn dex_type(&self) -> DexType;
-            pub fn pool_data_json(&self) -> Value;
-        }
-    }
-}
-
-impl AnyPoolConfig {
     pub fn from_basis(
         pool_address: PoolAddress,
         dex_type: DexType,
@@ -78,21 +62,6 @@ impl AnyPoolConfig {
         Ok(r)
     }
 
-    pub fn from_owner_and_data(
-        pool_address: &PoolAddress,
-        owner: &Pubkey,
-        data: &[u8],
-    ) -> AResult<AnyPoolConfig> {
-        let dex_type = DexType::determine_from(owner);
-        Self::from_basis(*pool_address, dex_type, data)
-    }
-
-    pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
-        let account = rpc_client().get_account(pool_address).await?;
-        let dex_type = DexType::determine_from(&account.owner);
-        Self::from_basis(*pool_address, dex_type, &account.data)
-    }
-
     pub fn from_ix(ix: &Instruction) -> Result<SwapInstruction> {
         let program_id = ix.program_id;
         let dex_type = DexType::determine_from(&program_id);
@@ -107,5 +76,38 @@ impl AnyPoolConfig {
             dex_type: dex,
             pool_address: address,
         })
+    }
+
+    pub fn from_owner_and_data(
+        pool_address: &PoolAddress,
+        owner: &Pubkey,
+        data: &[u8],
+    ) -> AResult<AnyPoolConfig> {
+        let dex_type = DexType::determine_from(owner);
+        Self::from_basis(*pool_address, dex_type, data)
+    }
+
+    pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
+        let account = rpc_client().get_account(pool_address).await?;
+        let dex_type = DexType::determine_from(&account.owner);
+        Self::from_basis(*pool_address, dex_type, &account.data)
+    }
+}
+
+impl AnyPoolConfig {
+    delegate! {
+        to match self {
+            MeteoraDlmm(c) => c,
+            MeteoraDammV2(c) => c,
+            PumpAmm(c) => c,
+        } {
+            pub fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
+            pub fn pool(&self) -> PoolAddress;
+            pub fn base_mint(&self) -> MintAddress;
+            pub fn quote_mint(&self) -> MintAddress;
+            pub fn dex_type(&self) -> DexType;
+            pub fn pool_data_json(&self) -> Value;
+            pub async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
+        }
     }
 }
