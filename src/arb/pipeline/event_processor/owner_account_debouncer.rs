@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::AccountState;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::global::enums::step_type::StepType::{AccountUpdateDebounced, DeterminePoolExists};
-use crate::arb::global::trace::types::{Trace, WithTrace};
+use crate::arb::global::trace::types::WithTrace;
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::event_processor::structs::pool_update::PoolUpdate;
@@ -14,7 +14,6 @@ use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::error;
 
 #[allow(non_upper_case_globals)]
 static LastPoolFromGrpc: LazyCache<Pubkey, AccountState> = LazyCache::new();

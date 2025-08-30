@@ -12,12 +12,9 @@ use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
-use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::{lazy_arc, return_error, unit_ok};
+use crate::{lazy_arc, unit_ok};
 use once_cell::sync::Lazy;
-use solana_program::pubkey::Pubkey;
-use sqlx::Pool;
 use std::sync::Arc;
 use tracing::info;
 

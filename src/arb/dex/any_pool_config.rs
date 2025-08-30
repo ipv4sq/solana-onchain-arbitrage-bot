@@ -6,7 +6,6 @@ use crate::arb::dex::meteora_damm_v2::config::MeteoraDammV2RefinedConfig;
 use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmRefinedConfig;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::config::PumpAmmRefinedConfig;
-use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
