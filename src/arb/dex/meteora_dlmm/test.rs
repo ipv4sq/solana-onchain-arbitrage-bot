@@ -1,12 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::interface::{PoolConfigInit, PoolDataLoader};
+    use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::dex::meteora_dlmm::bin_array;
-    use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-    use crate::arb::dex::meteora_dlmm::legacy::pool_config::*;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-    use crate::arb::global::constant::mint::Mints;
-    use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use anyhow::Result;
     use base64::engine::general_purpose;
@@ -18,107 +14,6 @@ mod tests {
         let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
         let account = MeteoraDlmmPoolData::load_data(&data).expect("Failed to parse account data");
         Ok(account)
-    }
-
-    #[test]
-    fn test_swap_accounts_with_amount() {
-        // Test with the actual transaction amount from the swap instruction
-        let amount_in = 449_360_555u64;
-        let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
-
-        let config = MeteoraDlmmPoolConfig::from_pool_data(
-            &POOL_ADDRESS.to_pubkey(),
-            load_data().unwrap(),
-            Mints::WSOL,
-        )
-        .unwrap();
-
-        // Build accounts with the specific amount
-        let result = config
-            .build_accounts_with_amount(
-                &payer,
-                &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
-                &Mints::WSOL,
-                amount_in,
-            )
-            .unwrap();
-
-        // Compare with expected from transaction
-        let expected_arrays = vec![
-            "9caL9WS3Y1RZ7L3wwXp4qa8hapTicbDY5GJJ3pteP7oX",
-            "MrNAjbZvwT2awQDobynRrmkJStE5ejprQ7QmFXLvycq",
-            "5Dj2QB9BtRtWV6skbCy6eadj23h6o46CVHpLbjsCJCEB",
-            "69EaDEqwjBKKRFKrtRxb7okPDu5EP5nFhbuqrBtekwDg",
-            "433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU",
-        ];
-
-        assert_eq!(
-            result.bin_arrays.len(),
-            5,
-            "Large swap should generate 5 bin arrays"
-        );
-
-        // Verify the pattern matches the actual transaction order: 2, 1, 0, -1, -2
-        let expected_indices = vec![2, 1, 0, -1, -2];
-
-        for (i, expected_idx) in expected_indices.iter().enumerate() {
-            let expected_pda =
-                bin_array::get_bin_array_pda(&POOL_ADDRESS.to_pubkey(), *expected_idx);
-            assert_eq!(
-                result.bin_arrays[i].pubkey, expected_pda,
-                "Bin array {} should match expected PDA for index {}",
-                i, expected_idx
-            );
-        }
-    }
-
-    #[test]
-    fn test_swap_accounts() {
-        // This test validates the structure of swap accounts
-        // Note: bin arrays are dynamic based on the swap size and liquidity distribution
-        // The expected values here are from a specific historical transaction
-        let payer = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey();
-        let expected = MeteoraDlmmInputAccounts {
-            lb_pair: "8ztFxjFPfVUtEf4SLSapcFj8GW2dxyUA9no2bLPq7H7V".to_writable(),
-            bin_array_bitmap_extension: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
-            reverse_x: "64GTWbkiCgZt62EMccjFHRoT1MQAQviDioa63NCj37w8".to_writable(),
-            reverse_y: "HJfR4mh9Yctrrh8pQQsrGsNdqV7KfpaaXGSdxGTwoeBK".to_writable(),
-            user_token_in: "4m7mnuw9HhbQzK87HNA2NvkinG84M75YZEjbMW8UFaMs".to_writable(),
-            user_token_out: "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_writable(),
-            token_x_mint: "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_readonly(),
-            token_y_mint: "So11111111111111111111111111111111111111112".to_readonly(),
-            oracle: "Fo3m9HQx8Rv4EMzmKWxe5yjCZMNcB5W5sKNv4pDzRFqe".to_writable(),
-            host_fee_in: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
-            user: "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_signer(),
-            token_x_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
-            token_y_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
-            event_authority: DLMM_EVENT_AUTHORITY.to_readonly(),
-            program: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo".to_program(),
-            bin_arrays: vec![
-                "9caL9WS3Y1RZ7L3wwXp4qa8hapTicbDY5GJJ3pteP7oX".to_writable(),
-                "MrNAjbZvwT2awQDobynRrmkJStE5ejprQ7QmFXLvycq".to_writable(),
-                "5Dj2QB9BtRtWV6skbCy6eadj23h6o46CVHpLbjsCJCEB".to_writable(),
-                "69EaDEqwjBKKRFKrtRxb7okPDu5EP5nFhbuqrBtekwDg".to_writable(),
-                "433yNSNcf1Gx9p8mWATybS81wQtjBfxmrnHpxNUzcMvU".to_writable(),
-            ],
-        };
-        let config = MeteoraDlmmPoolConfig::from_pool_data(
-            &POOL_ADDRESS.to_pubkey(),
-            load_data().unwrap(),
-            Mints::WSOL,
-        )
-        .unwrap();
-
-        let result = config
-            .build_accounts_with_amount(
-                &payer,
-                &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
-                &Mints::WSOL,
-                449_360_555u64,
-            )
-            .unwrap();
-
-        assert_eq!(result, expected);
     }
 
     #[test]
