@@ -6,20 +6,17 @@ use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::{Trace, WithTrace};
-use crate::arb::pipeline::swap_changes::account_monitor::subscriber::{
-    NewPoolConsumer, PoolUpdateConsumer,
-};
+use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
+use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
-use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use anyhow::anyhow;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
-use std::time::Duration;
-use tracing::{error, info};
+use tracing::info;
 
 pub type TxWithTrace = (GrpcTransactionUpdate, Trace);
 
@@ -57,12 +54,12 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow
         );
         if !PoolRecordRepository::is_pool_recorded(&pool_account).await {
             // this could be a new pool, we did not know, then we try to record it
-            NewPoolConsumer
+            NewPoolProcessor
                 .publish(WithTrace(pool_account, trace))
                 .await?;
         } else {
             // this is something we know, so trigger arbitrage opportunity.
-            PoolUpdateConsumer
+            PoolUpdateProcessor
                 .publish(WithTrace(Trigger::PoolAddress(pool_account), trace))
                 .await
                 .ok();

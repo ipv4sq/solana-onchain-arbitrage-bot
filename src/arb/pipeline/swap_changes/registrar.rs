@@ -1,5 +1,5 @@
 use crate::arb::pipeline::chain_subscriber::involved_account_subscriber::start_involved_account_monitor;
-use crate::arb::pipeline::swap_changes::account_monitor::subscriber::start_pool_monitor;
+use crate::arb::pipeline::chain_subscriber::owner_account_subscriber::start_pool_monitor;
 use crate::unit_ok;
 use anyhow::Result;
 use tracing::{error, info};
