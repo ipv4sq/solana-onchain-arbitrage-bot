@@ -5,14 +5,10 @@ use crate::arb::database::mev_simulation_log::model::{
 use crate::arb::database::mev_simulation_log::repository::MevSimulationLogRepository;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
-use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader};
-use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::dex::util::{ata, ata_sol_token};
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
-use crate::arb::global::constant::token_program::TokenProgram;
+use crate::arb::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::global::trace::types::Trace;
@@ -22,7 +18,6 @@ use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
-use solana_program::system_program;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
@@ -99,7 +94,7 @@ pub fn create_invoke_mev_instruction(
         fee_account.to_writable(),
         ata_sol_token(&signer, &Mints::WSOL).to_writable(),
         TokenProgram::SPL_TOKEN.to_program(),
-        system_program::ID.to_readonly(),
+        SystemProgram.to_readonly(),
         spl_associated_token_account::ID.to_readonly(),
     ];
 
