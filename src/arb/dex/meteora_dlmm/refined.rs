@@ -36,15 +36,19 @@ impl RefinedPoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmRefinedConfig {
             &self.pool_address,
             &self.pool_data,
         )?;
-        let accounts: Vec<AccountMeta> = vec![
-            built.program,
-            self.pool_data.pair().desired_mint()?.to_readonly(),
-            built.event_authority,
-            built.lb_pair,
-            built.reverse_x,
-            built.reverse_y,
-            built.oracle,
-        ];
+        let accounts: Vec<AccountMeta> = [
+            vec![
+                built.program,
+                self.pool_data.pair().desired_mint()?.to_readonly(),
+                built.event_authority,
+                built.lb_pair,
+                built.reverse_x,
+                built.reverse_y,
+                built.oracle,
+            ],
+            built.bin_arrays,
+        ]
+        .concat();
         Ok(accounts)
     }
 
