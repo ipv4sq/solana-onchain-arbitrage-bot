@@ -20,13 +20,8 @@ use tracing::info;
 async fn main() -> anyhow::Result<()> {
     arb::util::logging::init()?;
 
-    // Initialize database connection
-    if let Err(e) = global::db::init_db().await {
-        log_error_with_backtrace!(warn, "Failed to initialize database connection", e);
-        tracing::warn!("Database features will be unavailable");
-    } else {
-        info!("Database connection initialized");
-    }
+    // Database will be automatically initialized on first use
+    info!("Database will be initialized on first access");
 
     // Initialize blockhash holder with fresh blockhash
     info!("Initializing blockhash holder...");

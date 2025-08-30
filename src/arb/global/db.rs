@@ -1,61 +1,57 @@
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::env;
-use std::sync::OnceLock;
 use std::time::Duration;
 
-static DB_CONNECTION: OnceLock<DatabaseConnection> = OnceLock::new();
+static DB_CONNECTION: Lazy<DatabaseConnection> = Lazy::new(|| {
+    // This initialization happens in a blocking context
+    // For tests, we need to ensure they call init_db_async first
+    std::thread::spawn(|| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            create_connection().await.expect("Failed to initialize database")
+        })
+    })
+    .join()
+    .unwrap()
+});
 
-pub async fn init_db() -> Result<()> {
+async fn create_connection() -> Result<DatabaseConnection> {
     dotenv::dotenv().ok();
     let database_url = env::var("DATABASE_URL")?;
 
     let mut opt = ConnectOptions::new(database_url);
     opt.max_connections(100)
         .min_connections(5)
-        .connect_timeout(Duration::from_secs(30))
-        .acquire_timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(8))
+        .acquire_timeout(Duration::from_secs(2))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
         .sqlx_logging(false);
 
-    let connection = Database::connect(opt).await?;
+    Ok(Database::connect(opt).await?)
+}
 
-    DB_CONNECTION
-        .set(connection)
-        .map_err(|_| anyhow::anyhow!("Database already initialized"))?;
-
+pub async fn init_db() -> Result<()> {
+    // Force lazy initialization
+    let _ = &*DB_CONNECTION;
     Ok(())
 }
 
 pub fn get_db() -> &'static DatabaseConnection {
-    DB_CONNECTION
-        .get()
-        .expect("Database not initialized. Call init_db() first")
+    &*DB_CONNECTION
 }
 
 pub fn is_db_initialized() -> bool {
-    DB_CONNECTION.get().is_some()
+    // With Lazy, it's always initialized when accessed
+    true
 }
 
 #[cfg(test)]
-mod test_init {
-    use super::*;
-    use ctor::ctor;
-
-    #[ctor]
-    fn init_test_db() {
-        // Initialize tokio runtime for test database setup
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-
-        // Only initialize if not already done
-        if !is_db_initialized() {
-            runtime.block_on(async {
-                if let Err(e) = init_db().await {
-                    eprintln!("Warning: Failed to initialize test database: {}", e);
-                    eprintln!("Database-dependent tests may fail");
-                }
-            });
-        }
+pub async fn ensure_test_db() -> Result<()> {
+    if !is_db_initialized() {
+        init_db().await?;
     }
+    Ok(())
 }
