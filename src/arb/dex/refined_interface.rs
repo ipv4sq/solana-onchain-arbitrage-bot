@@ -1,5 +1,6 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::interface::{Direction, PoolDataLoader};
+use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
@@ -30,7 +31,7 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
 
     fn extract_pool_from(ix: Instruction) -> AResult<(DexType, PoolAddress)>;
 
-    fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> Vec<AccountMeta>;
+    fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
 
     fn dir(&self, from: &MintAddress, to: &MintAddress) -> Direction {
         let pool_base = self.as_ref();
@@ -42,7 +43,7 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
         panic!("pool doesn't contain from and to");
     }
 
-    fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> u64;
+    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
 
     // not sure if needed in the future
     fn refresh_pool_data(&mut self, data: &[u8]) -> AResult<&Self>

@@ -101,7 +101,7 @@ impl PumpAmmIxData {
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::pump_amm::input_data::PumpAmmIxData;
+    use crate::arb::dex::pump_amm::legacy::input_data::PumpAmmIxData;
 
     #[test]
     fn test_input_data() {
