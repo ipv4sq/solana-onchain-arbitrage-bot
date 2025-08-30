@@ -83,3 +83,9 @@ yellowstone-grpc-proto = "8.0.0"
 [dev-dependencies]
 serde_json = "1.0.143"
 ctor = "0.5.0"
+
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"

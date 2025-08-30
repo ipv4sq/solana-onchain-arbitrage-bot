@@ -8,6 +8,7 @@ use crate::arb::pipeline::event_processor::pool_update_processor::get_minor_mint
 use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::alias::PoolAddress;
+use crate::arb::util::structs::mint_pair::MintPair;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
@@ -102,10 +103,10 @@ pub async fn compute_brute_force(
     let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint)
         .await?
         .into_iter()
+        .filter(|pool| pool.address.0 != *changed_pool)
         .filter(|pool| {
-            pool.address.0 != *changed_pool
-                && ((pool.base_mint.0 == Mints::WSOL && pool.quote_mint.0 == *minor_mint)
-                    || (pool.quote_mint.0 == Mints::WSOL && pool.base_mint.0 == *minor_mint))
+            let mint_pair = MintPair(pool.base_mint.0, pool.quote_mint.0);
+            mint_pair.consists_of(minor_mint, &Mints::WSOL).is_ok()
         })
         .collect::<Vec<_>>();
 
