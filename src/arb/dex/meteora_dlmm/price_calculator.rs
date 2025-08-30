@@ -1,6 +1,6 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
-use crate::arb::dex::interface::Direction;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::global::enums::direction::Direction;
 use crate::arb::util::alias::MintAddress;
 use anyhow::{anyhow, Result};
 use rust_decimal::Decimal;

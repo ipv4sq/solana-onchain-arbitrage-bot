@@ -1,16 +1,17 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
-use crate::arb::dex::interface::{InputAccountUtil, TradeDirection};
+use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::pump_amm::address_seed;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
-use crate::arb::dex::util::ata;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::constant::token_program::{
     SystemProgram, TokenProgram, ASSOCIATED_TOKEN_ACCOUNT_PROGRAM,
 };
+use crate::arb::global::enums::direction::TradeDirection;
 use crate::arb::util::alias::AResult;
+use crate::arb::util::solana::pda::ata;
 use crate::arb::util::tokio_util::block_on;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
@@ -185,8 +186,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::database::mint_record::repository::MintRecordRepository;
-    use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader};
+    use crate::arb::dex::interface::PoolDataLoader;
+    use crate::arb::dex::legacy_interface::InputAccountUtil;
     use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
     use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
     use crate::arb::global::constant::mint::Mints;

@@ -1,7 +1,8 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::dex::interface::{InputAccountUtil, TradeDirection};
+use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+use crate::arb::global::enums::direction::TradeDirection;
 use crate::arb::util::alias::AResult;
 use anyhow::Result;
 use itertools::concat;
@@ -250,9 +251,10 @@ impl InputAccountUtil<MeteoraDlmmInputAccounts, MeteoraDlmmPoolData> for Meteora
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader};
+    use crate::arb::dex::interface::PoolDataLoader;
+    use crate::arb::dex::legacy_interface::InputAccountUtil;
     use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-    use crate::arb::dex::meteora_dlmm::legacy::input_data::is_meteora_dlmm_swap;
+    use crate::arb::dex::meteora_dlmm::misc::input_data::is_meteora_dlmm_swap;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::global::constant::pool_program::PoolProgram;
     use crate::arb::global::constant::token_program::TokenProgram;

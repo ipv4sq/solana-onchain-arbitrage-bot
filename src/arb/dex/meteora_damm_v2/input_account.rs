@@ -1,9 +1,11 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::Transaction;
-use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader, TradeDirection};
+use crate::arb::dex::interface::PoolDataLoader;
+use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
-use crate::arb::dex::util::ata;
+use crate::arb::global::enums::direction::TradeDirection;
 use crate::arb::util::alias::AResult;
+use crate::arb::util::solana::pda::ata;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::AccountMeta;
@@ -182,9 +184,9 @@ impl InputAccountUtil<MeteoraDammV2InputAccount, MeteoraDammV2PoolData>
 #[cfg(test)]
 mod tests {
     use crate::arb::convention::chain::Transaction;
-    use crate::arb::dex::interface::InputAccountUtil;
+    use crate::arb::dex::legacy_interface::InputAccountUtil;
     use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-    use crate::arb::dex::meteora_damm_v2::legacy::input_data::is_meteora_damm_v2_swap;
+    use crate::arb::dex::meteora_damm_v2::misc::input_data::is_meteora_damm_v2_swap;
     use crate::arb::dex::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::arb::global::constant::pool_program::PoolProgram;
     use crate::arb::global::constant::token_program::TokenProgram;

@@ -1,9 +1,9 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::dex::interface::{InputAccountUtil, PoolDataLoader};
+use crate::arb::dex::interface::{PoolBase, PoolDataLoader, RefinedPoolConfig};
+use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
-use crate::arb::dex::refined_interface::{PoolBase, RefinedPoolConfig};
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::traits::account_meta::ToAccountMeta;

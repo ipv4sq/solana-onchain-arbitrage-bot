@@ -1,15 +1,88 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::convention::chain::Transaction;
+use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::global::enums::dex_type::DexType;
+use crate::arb::global::enums::direction::Direction;
 use crate::arb::global::state::rpc::rpc_client;
-use crate::arb::util::alias::AResult;
+use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(bound = "Data: serde::Serialize + for<'a> serde::Deserialize<'a>")]
+pub struct PoolBase<Data: PoolDataLoader> {
+    pub pool_address: PoolAddress,
+    pub base_mint: MintAddress,
+    pub quote_mint: MintAddress,
+    pub dex_type: DexType,
+    pub pool_data: Data,
+}
+
+#[allow(async_fn_in_trait)]
+pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
+    async fn from_address(address: &PoolAddress) -> AResult<Self>
+    where
+        Self: Sized,
+    {
+        let account = rpc_client().get_account(address).await?;
+        let dex_type = DexType::determine_from(&account.owner);
+        Self::from_data(*address, dex_type, &account.data)
+    }
+
+    fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self>
+    where
+        Self: Sized;
+
+    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)>;
+
+    fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
+
+    fn dir(&self, from: &MintAddress, to: &MintAddress) -> Direction {
+        let pool_base = self.as_ref();
+        if *from == pool_base.base_mint && *to == pool_base.quote_mint {
+            return Direction::XtoY;
+        } else if *from == pool_base.quote_mint && *to == pool_base.base_mint {
+            return Direction::YtoX;
+        }
+        panic!("pool doesn't contain from and to");
+    }
+
+    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
+
+    // not sure if needed in the future
+    fn refresh_pool_data(&mut self, data: &[u8]) -> AResult<Self>
+    where
+        Self: Sized,
+    {
+        let x = self.as_ref();
+        Self::from_data(x.pool_address, x.dex_type, data)
+    }
+
+    fn pool(&self) -> PoolAddress {
+        self.as_ref().pool_address
+    }
+
+    fn base_mint(&self) -> MintAddress {
+        self.as_ref().base_mint
+    }
+
+    fn quote_mint(&self) -> MintAddress {
+        self.as_ref().quote_mint
+    }
+
+    fn dex_type(&self) -> DexType {
+        self.as_ref().dex_type
+    }
+
+    fn pool_data_json(&self) -> Value {
+        json!(self.as_ref().pool_data)
+    }
+}
+
 pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
-    fn load_data(data: &[u8]) -> Result<Self>;
+    fn load_data(data: &[u8]) -> anyhow::Result<Self>;
 
     // mints
     fn base_mint(&self) -> Pubkey;
@@ -20,85 +93,15 @@ pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
     fn quote_vault(&self) -> Pubkey;
 
     //
-    fn consists_of(&self, mint1: &Pubkey, mint2: &Pubkey) -> Result<()> {
+    fn consists_of(&self, mint1: &Pubkey, mint2: &Pubkey) -> anyhow::Result<()> {
         MintPair(self.base_mint(), self.quote_mint()).consists_of(mint1, mint2)
     }
 
-    fn shall_contain(&self, mint: &Pubkey) -> Result<()> {
+    fn shall_contain(&self, mint: &Pubkey) -> anyhow::Result<()> {
         MintPair(self.base_mint(), self.quote_mint()).shall_contain(mint)
     }
 
     fn pair(&self) -> MintPair {
-        return MintPair(self.base_mint(), self.quote_mint());
+        MintPair(self.base_mint(), self.quote_mint())
     }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(bound = "Data: serde::Serialize + for<'a> serde::Deserialize<'a>")]
-pub struct PoolConfig<Data: PoolDataLoader> {
-    pub pool: Pubkey,
-    pub data: Data,
-    pub desired_mint: Pubkey,
-    pub minor_mint: Pubkey,
-}
-
-pub trait PoolConfigInit<Data: PoolDataLoader>: Sized {
-    fn from_pool_data(pool: &Pubkey, pool_data: Data, desired_mint: Pubkey) -> Result<Self>;
-
-    async fn from_address(pool: &Pubkey) -> Result<Self> {
-        let client = rpc_client();
-        let data = client.get_account_data(pool).await?;
-        let pool_data = Data::load_data(&data)?;
-        let pair = MintPair(pool_data.base_mint(), pool_data.quote_mint());
-        let config = Self::from_pool_data(pool, pool_data, pair.desired_mint()?);
-        config
-    }
-}
-
-pub struct TradeDirection {
-    pub from: Pubkey,
-    pub to: Pubkey,
-}
-
-pub trait InputAccountUtil<Account, Data>: Sized {
-    fn restore_from(ix: &Instruction, tx: &Transaction) -> Result<Account>;
-
-    /*
-    1. This is just for building the right list of accounts with correct permission set.
-    2. If there is any bin array, it would quickly estimate.
-     */
-    fn build_accounts_no_matter_direction_size(
-        payer: &Pubkey,
-        pool: &Pubkey,
-        pool_data: &Data,
-    ) -> Result<Account>;
-
-    // This is the most accurate version, for you to generate swap instructions directly in the future
-    fn build_accounts_with_direction_and_size(
-        payer: &Pubkey,
-        pool: &Pubkey,
-        pool_data: &Data,
-        input_mint: &Pubkey,
-        output_mint: &Pubkey,
-        input_amount: Option<u64>,
-        output_amount: Option<u64>,
-    ) -> Result<Account>;
-
-    fn get_trade_direction(self) -> AResult<TradeDirection>;
-
-    fn to_list(&self) -> Vec<&AccountMeta>;
-
-    fn to_list_cloned(&self) -> Vec<AccountMeta> {
-        self.to_list().into_iter().cloned().collect()
-    }
-}
-
-pub trait PriceCalculation {
-    fn calculate_price(&self, tx: &Transaction) -> Result<u64>;
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Direction {
-    XtoY,
-    YtoX,
 }

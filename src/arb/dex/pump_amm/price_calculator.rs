@@ -1,7 +1,7 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
-use crate::arb::dex::interface::Direction;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
+use crate::arb::global::enums::direction::Direction;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress};
 use anyhow::anyhow;

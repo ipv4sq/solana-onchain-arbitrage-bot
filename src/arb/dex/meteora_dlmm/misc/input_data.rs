@@ -39,7 +39,7 @@ pub fn is_meteora_dlmm_swap(data: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::meteora_dlmm::legacy::input_data::MeteoraDlmmIxData;
+    use crate::arb::dex::meteora_dlmm::misc::input_data::MeteoraDlmmIxData;
 
     static HEX_DATA: &str = "f8c69e91e17587c8ceaf31fc11ee01000000000000000000";
 

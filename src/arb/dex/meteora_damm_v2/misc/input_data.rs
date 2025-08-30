@@ -43,7 +43,7 @@ pub fn is_meteora_damm_v2_swap(data: &[u8]) -> bool {
 }
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::meteora_damm_v2::legacy::input_data::MeteoraDammV2InputData;
+    use crate::arb::dex::meteora_damm_v2::misc::input_data::MeteoraDammV2InputData;
 
     #[test]
     fn test_load_from_hex() {

@@ -1,12 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::interface::{PoolConfigInit, PoolDataLoader};
-    use crate::arb::dex::raydium_cpmm::account::RaydiumCpmmSwapAccounts;
+    use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::dex::raydium_cpmm::data::RaydiumCpmmAPoolData;
-    use crate::arb::dex::raydium_cpmm::pool_config::*;
-    use crate::arb::global::constant::mint::Mints;
-    use crate::arb::util::traits::account_meta::ToAccountMeta;
-    use crate::arb::util::traits::pubkey::ToPubkey;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
@@ -16,65 +11,6 @@ mod tests {
         let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
         let account = RaydiumCpmmAPoolData::load_data(&data).expect("Failed to parse account data");
         return Ok(account);
-    }
-
-    #[test]
-    fn test_computed_accounts() {
-        let account = load_data().unwrap();
-        let payer = "JDDadtcuCMTNy4Y8CDQ5VmL33yqbWRPPmapJdF7sxCvF".to_pubkey();
-        let config =
-            RaydiumCpmmPoolConfig::from_pool_data(&POOL_ADDRESS.to_pubkey(), account, Mints::WSOL)
-                .unwrap();
-
-        let expected = RaydiumCpmmSwapAccounts {
-            payer: payer.to_signer(),
-            authority: "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
-                .to_pubkey()
-                .to_writable(),
-            amm_config: "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2"
-                .to_pubkey()
-                .to_writable(),
-            pool_state: POOL_ADDRESS.to_pubkey().to_writable(),
-            input_token_account: "4gDjRYMJ7ha8vonY7L8RiqRYiQfcn4riNsHUAR5XAjNg"
-                .to_pubkey()
-                .to_writable(),
-            output_token_account: "2Mpreh9Z6z6WQEzKauZVzyKdVyx5DYVZZ6aPwdtJVcXK"
-                .to_pubkey()
-                .to_writable(),
-            input_vault: "HgNPDD8bpbSrGyHegiCT5xrYxHTfwLfZydwGkjNCJRKA"
-                .to_pubkey()
-                .to_writable(),
-            output_vault: "9xsCiNwYQXM3ZeHFSVj9JQdP1vREJREpN23f6wvxA1ty"
-                .to_pubkey()
-                .to_writable(),
-            input_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-                .to_pubkey()
-                .to_readonly(),
-            output_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-                .to_pubkey()
-                .to_readonly(),
-            input_token_mint: "So11111111111111111111111111111111111111112"
-                .to_pubkey()
-                .to_writable(),
-            output_token_mint: "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk"
-                .to_pubkey()
-                .to_writable(),
-            observation_state: "4UdSz2kMddtX4woMmdgkWg75fdBP8FgYwqfkh4ri7mnD"
-                .to_pubkey()
-                .to_writable(),
-        };
-
-        // let result = config
-        //     .build_accounts(
-        //         &payer,
-        //         &Mints::WSOL,
-        //         &"Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk".to_pubkey(),
-        //         None,
-        //         None,
-        //     )
-        //     .unwrap();
-        //
-        // assert_eq!(expected, result);
     }
 
     #[test]

@@ -1,0 +1,10 @@
+use solana_program::pubkey::Pubkey;
+use spl_associated_token_account::get_associated_token_address_with_program_id;
+
+pub fn ata(owner: &Pubkey, mint: &Pubkey, token_program: &Pubkey) -> Pubkey {
+    get_associated_token_address_with_program_id(owner, mint, token_program)
+}
+
+pub fn ata_sol_token(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
+    get_associated_token_address_with_program_id(owner, mint, &spl_token::id())
+}

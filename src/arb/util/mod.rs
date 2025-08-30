@@ -1,10 +1,10 @@
 pub mod alias;
 pub mod cron;
 pub mod debug;
-mod duration;
 pub mod logging;
 pub mod macros;
 pub mod serde_helpers;
+pub mod solana;
 pub mod structs;
 pub mod tokio_util;
 pub mod traits;

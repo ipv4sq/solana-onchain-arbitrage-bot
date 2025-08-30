@@ -1,5 +1,7 @@
 use crate::arb::dex::interface::PoolDataLoader;
-use crate::arb::dex::meteora_damm_v2::pool_data_type::{PoolFeesStruct, PoolMetrics, RewardInfo};
+use crate::arb::dex::meteora_damm_v2::misc::pool_data_type::{
+    PoolFeesStruct, PoolMetrics, RewardInfo,
+};
 use crate::arb::util::serde_helpers;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
