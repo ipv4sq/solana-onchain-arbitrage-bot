@@ -54,3 +54,11 @@ macro_rules! log_error_with_backtrace {
         }
     };
 }
+
+#[macro_export]
+macro_rules! bail_error {
+    ($($arg:tt)*) => {{
+        let msg = format!($($arg)*);
+        return Err(anyhow::anyhow!(msg));
+    }};
+}

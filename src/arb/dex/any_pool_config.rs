@@ -1,26 +1,16 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
-use crate::arb::convention::chain::{AccountState, Transaction};
 use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
-use crate::arb::dex::interface::{InputAccountUtil, PoolConfigInit, PoolDataLoader};
-use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
-use crate::arb::dex::meteora_damm_v2::legacy::pool_config::MeteoraDammV2Config;
-use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::dex::meteora_damm_v2::refined::MeteoraDammV2RefinedConfig;
-use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::dex::meteora_dlmm::legacy::pool_config::MeteoraDlmmPoolConfig;
-use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::dex::meteora_dlmm::refined::MeteoraDlmmRefinedConfig;
-use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
-use crate::arb::dex::pump_amm::legacy::pool_config::PumpAmmPoolConfig;
 use crate::arb::dex::pump_amm::refined::PumpAmmRefinedConfig;
-use crate::arb::dex::refined_interface::RefinedPoolConfig;
+use crate::arb::dex::refined_interface::{PoolBase, RefinedPoolConfig};
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, PoolAddress};
-use crate::f;
-use anyhow::{anyhow, Result};
+use crate::bail_error;
+use anyhow::Result;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -47,6 +37,15 @@ impl AnyPoolConfig {
             PumpAmm(_) => DexType::PumpAmm,
             AnyPoolConfig::Unsupported => DexType::Unknown,
         }
+    }
+    pub fn pool_data(&self) -> DexType {
+        let c:PoolBase<?> = match self {
+            MeteoraDlmm(c) => Some(c),
+            MeteoraDammV2(c) => Some(c),
+            PumpAmm(c) => Some(c),
+            AnyPoolConfig::Unsupported => None
+        };
+        todo!()
     }
 }
 
@@ -99,7 +98,7 @@ impl AnyPoolConfig {
             DexType::MeteoraDlmm => MeteoraDlmmRefinedConfig::extract_pool_from(ix),
             DexType::MeteoraDammV2 => MeteoraDammV2RefinedConfig::extract_pool_from(ix),
             DexType::PumpAmm => PumpAmmRefinedConfig::extract_pool_from(ix),
-            _ => Err(anyhow!(f!("Unsppord dex {}", dex_type))),
+            _ => bail_error!("Unsupported dex {}", dex_type),
         }?;
 
         Ok(SwapInstruction {
