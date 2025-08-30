@@ -11,8 +11,7 @@ use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProc
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::{lazy_arc, unit_ok};
-use anyhow::anyhow;
+use crate::{lazy_arc, return_error, unit_ok};
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
@@ -39,12 +38,12 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> anyhow
         &update.signature,
     );
     info!("processing involved account transaction");
-    // first, we got to figure out if it's a swap ix.
+
     let transaction = update.to_unified()?;
     let Some((_ix, inners)) =
         transaction.extract_ix_and_inners(|program_id| *program_id == PoolProgram::PUMP_AMM)
     else {
-        return Err(anyhow!("Transaction does not contain involved accounts"));
+        return_error!("Transaction does not contain involved accounts");
     };
 
     if let Some(pool_account) = find_pump_swap_pool(&inners.instructions) {
