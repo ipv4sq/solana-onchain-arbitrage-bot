@@ -1,6 +1,3 @@
-// Domain Models
-pub mod entity; // SeaORM entity models
-
 // Custom types for SeaORM
 pub mod columns;
 

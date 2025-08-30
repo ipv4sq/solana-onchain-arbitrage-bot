@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use crate::arb::database::entity::PoolRecord;
+use crate::arb::database::pool_record::PoolRecord;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::structs::lazy_cache::LazyCache;

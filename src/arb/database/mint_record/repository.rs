@@ -1,8 +1,7 @@
 use crate::arb::database::columns::PubkeyType;
-use crate::arb::database::entity::{MintRecord, MintRecordTable};
 use crate::arb::database::mint_record::cache::MintCache;
-use crate::arb::database::mint_record::model;
-use crate::arb::global::db::get_db;
+use crate::arb::database::mint_record::{model, MintRecord, MintRecordTable};
+use crate::arb::global::state::db::get_db;
 use crate::arb::util::traits::option::OptionExt;
 use crate::f;
 use anyhow::Result;
