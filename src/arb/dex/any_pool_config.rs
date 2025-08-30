@@ -10,9 +10,11 @@ use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
+use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::return_error;
 use anyhow::Result;
 use delegate::delegate;
+use once_cell::sync::Lazy;
 use serde_json::Value;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -111,3 +113,11 @@ impl AnyPoolConfig {
         }
     }
 }
+
+#[allow(non_upper_case_globals)]
+pub static PoolConfigCache: Lazy<LoadingCache<Pubkey, AnyPoolConfig>> = Lazy::new(|| {
+    LoadingCache::new(200_000_000, |pool: &Pubkey| {
+        let pool = *pool;
+        async move { AnyPoolConfig::from(&pool).await.ok() }
+    })
+});

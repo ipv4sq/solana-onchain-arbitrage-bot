@@ -8,7 +8,7 @@ use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
-use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
+use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};

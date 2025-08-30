@@ -1,4 +1,4 @@
-use crate::arb::pipeline::swap_changes::account_monitor::pool_update::PoolUpdate;
+use crate::arb::pipeline::event_processor::structs::pool_update::PoolUpdate;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, Debug)]
