@@ -7,7 +7,7 @@ use crate::arb::dex::meteora_damm_v2::input_account::MeteoraDammV2InputAccount;
 use crate::arb::dex::meteora_damm_v2::pool_config::MeteoraDammV2Config;
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
 use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-use crate::arb::dex::meteora_dlmm::pool_config::MeteoraDlmmPoolConfig;
+use crate::arb::dex::meteora_dlmm::legacy::pool_config::MeteoraDlmmPoolConfig;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::dex::pump_amm::input_account::PumpAmmInputAccounts;
 use crate::arb::dex::pump_amm::legacy::pool_config::PumpAmmPoolConfig;

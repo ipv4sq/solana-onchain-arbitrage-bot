@@ -3,7 +3,7 @@ mod tests {
     use crate::arb::dex::interface::{PoolConfigInit, PoolDataLoader};
     use crate::arb::dex::meteora_dlmm::bin_array;
     use crate::arb::dex::meteora_dlmm::input_account::MeteoraDlmmInputAccounts;
-    use crate::arb::dex::meteora_dlmm::pool_config::*;
+    use crate::arb::dex::meteora_dlmm::legacy::pool_config::*;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
