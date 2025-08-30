@@ -11,11 +11,13 @@ use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProc
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
+use crate::arb::util::structs::mint_pair::MintPair;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, return_error, unit_ok};
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
+use sqlx::Pool;
 use std::sync::Arc;
 use tracing::info;
 
@@ -42,44 +44,74 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     info!("Processing involved account transaction");
 
     let tx = update.to_unified()?;
-    let (_, inners) = tx
-        .extract_ix_and_inners(|p| *p == PoolProgram::PUMP_AMM)
-        .or_err("Not a pump amm account")?;
+    let ixs = tx.all_instructions();
 
-    let pump_amm_pool = find_pump_swap_pool(&inners.instructions).or_err("Not a pump amm pool")?;
+    let pump_pools: Vec<PoolAddress> = ixs
+        .iter()
+        .filter(|ix| ix.program_id == PoolProgram::PUMP_AMM)
+        .flat_map(|x| find_pump_swap(x))
+        .collect();
 
-    if PoolRecordRepository::is_pool_recorded(&pump_amm_pool).await {
-        PoolUpdateProcessor
-            .publish(WithTrace(Trigger::PoolAddress(pump_amm_pool), trace))
-            .await?;
-    } else {
-        NewPoolProcessor
-            .publish(WithTrace(pump_amm_pool, trace))
-            .await?;
+    if !pump_pools.is_empty() {
+        info!("Found {} pump pools in transaction", pump_pools.len());
+    }
+
+    if pump_pools.len() > ixs.len() * 2 {
+        panic!("There must be something wrong here")
+    }
+
+    // Deduplicate pools
+    use std::collections::HashSet;
+    let unique_pools: HashSet<PoolAddress> = pump_pools.into_iter().collect();
+
+    for pool in unique_pools {
+        match PoolRecordRepository::is_pool_recorded(&pool).await {
+            true => {
+                PoolUpdateProcessor
+                    .publish(WithTrace(Trigger::PoolAddress(pool), trace.clone()))
+                    .await?
+            }
+            false => {
+                NewPoolProcessor
+                    .publish(WithTrace(pool, trace.clone()))
+                    .await?
+            }
+        }
     }
 
     unit_ok!()
 }
 
-fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<PoolAddress> {
-    let wsol = Mints::WSOL;
+fn find_pump_swap(ix: &Instruction) -> Option<PoolAddress> {
+    if ix.accounts.len() < 6 {
+        return None;
+    }
 
-    instructions.iter().find_map(|ix| {
-        if ix.accounts.len() < 5 {
-            return None;
-        }
+    let third = ix.accounts.get(2)?.pubkey;
+    if third != PUMP_GLOBAL_CONFIG {
+        return None;
+    }
 
-        if ix.accounts.get(2).map(|acc| acc.pubkey) != Some(PUMP_GLOBAL_CONFIG) {
-            return None;
-        }
+    let at_4 = ix.accounts.get(4)?.pubkey;
+    let at_5 = ix.accounts.get(5)?.pubkey;
+    let pair = MintPair(at_4, at_5);
 
-        let has_wsol_at_4_or_5 = ix.accounts.get(3).map(|acc| acc.pubkey) == Some(wsol)
-            || ix.accounts.get(4).map(|acc| acc.pubkey) == Some(wsol);
+    if !pair.shall_contain(&Mints::WSOL).is_ok() {
+        return None;
+    }
+    let pool = ix.accounts.get(1)?.pubkey;
+    Some(pool)
+}
 
-        if has_wsol_at_4_or_5 {
-            ix.accounts.get(1).map(|acc| acc.pubkey)
-        } else {
-            None
-        }
-    })
+#[cfg(test)]
+mod tests {
+    use crate::arb::global::state::rpc::fetch_tx;
+
+    #[tokio::test]
+    async fn test_find_pump_swap_pool() {
+        let tx = fetch_tx("4h61Rg4QEGEjCV2T5dEKa3JitKeHGnRz1voH3ypnvtVQHnmZPprtNZemU2G9EwB2TPUSuJL3sFyMK5y5V5QnGH2A").await.unwrap();
+        let _inners = tx.just_inner().map_or(vec![], |inner| {
+            inner.iter().flat_map(|x| &x.instructions).collect()
+        });
+    }
 }

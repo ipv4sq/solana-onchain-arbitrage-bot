@@ -2,6 +2,7 @@ use crate::arb::convention::chain::Transaction;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::pipeline::event_processor::mev_bot::logging::log_token_balances_of;
 use crate::arb::program::mev_bot::ix;
+use crate::arb::util::traits::option::OptionExt;
 use anyhow::Result;
 use tracing::info;
 
@@ -12,7 +13,10 @@ pub async fn entry(tx: &Transaction) -> Result<()> {
 
     log_token_balances_of(tx);
 
-    let swaps = tx.extract_known_swap_inner_ix(inner);
+    let swaps = tx
+        .extract_known_swap_ix(&inner.instructions)
+        .or_err("missing swap instruction")?;
+
     for swap in swaps {
         info!(
             "Recording pool {} for {:?}",

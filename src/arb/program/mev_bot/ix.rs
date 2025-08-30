@@ -20,7 +20,7 @@ pub fn convert_to_smb_ix(ix: &Instruction) -> Result<SolanaMevBotIxInput> {
 }
 
 pub fn extract_mev_instruction(tx: &Transaction) -> Option<(&Instruction, &InnerInstructions)> {
-    tx.extract_ix_and_inners(|program_id| *program_id == MevBot::EMV_BOT_PROGRAM)
+    tx.find_top_ix_interact_with(|program_id| *program_id == MevBot::EMV_BOT_PROGRAM)
 }
 
 #[derive(Debug, Clone)]

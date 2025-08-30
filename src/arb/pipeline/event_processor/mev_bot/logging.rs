@@ -1,3 +1,4 @@
+use crate::arb::convention::chain::util::token_balance::TokenBalanceChange;
 use crate::arb::convention::chain::Transaction;
 use crate::arb::global::constant::mint::Mints;
 use tracing::info;
@@ -5,10 +6,7 @@ use tracing::info;
 pub fn log_token_changes(
     balance_changes: &std::collections::HashMap<
         String,
-        std::collections::HashMap<
-            String,
-            crate::arb::convention::chain::util::transaction::TokenBalanceChange,
-        >,
+        std::collections::HashMap<String, TokenBalanceChange>,
     >,
     token_mint: &str,
     token_name: &str,
@@ -19,10 +17,7 @@ pub fn log_token_changes(
 }
 
 pub fn log_token_changes_for_mint(
-    token_changes: &std::collections::HashMap<
-        String,
-        crate::arb::convention::chain::util::transaction::TokenBalanceChange,
-    >,
+    token_changes: &std::collections::HashMap<String, TokenBalanceChange>,
     token_mint: &str,
     token_name: &str,
 ) {

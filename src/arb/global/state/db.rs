@@ -10,7 +10,9 @@ static DB_CONNECTION: Lazy<DatabaseConnection> = Lazy::new(|| {
     std::thread::spawn(|| {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
-            create_connection().await.expect("Failed to initialize database")
+            create_connection()
+                .await
+                .expect("Failed to initialize database")
         })
     })
     .join()
@@ -22,7 +24,7 @@ async fn create_connection() -> Result<DatabaseConnection> {
     let database_url = env::var("DATABASE_URL")?;
 
     let mut opt = ConnectOptions::new(database_url);
-    opt.max_connections(100)
+    opt.max_connections(50)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(2))

@@ -27,17 +27,6 @@ pub enum AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
-    pub fn recognized(program: &Pubkey) -> bool {
-        [
-            PoolProgram::METEORA_DLMM,
-            PoolProgram::PUMP_AMM,
-            PoolProgram::METEORA_DAMM_V2,
-        ]
-        .contains(&program)
-    }
-}
-
-impl AnyPoolConfig {
     pub fn from_basis(
         pool_address: PoolAddress,
         dex_type: DexType,
@@ -64,7 +53,7 @@ impl AnyPoolConfig {
         Ok(r)
     }
 
-    pub fn from_ix(ix: &Instruction) -> Result<SwapInstruction> {
+    pub fn from_ix_to_swap(ix: &Instruction) -> Result<SwapInstruction> {
         let program_id = ix.program_id;
         let dex_type = DexType::determine_from(&program_id);
         let (dex, address) = match dex_type {
