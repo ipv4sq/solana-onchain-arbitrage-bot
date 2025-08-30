@@ -1,6 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
@@ -9,19 +10,20 @@ use crate::arb::pipeline::swap_changes::account_monitor::subscriber::{
     NEW_POOL_CONSUMER, POOL_UPDATE_CONSUMER,
 };
 use crate::arb::pipeline::swap_changes::account_monitor::trigger::Trigger;
-use crate::arb::sdk::yellowstone::{GrpcTransactionUpdate, SolanaGrpcClient, TransactionFilter};
+use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
 
-static TRANSACTION_PROCESSOR: Lazy<Arc<PubSubProcessor<(GrpcTransactionUpdate, Trace)>>> =
+#[allow(non_upper_case_globals)]
+static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<(GrpcTransactionUpdate, Trace)>>> =
     lazy_arc!({
         let config = PubSubConfig {
             worker_pool_size: 16,
@@ -37,75 +39,29 @@ static TRANSACTION_PROCESSOR: Lazy<Arc<PubSubProcessor<(GrpcTransactionUpdate, T
         })
     });
 
-static TRANSACTION_DEBOUNCER: Lazy<Arc<BufferedDebouncer<String, (GrpcTransactionUpdate, Trace)>>> =
-    lazy_arc!({
-        BufferedDebouncer::new(
-            Duration::from_millis(5),
-            |(update, trace): (GrpcTransactionUpdate, Trace)| async move {
-                trace.step_with(
-                    StepType::Custom("TransactionDebounced".to_string()),
-                    "signature",
-                    &update.signature,
-                );
-                if let Err(e) = TRANSACTION_PROCESSOR.publish((update, trace)).await {
-                    error!("Failed to publish transaction update: {}", e);
-                }
-            },
-        )
-    });
+#[allow(non_upper_case_globals)]
+pub static InvolvedAccountTxDebouncer: Lazy<
+    Arc<BufferedDebouncer<String, (GrpcTransactionUpdate, Trace)>>,
+> = lazy_arc!({
+    BufferedDebouncer::new(
+        Duration::from_millis(5),
+        |(update, trace): (GrpcTransactionUpdate, Trace)| async move {
+            trace.step_with(
+                StepType::Custom("TransactionDebounced".to_string()),
+                "signature",
+                &update.signature,
+            );
+            if let Err(e) = InvolvedAccountTxProcessor.publish((update, trace)).await {
+                error!("Failed to publish transaction update: {}", e);
+            }
+        },
+    )
+});
 
-pub struct InvolvedAccountSubscriber {
-    client: SolanaGrpcClient,
-}
-
-impl InvolvedAccountSubscriber {
-    pub async fn new() -> Result<Self> {
-        Ok(Self {
-            client: SolanaGrpcClient::from_env()?,
-        })
-    }
-
-    pub async fn start(self) -> Result<()> {
-        info!(
-            "Starting transaction subscription for {} involved accounts",
-            PoolProgram::PUMP_AMM,
-        );
-
-        let mut filter = TransactionFilter::new("involved_accounts");
-
-        filter
-            .account_include
-            .push(PoolProgram::PUMP_AMM.to_string());
-
-        self.client
-            .subscribe_transactions(
-                filter,
-                move |tx_update| {
-                    let trace = Trace::new();
-
-                    trace.step_with(
-                        StepType::Custom("TransactionReceived".to_string()),
-                        "signature",
-                        &tx_update.signature,
-                    );
-
-                    async move { Self::handle_transaction_update(tx_update, trace).await }
-                },
-                true,
-            )
-            .await
-    }
-
-    async fn handle_transaction_update(update: GrpcTransactionUpdate, trace: Trace) -> Result<()> {
-        TRANSACTION_DEBOUNCER.update(update.signature.clone(), (update, trace));
-        unit_ok!()
-    }
-}
-
-async fn process_involved_account_transaction(
+pub async fn process_involved_account_transaction(
     update: GrpcTransactionUpdate,
     trace: Trace,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     trace.step_with(
         StepType::Custom("ProcessingTransaction".to_string()),
         "signature",
@@ -141,7 +97,6 @@ async fn process_involved_account_transaction(
 }
 
 fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<Pubkey> {
-    let pump_global_config = "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_pubkey();
     let wsol = Mints::WSOL;
 
     instructions.iter().find_map(|ix| {
@@ -149,7 +104,7 @@ fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<Pubkey> {
             return None;
         }
 
-        if ix.accounts.get(2).map(|acc| acc.pubkey) != Some(pump_global_config) {
+        if ix.accounts.get(2).map(|acc| acc.pubkey) != Some(PUMP_GLOBAL_CONFIG) {
             return None;
         }
 
@@ -162,9 +117,4 @@ fn find_pump_swap_pool(instructions: &[Instruction]) -> Option<Pubkey> {
             None
         }
     })
-}
-
-pub async fn start_involved_account_monitor() -> Result<()> {
-    let subscriber = InvolvedAccountSubscriber::new().await?;
-    subscriber.start().await
 }

@@ -11,7 +11,7 @@ pub struct SolanaMevBotOnchainListener {
 }
 
 impl SolanaMevBotOnchainListener {
-    pub fn from_env() -> Self {
+    pub fn new() -> Self {
         Self {
             client: SolanaGrpcClient::from_env().unwrap(),
         }
@@ -43,6 +43,6 @@ impl SolanaMevBotOnchainListener {
 }
 
 pub async fn start_mev_bot_subscriber() -> Result<()> {
-    let subscriber = SolanaMevBotOnchainListener::from_env();
+    let subscriber = SolanaMevBotOnchainListener::new();
     subscriber.start(true).await
 }
