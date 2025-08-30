@@ -29,6 +29,14 @@ pub struct PubSubProcessor<T: Send + 'static> {
 }
 
 impl<T: Send + 'static> PubSubProcessor<T> {
+    pub fn from_async_fn<F, Fut>(config: PubSubConfig, processor: F) -> Self
+    where
+        F: Fn(T) -> Fut + Send + Sync + 'static + Clone,
+        Fut: std::future::Future<Output = Result<()>> + Send + 'static,
+    {
+        Self::new(config, move |msg| Box::pin(processor(msg)))
+    }
+
     pub fn new<F>(config: PubSubConfig, processor: F) -> Self
     where
         F: Fn(T) -> futures::future::BoxFuture<'static, Result<()>> + Send + Sync + 'static + Clone,

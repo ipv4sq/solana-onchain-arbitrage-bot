@@ -31,14 +31,7 @@ static InvolvedAccountTxProcessor: Lazy<Arc<PubSubProcessor<TxWithTrace>>> = laz
         name: "InvolvedAccountTransactionProcessor".to_string(),
     };
 
-    // PubSubProcessor::new(config, |(update, trace): (GrpcTransactionUpdate, Trace)| {
-    //     Box::pin(async move {
-    //         process_involved_account_transaction(update, trace).await?;
-    //         Ok(())
-    //     })
-    // });
-
-    PubSubProcessor::new(config, process_involved_account_transaction)
+    PubSubProcessor::from_async_fn(config, process_involved_account_transaction)
 });
 
 #[allow(non_upper_case_globals)]
