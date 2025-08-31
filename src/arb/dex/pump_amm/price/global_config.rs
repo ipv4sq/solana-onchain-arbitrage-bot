@@ -1,6 +1,7 @@
 use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::AResult;
+use crate::arb::util::serde_helpers;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use crate::arb::util::traits::option::OptionExt;
@@ -13,13 +14,18 @@ use std::time::Duration;
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct GlobalConfig {
-    pub admin: Pubkey,
-    pub lp_fee_basis_points: u64,
-    pub protocol_fee_basis_points: u64,
-    pub disable_flags: u8,
-    pub protocol_fee_recipients: [Pubkey; 8],
-    pub coin_creator_fee_basis_points: u64,
-    pub admin_set_coin_creator_authority: Pubkey,
+    pub admin: Pubkey,                                  // 32 bytes
+    pub lp_fee_basis_points: u64,                       // 8 bytes
+    pub protocol_fee_basis_points: u64,                 // 8 bytes
+    pub disable_flags: u8,                              // 1 byte
+    pub protocol_fee_recipients: [Pubkey; 8],           // 256 bytes (32 * 8)
+    pub coin_creator_fee_basis_points: u64,             // 8 bytes
+    pub admin_set_coin_creator_authority: Pubkey,       // 32 bytes
+    // Total so far: 32 + 8 + 8 + 1 + 256 + 8 + 32 = 345 bytes
+    // Account has 512 bytes total (minus 8 byte discriminator = 504 bytes)
+    // Padding needed: 504 - 345 = 159 bytes
+    #[serde(with = "serde_helpers::byte_array_159")]
+    pub _padding: [u8; 159],
 }
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]

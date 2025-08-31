@@ -46,3 +46,30 @@ pub mod byte_array_57 {
         Ok(arr)
     }
 }
+
+pub mod byte_array_159 {
+    use super::*;
+
+    pub fn serialize<S>(value: &[u8; 159], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        value.as_slice().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<[u8; 159], D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec = Vec::<u8>::deserialize(deserializer)?;
+        if vec.len() != 159 {
+            return Err(serde::de::Error::custom(format!(
+                "Expected array of length 159, got {}",
+                vec.len()
+            )));
+        }
+        let mut arr = [0u8; 159];
+        arr.copy_from_slice(&vec);
+        Ok(arr)
+    }
+}
