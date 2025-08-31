@@ -16,13 +16,14 @@ use tracing::info;
 
 #[allow(non_upper_case_globals)]
 pub static PoolUpdateProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Trigger>>>> = lazy_arc!({
-    let config = PubSubConfig {
-        worker_pool_size: 32,
-        channel_buffer_size: 50000,
-        name: "PoolUpdateProcessor".to_string(),
-    };
-
-    PubSubProcessor::new(config, process_pool_update)
+    PubSubProcessor::new(
+        PubSubConfig {
+            worker_pool_size: 32,
+            channel_buffer_size: 50000,
+            name: "PoolUpdateProcessor".to_string(),
+        },
+        process_pool_update,
+    )
 });
 
 pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<()> {
@@ -45,17 +46,10 @@ pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<(
         }
         Trigger::PoolAddress(addr) => {
             info!("Pool triggered directly for: {}", addr);
-            let updated_config = AnyPoolHolder::refresh(&pool_addr).await.or_err("")?;
+            let updated_config = AnyPoolHolder::get(&pool_addr).await.or_err("")?;
             on_pool_update(pool_addr, updated_config, trace).await;
         }
     }
 
     unit_ok!()
-}
-
-pub async fn get_minor_mint_for_pool(pool: &PoolAddress) -> Option<MintAddress> {
-    let pool = PoolRecordRepository::get_pool_by_address(pool).await?;
-    MintPair(pool.base_mint.into(), pool.quote_mint.into())
-        .minor_mint()
-        .ok()
 }

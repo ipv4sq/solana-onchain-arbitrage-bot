@@ -1,3 +1,4 @@
+use crate::arb::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::Trace;
@@ -23,13 +24,14 @@ impl InvolvedAccountSubscriber {
             "Starting transaction subscription for {} involved accounts",
             PoolProgram::PUMP_AMM,
         );
-        let mut filter = TransactionFilter::new("involved_accounts");
-        filter
-            .account_include
-            .push(PoolProgram::PUMP_AMM.to_string());
 
         self.client
-            .subscribe_transactions(filter, Self::handle_transaction_update, true)
+            .subscribe_transactions(
+                TransactionFilter::new("involved_accounts")
+                    .with_programs(&vec![PoolProgram::PUMP_AMM, RAYDIUM_CPMM_AUTHORITY]),
+                Self::handle_transaction_update,
+                true,
+            )
             .await
     }
 

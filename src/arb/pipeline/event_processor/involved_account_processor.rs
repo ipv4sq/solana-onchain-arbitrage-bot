@@ -7,14 +7,14 @@ use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
-use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::TokenBalanceProcessor;
+use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::process_token_balance_change;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use once_cell::sync::Lazy;
+use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::info;
 
 pub type TxWithTrace = (GrpcTransactionUpdate, Trace);
 
@@ -39,30 +39,22 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
 
     let tx = update.to_unified()?;
     let ixs = tx.all_instructions();
+    // here I am going to cache the balance changes:
+    // this is for raydium vault
+    // and for pump amm vault
+    let _ = process_token_balance_change(tx, &trace).await;
 
-    let pump_pools: Vec<PoolAddress> = ixs
+    let pump_pools: HashSet<PoolAddress> = ixs
         .iter()
         .flat_map(|ix| PumpAmmConfig::pase_swap_from_ix(ix))
         .map(|swap| swap.1)
         .collect();
 
-    if !pump_pools.is_empty() {
-        info!("Found {} pump pools in transaction", pump_pools.len());
-    }
-
-    TokenBalanceProcessor
-        .publish(WithTrace(tx, trace.clone()))
-        .await?;
-
     if pump_pools.len() > ixs.len() * 2 {
         panic!("There must be something wrong here")
     }
 
-    // Deduplicate pools
-    use std::collections::HashSet;
-    let unique_pools: HashSet<PoolAddress> = pump_pools.into_iter().collect();
-
-    for pool in unique_pools {
+    for pool in pump_pools {
         match PoolRecordRepository::is_pool_recorded(&pool).await {
             true => {
                 PoolUpdateProcessor

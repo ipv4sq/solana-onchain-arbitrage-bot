@@ -86,6 +86,10 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     fn pool_data_json(&self) -> Value {
         json!(self.as_ref().pool_data)
     }
+
+    fn mint_pair(&self) -> MintPair {
+        self.as_ref().pool_data.pair()
+    }
 }
 
 pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {

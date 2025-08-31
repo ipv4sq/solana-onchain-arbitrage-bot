@@ -4,7 +4,6 @@ use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::Trace;
-use crate::arb::pipeline::event_processor::pool_update_processor::get_minor_mint_for_pool;
 use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
@@ -22,15 +21,11 @@ pub async fn on_pool_update(
     updated_config: AnyPoolConfig,
     trace: Trace,
 ) -> Option<()> {
-    if !is_valid_pool(&updated_config) {
+    let mints = updated_config.mint_pair();
+    if !mints.contains(&Mints::WSOL) {
         return None;
     }
-
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
-
-    AnyPoolHolder::upsert(updated_config.clone()).await;
-
-    let minor_mint = get_minor_mint_for_pool(&pool_address).await?;
 
     if trace.since_begin() > MAX_PROCESSING_TIME_MS {
         warn!("Skipping opportunity calculation - processing time exceeded");
@@ -43,6 +38,7 @@ pub async fn on_pool_update(
         pool_address,
     );
 
+    let minor_mint = mints.minor_mint().unwrap();
     let opportunities =
         find_arbitrage_opportunities(&minor_mint, &pool_address, &updated_config, &trace).await?;
 
@@ -66,11 +62,6 @@ pub struct ArbitrageResult {
     pub first_pool: PoolAddress,
     pub second_pool: PoolAddress,
     pub profit_lamports: u64,
-}
-
-fn is_valid_pool(config: &AnyPoolConfig) -> bool {
-    let mint_pair = MintPair(config.base_mint(), config.quote_mint());
-    mint_pair.shall_contain(&Mints::WSOL).is_ok()
 }
 
 async fn find_arbitrage_opportunities(

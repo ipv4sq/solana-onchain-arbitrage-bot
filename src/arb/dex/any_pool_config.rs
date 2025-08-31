@@ -12,6 +12,7 @@ use crate::arb::dex::raydium_cpmm::config::RaydiumCpmmConfig;
 use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
+use crate::arb::util::structs::mint_pair::MintPair;
 use crate::return_error;
 use anyhow::Result;
 use delegate::delegate;
@@ -85,6 +86,7 @@ impl AnyPoolConfig {
             pub fn pool_data_json(&self) -> Value;
             pub async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
             pub async fn get_amount_out(&self,input_amount: u64,from_mint: &MintAddress,to_mint: &MintAddress,) -> AResult<u64>;
+            pub fn mint_pair(&self) -> MintPair;
         }
     }
 }

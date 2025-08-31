@@ -1,5 +1,5 @@
 use crate::arb::convention::chain::Transaction;
-use crate::arb::global::trace::types::WithTrace;
+use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::util::alias::{AResult, MintAddress};
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use crate::arb::util::traits::option::OptionExt;
@@ -11,17 +11,6 @@ use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[allow(non_upper_case_globals)]
-pub static TokenBalanceProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Transaction>>>> = lazy_arc!({
-    let config = PubSubConfig {
-        worker_pool_size: 8,
-        channel_buffer_size: 1_000_000,
-        name: "TokenBalanceProcessor".to_string(),
-    };
-
-    PubSubProcessor::new(config, process_token_balance_change)
-});
-
 #[derive(Clone)]
 pub struct TokenAmount {
     pub amount: u64,
@@ -29,10 +18,16 @@ pub struct TokenAmount {
 }
 #[allow(non_upper_case_globals)]
 pub static TokenBalanceShortLivingCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
-    Lazy::new(|| TtlLoadingCache::new(2_000_000, Duration::from_secs(180), |_| async move { None }));
+    Lazy::new(|| {
+        TtlLoadingCache::new(
+            20_000_000,
+            //
+            Duration::from_secs(3600 * 12),
+            |_| async move { None },
+        )
+    });
 
-pub async fn process_token_balance_change(update: WithTrace<Transaction>) -> AResult<()> {
-    let WithTrace(tx, trace) = update;
+pub async fn process_token_balance_change(tx: Transaction, trace: &Trace) -> AResult<()> {
     trace.step_with_custom("Tracking Token balance change");
     let balances = tx
         .meta
