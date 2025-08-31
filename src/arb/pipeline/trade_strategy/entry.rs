@@ -9,6 +9,8 @@ use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::alias::PoolAddress;
 use crate::arb::util::structs::mint_pair::MintPair;
+use crate::arb::util::worker_runtime::ArbitrageOpportunityWorker;
+use futures::future::try_join_all;
 use rust_decimal::Decimal;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
@@ -133,21 +135,35 @@ pub async fn compute_brute_force(
     }
 
     let input_sol = Decimal::ONE;
-    let mut results = Vec::new();
 
     trace.step_with_custom("Checking arbitrage of each pool");
 
-    for other_pool in related_pools.iter() {
-        check_pool_arbitrage(
-            &mut results,
-            other_pool,
-            changed_pool,
-            changed_config,
-            *minor_mint,
-            input_sol,
-        )
-        .await;
-    }
+    // Clone values that need to be moved into async blocks
+    let changed_pool_owned = *changed_pool;
+    let changed_config_owned = changed_config.clone();
+    let minor_mint_owned = *minor_mint;
+
+    // Spawn all tasks on the dedicated 8-thread runtime
+    let handles: Vec<_> = related_pools
+        .into_iter()
+        .map(move |other_pool| {
+            let changed_config = changed_config_owned.clone();
+            ArbitrageOpportunityWorker.spawn(async move {
+                check_pool_arbitrage(
+                    other_pool,
+                    changed_pool_owned,
+                    changed_config,
+                    minor_mint_owned,
+                    input_sol,
+                )
+                .await
+            })
+        })
+        .collect();
+
+    // Collect all results at once
+    let all_results = try_join_all(handles).await.unwrap();
+    let mut results = all_results.into_iter().flatten().collect::<Vec<_>>();
 
     trace.step_with_custom("Checked arbitrage of each pool");
 
@@ -178,13 +194,14 @@ pub async fn compute_brute_force(
 }
 
 async fn check_pool_arbitrage(
-    results: &mut Vec<ArbitrageResult>,
-    other_pool: &crate::arb::database::pool_record::model::Model,
-    changed_pool: &PoolAddress,
-    changed_config: &AnyPoolConfig,
+    other_pool: crate::arb::database::pool_record::model::Model,
+    changed_pool: PoolAddress,
+    changed_config: AnyPoolConfig,
     minor_mint: MintAddress,
     input_sol: Decimal,
-) {
+) -> Vec<ArbitrageResult> {
+    let mut results = Vec::new();
+
     let other_config = match PoolConfigCache.get(&other_pool.address.0).await {
         Some(config) => config,
         None => {
@@ -192,16 +209,16 @@ async fn check_pool_arbitrage(
                 "Failed to get config for pool {}, skipping",
                 other_pool.address.0
             );
-            return;
+            return results;
         }
     };
 
     if let Some(output_sol) =
-        simulate_path(input_sol, changed_config, &other_config, minor_mint).await
+        simulate_path(input_sol, &changed_config, &other_config, minor_mint).await
     {
         if output_sol > Decimal::ONE {
             results.push(ArbitrageResult {
-                first_pool: *changed_pool,
+                first_pool: changed_pool,
                 second_pool: other_pool.address.0,
                 output_sol,
             });
@@ -213,12 +230,12 @@ async fn check_pool_arbitrage(
     }
 
     if let Some(output_sol) =
-        simulate_path(input_sol, &other_config, changed_config, minor_mint).await
+        simulate_path(input_sol, &other_config, &changed_config, minor_mint).await
     {
         if output_sol > Decimal::ONE {
             results.push(ArbitrageResult {
                 first_pool: other_pool.address.0,
-                second_pool: *changed_pool,
+                second_pool: changed_pool,
                 output_sol,
             });
             info!(
@@ -227,6 +244,8 @@ async fn check_pool_arbitrage(
             );
         }
     }
+
+    results
 }
 
 async fn simulate_path(

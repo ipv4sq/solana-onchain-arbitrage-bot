@@ -9,3 +9,4 @@ pub mod solana;
 pub mod structs;
 pub mod traits;
 pub mod worker;
+pub mod worker_runtime;
