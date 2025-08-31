@@ -1,11 +1,13 @@
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::enums::step_type::StepType;
+use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::WithTrace;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::pipeline::trade_strategy::entry::on_pool_update;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
+use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use once_cell::sync::Lazy;
@@ -33,16 +35,17 @@ pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<(
         Trigger::PoolUpdate(update) => {
             info!("Pool data changed for: {}", pool_addr);
             // update pool
-            let updated_config = AnyPoolConfig::from_owner_and_data(
+            let updated_config = AnyPoolHolder::update_config(
                 update.pool(),
                 &update.current.owner,
                 &update.current.data,
-            )?;
+            )
+            .await?;
             on_pool_update(pool_addr, updated_config, trace).await;
         }
         Trigger::PoolAddress(addr) => {
             info!("Pool triggered directly for: {}", addr);
-            let updated_config = AnyPoolConfig::from(&pool_addr).await?;
+            let updated_config = AnyPoolHolder::refresh(&pool_addr).await.or_err("")?;
             on_pool_update(pool_addr, updated_config, trace).await;
         }
     }

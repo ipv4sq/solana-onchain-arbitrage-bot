@@ -7,6 +7,7 @@ use crate::arb::database::pool_record::model::{
 };
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::client::db::get_db;
+use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
@@ -48,7 +49,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
         |addr| {
             let addr = *addr;
             async move {
-                let config = AnyPoolConfig::from(&addr).await.ok()?;
+                let config = AnyPoolHolder::get(&addr).await?;
                 build_model(config).await.ok()
             }
         },
