@@ -1,5 +1,5 @@
 use crate::arb::dex::interface::PoolDataLoader;
-use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::global::enums::direction::Direction;
 use crate::arb::pipeline::trade_strategy::token_balance_cache::get_balance_of_account;

@@ -1,7 +1,7 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::arb::dex::legacy_interface::InputAccountUtil;
-use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;

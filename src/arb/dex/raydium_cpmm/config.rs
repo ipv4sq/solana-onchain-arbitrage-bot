@@ -1,6 +1,6 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
-use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
 use crate::arb::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
 use crate::arb::global::constant::mint::Mints;

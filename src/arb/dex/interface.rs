@@ -1,5 +1,5 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::enums::direction::Direction;
 use crate::arb::global::state::rpc::rpc_client;

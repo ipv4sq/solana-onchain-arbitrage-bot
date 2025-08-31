@@ -4,7 +4,7 @@ use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm
 use crate::arb::dex::interface::PoolConfig;
 use crate::arb::dex::meteora_damm_v2::config::MeteoraDammV2Config;
 use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmConfig;
-use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
+use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::config::PumpAmmConfig;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
