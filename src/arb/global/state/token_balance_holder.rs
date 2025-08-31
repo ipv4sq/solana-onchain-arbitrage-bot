@@ -23,9 +23,9 @@ static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> 
 #[allow(non_upper_case_globals)]
 pub static QueryRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     RateLimiter::new(
-        25,
+        35,
         Duration::from_secs(1),
-        30,
+        35,
         "AccountBalanceQueryRateLimiter".to_string(),
     )
 });
