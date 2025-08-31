@@ -104,7 +104,7 @@ Provides abstraction layers for consistent interaction across different componen
 
 - **Pool** (`convention/pool/`): Unified pool interface with trait-based abstraction
     - **Interface** (`interface.rs`): Core traits - `PoolDataLoader`, `PoolConfigInit`, `InputAccountUtil`
-    - **DEX Implementations**: 
+    - **DEX Implementations**:
         - `meteora_damm/` and `meteora_damm_v2/` - Meteora Dynamic AMM pools
         - `meteora_dlmm/` - Meteora Dynamic Liquidity Market Maker
         - `raydium_cpmm/` - Raydium Constant Product Market Maker
@@ -172,7 +172,6 @@ Shared state and utilities:
 - **Enums** (`global/enums/`):
     - `dex_type.rs` - Comprehensive DEX type system (10+ DEXes)
 
-- **Database** (`global/db.rs`) - Connection management
 - **Trace** (`global/trace/`) - **NEW**: Tracing and monitoring types
 
 #### 5. **Program Module** (`src/arb/program/`)
@@ -219,6 +218,30 @@ Production-grade utilities and abstractions:
 
 1. **Raydium**: AMM V4, CPMM, CLMM
 2. **Meteora**: DLMM, DAMM, DAMM V2
+    - **DLMM (Dynamic Liquidity Market Maker)** Implementation:
+        - Located in `src/arb/dex/meteora_dlmm/price/best_effort.rs`
+        - **get_amount_out**: Calculates swap output with bin traversal
+            - Traverses up to 10 bins for liquidity
+            - Fetches bin array accounts dynamically via PDA
+            - Handles X→Y and Y→X swap directions correctly
+            - Fee calculation: base fee + variable fee (volatility-based)
+            - **Price Calculation**: 
+                - Always calculate from bin ID: `price = (1 + bin_step/10000)^bin_id`
+                - Don't use stored price in bin (it may represent something else)
+                - Price is in lamports (smallest units), with 18 decimals precision
+            - **Bin Traversal Logic**:
+                - X→Y swap: Move to lower bin IDs (bins with Y liquidity)
+                - Y→X swap: Move to higher bin IDs (bins with X liquidity)
+                - Only check if output reserve > 0 (input comes from user)
+        - **Bin Structure**: 
+            - 70 bins per array (bin_id % 70 gives position)
+            - Each bin stores: amount_x, amount_y, price, liquidity data
+            - Bin array index: bin_id / 70
+        - **Common Issues**:
+            - Stored price in bin may not match calculated price - use calculated
+            - Must check output liquidity only, not input liquidity
+            - Price represents Y per X in lamport units
+        - **Testing**: Use `must_init_db()` for database initialization in tests
 3. **Orca**: Whirlpool
 4. **Pump.fun**: AMM with creator fee mechanism
 5. **SolFi**: Custom pools
@@ -226,9 +249,10 @@ Production-grade utilities and abstractions:
 7. **Plus**: Additional/future DEX support
 
 Each DEX module includes:
+
 - Configuration structures
 - Constants (program IDs, fees)
-- Pool information structures  
+- Pool information structures
 - Swap instruction builders
 
 ### Configuration Structure
@@ -268,6 +292,7 @@ enabled = false
 ### Active Tables (11 migrations)
 
 #### `pools`
+
 - `address` (PubkeyType, PRIMARY KEY): Pool address
 - `name` (String): Pool name
 - `dex_type` (DexType): DEX protocol type
@@ -280,6 +305,7 @@ enabled = false
 - `created_at`, `updated_at` (DateTime, optional)
 
 #### `mint_records`
+
 - `address` (PubkeyType, PRIMARY KEY): Mint address
 - `symbol` (String): Token symbol
 - `decimals` (i16): Token decimals
@@ -287,12 +313,14 @@ enabled = false
 - `created_at`, `updated_at` (DateTime, optional)
 
 #### `kv_cache` - **NEW**
+
 - `type` (CacheType): Cache type identifier
 - `key` (String): Cache key
 - `value` (JSON): Cached value
 - `valid_until` (DateTime): TTL expiration
 
 #### `mev_simulation_log` - **NEW**
+
 - Complex MEV simulation tracking with:
 - Mint pairs (`minor_mint`, `desired_mint` with symbols)
 - Pool arrays and profitability metrics
@@ -410,10 +438,11 @@ result.insert(item.key, value);
 **Never hardcode addresses** - use provided constants:
 
 - `Mints::WSOL`, `Mints::USDC` - token mints
-- `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs  
+- `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs
 - `MevBot::PROGRAM_ID` - MEV bot constants
 
 **Use built-in caching**:
+
 - `PoolRecordRepository::is_pool_recorded()` - Check if pool exists
 - `PoolRecordRepository::get_pool_by_address()` - Get cached pool
 - `MintRecordRepository` methods - Cached mint operations
@@ -510,5 +539,5 @@ sqlx migrate run
 - **Blockhash Refresh**: Every 200ms via dedicated thread
 - **Database Pool**: 100 max connections, 5 min connections
 - please check compile error once you update files, unless you are told not to
-- if you need rpc client, you have 
-    use crate::arb::global::state::rpc::rpc_client;
+- if you need rpc client, you have
+  use crate::arb::global::state::rpc::rpc_client;
