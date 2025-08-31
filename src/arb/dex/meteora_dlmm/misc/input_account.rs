@@ -256,9 +256,9 @@ mod tests {
     use crate::arb::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
     use crate::arb::dex::meteora_dlmm::misc::input_data::is_meteora_dlmm_swap;
     use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
+    use crate::arb::global::client::rpc::fetch_tx_sync;
     use crate::arb::global::constant::pool_program::PoolProgram;
     use crate::arb::global::constant::token_program::TokenProgram;
-    use crate::arb::global::state::rpc::fetch_tx_sync;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::arb::util::traits::pubkey::ToPubkey;

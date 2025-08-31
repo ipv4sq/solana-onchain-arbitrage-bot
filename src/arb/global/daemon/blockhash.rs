@@ -1,3 +1,4 @@
+use crate::arb::global::client::rpc;
 use anyhow::Result;
 use parking_lot::RwLock;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -70,7 +71,7 @@ static GLOBAL_BLOCKHASH: OnceCell<Arc<BlockhashHolder>> = OnceCell::const_new();
 async fn ensure_initialized() -> Result<()> {
     GLOBAL_BLOCKHASH
         .get_or_init(|| async {
-            let rpc_client = super::rpc::rpc_client();
+            let rpc_client = rpc::rpc_client();
             let holder = Arc::new(BlockhashHolder::new(rpc_client));
 
             // Fetch initial blockhash

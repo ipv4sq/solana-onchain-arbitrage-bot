@@ -5,11 +5,11 @@ use crate::arb::database::mev_simulation_log::model::{
 use crate::arb::database::mev_simulation_log::repository::MevSimulationLogRepository;
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::arb::global::enums::step_type::StepType;
-use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::solana::pda::{ata, ata_sol_token};

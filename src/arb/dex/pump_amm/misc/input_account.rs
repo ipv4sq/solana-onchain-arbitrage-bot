@@ -191,8 +191,8 @@ mod tests {
     use crate::arb::dex::legacy_interface::InputAccountUtil;
     use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
     use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
+    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
-    use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::alias::AResult;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::arb::util::traits::pubkey::ToPubkey;

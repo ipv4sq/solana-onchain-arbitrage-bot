@@ -1,8 +1,8 @@
 use crate::arb::database::mint_record::model::Model as MintRecord;
+use crate::arb::global::client::rpc::rpc_client;
 #[allow(unused_imports)]
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::TokenProgram;
-use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::traits::orm::ToOrm;
 use anyhow::Result;
 use mpl_token_metadata::accounts::Metadata;

@@ -3,7 +3,7 @@ use crate::arb::dex::meteora_dlmm::misc::bin_array::{
     bin_id_to_bin_array_index, get_bin_array_pda,
 };
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
@@ -209,8 +209,8 @@ impl MeteoraDlmmPoolData {
 mod tests {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::global::state::db::must_init_db;
-    use crate::arb::global::state::rpc::rpc_client;
+    use crate::arb::global::client::db::must_init_db;
+    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
@@ -238,7 +238,7 @@ mod tests {
         let usdc_decimals = 6;
         let trump_amount = one_trump as f64 / 10_f64.powi(trump_decimals);
         let usdc_amount = usdc_out as f64 / 10_f64.powi(usdc_decimals);
-        
+
         println!("\n=== Swap Result ===");
         println!("Input: {} TRUMP ({} lamports)", trump_amount, one_trump);
         println!("Output: {} USDC ({} lamports)", usdc_amount, usdc_out);

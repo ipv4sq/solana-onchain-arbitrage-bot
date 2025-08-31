@@ -56,6 +56,17 @@ impl PoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmConfig {
     async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote> {
         self.pool_data.mid_price_for_quick_estimate(from, to).await
     }
+
+    async fn get_amount_out(
+        &self,
+        input_amount: u64,
+        from_mint: &MintAddress,
+        to_mint: &MintAddress,
+    ) -> AResult<u64> {
+        self.pool_data
+            .get_amount_out(input_amount, from_mint, to_mint, &self.pool_address)
+            .await
+    }
 }
 
 impl AsRef<PoolBase<MeteoraDlmmPoolData>> for MeteoraDlmmConfig {

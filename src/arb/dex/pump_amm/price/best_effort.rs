@@ -2,7 +2,7 @@ use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::dex::pump_amm::price::global_config::{compute_fees_bps, GlobalConfig};
 use crate::arb::global::constant::pool_program::PoolProgram;
-use crate::arb::pipeline::trade_strategy::token_balance_cache::get_balance_of_account;
+use crate::arb::global::state::token_balance_holder::get_balance_of_account;
 use crate::arb::util::alias::{AResult, MintAddress};
 use crate::arb::util::traits::option::OptionExt;
 use crate::f;
@@ -94,9 +94,9 @@ fn is_pump_pool(base_mint: &Pubkey, pool_creator: &Pubkey) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arb::global::client::db::must_init_db;
+    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
-    use crate::arb::global::state::db::must_init_db;
-    use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

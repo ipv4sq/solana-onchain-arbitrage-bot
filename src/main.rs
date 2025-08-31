@@ -12,7 +12,7 @@ mod transaction;
 pub mod util;
 
 use crate::arb::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
-use arb::global;
+use solana_onchain_arbitrage_bot::arb::global;
 use solana_onchain_arbitrage_bot::arb::pipeline::chain_subscriber::owner_account_subscriber::start_pool_monitor;
 use tracing::info;
 
@@ -22,12 +22,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize database connection pool
     info!("Initializing database connection pool...");
-    global::state::db::init_db().await?;
+    global::client::db::init_db().await?;
     info!("Database connection pool initialized");
 
     // Initialize blockhash holder with fresh blockhash
     info!("Initializing blockhash holder...");
-    global::state::blockhash::initialize().await?;
+    global::daemon::blockhash::initialize().await?;
     info!("Blockhash holder initialized");
 
     // 2. Start the SolanaMevBotOnchainListener

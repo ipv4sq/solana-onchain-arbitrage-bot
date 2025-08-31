@@ -83,7 +83,7 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::state::rpc::fetch_tx;
+    use crate::arb::global::client::rpc::fetch_tx;
 
     #[tokio::test]
     async fn test_find_pump_swap_pool() {

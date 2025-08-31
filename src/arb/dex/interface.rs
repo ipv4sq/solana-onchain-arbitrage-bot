@@ -1,8 +1,8 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::enums::direction::Direction;
-use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
 use serde::{Deserialize, Serialize};
@@ -50,6 +50,13 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     }
 
     async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
+
+    async fn get_amount_out(
+        &self,
+        input_amount: u64,
+        from_mint: &MintAddress,
+        to_mint: &MintAddress,
+    ) -> AResult<u64>;
 
     // not sure if needed in the future
     fn refresh_pool_data(&mut self, data: &[u8]) -> AResult<Self>

@@ -1,5 +1,5 @@
 use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
-use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::alias::AResult;
 use crate::arb::util::serde_helpers;
 use crate::arb::util::structs::cache_type::CacheType;
@@ -14,13 +14,13 @@ use std::time::Duration;
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct GlobalConfig {
-    pub admin: Pubkey,                                  // 32 bytes
-    pub lp_fee_basis_points: u64,                       // 8 bytes
-    pub protocol_fee_basis_points: u64,                 // 8 bytes
-    pub disable_flags: u8,                              // 1 byte
-    pub protocol_fee_recipients: [Pubkey; 8],           // 256 bytes (32 * 8)
-    pub coin_creator_fee_basis_points: u64,             // 8 bytes
-    pub admin_set_coin_creator_authority: Pubkey,       // 32 bytes
+    pub admin: Pubkey,                            // 32 bytes
+    pub lp_fee_basis_points: u64,                 // 8 bytes
+    pub protocol_fee_basis_points: u64,           // 8 bytes
+    pub disable_flags: u8,                        // 1 byte
+    pub protocol_fee_recipients: [Pubkey; 8],     // 256 bytes (32 * 8)
+    pub coin_creator_fee_basis_points: u64,       // 8 bytes
+    pub admin_set_coin_creator_authority: Pubkey, // 32 bytes
     // Total so far: 32 + 8 + 8 + 1 + 256 + 8 + 32 = 345 bytes
     // Account has 512 bytes total (minus 8 byte discriminator = 504 bytes)
     // Padding needed: 504 - 345 = 159 bytes
@@ -51,9 +51,7 @@ pub struct Fees {
 
 impl GlobalConfig {
     async fn fetch(address: &Pubkey) -> AResult<Self> {
-        let account = rpc_client()
-            .get_account(address)
-            .await?;
+        let account = rpc_client().get_account(address).await?;
 
         if account.data.len() < 8 {
             return Err(anyhow::anyhow!(
@@ -75,9 +73,7 @@ impl GlobalConfig {
 
 impl FeeConfig {
     pub async fn fetch(address: &Pubkey) -> AResult<Self> {
-        let account = rpc_client()
-            .get_account(address)
-            .await?;
+        let account = rpc_client().get_account(address).await?;
 
         if account.data.len() < 8 {
             return Err(anyhow::anyhow!(

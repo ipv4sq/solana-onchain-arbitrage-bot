@@ -1,8 +1,8 @@
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::block_reason::BlocklistReason;
 use crate::arb::global::enums::step_type::StepType;
-use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::global::trace::types::WithTrace;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;

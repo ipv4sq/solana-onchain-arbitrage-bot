@@ -1,4 +1,4 @@
 pub mod chain_subscriber;
-mod event_processor;
+pub mod event_processor;
 pub mod trade_strategy;
 pub mod uploader;

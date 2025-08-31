@@ -18,7 +18,6 @@ use tracing::{debug, error, info};
 
 use crate::arb::global::constant::mev_bot::MevBot;
 use crate::arb::global::constant::mint::Mints;
-use crate::arb::global::state::rpc;
 use crate::arb::util::traits::pubkey::ToPubkey;
 use crate::legacy_dex::meteora::constants::{
     damm_program_id, damm_v2_event_authority, damm_v2_pool_authority, damm_v2_program_id,
@@ -29,6 +28,7 @@ use crate::legacy_dex::raydium::constants::{
     raydium_clmm_program_id, raydium_cp_program_id, raydium_program_id,
 };
 use crate::legacy_dex::whirlpool::constants::whirlpool_program_id;
+use solana_onchain_arbitrage_bot::arb::global::client::rpc;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;

@@ -1,6 +1,6 @@
 use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::traits::pubkey::ToPubkey;
 
 #[tokio::test]
@@ -16,11 +16,18 @@ async fn inspect_trump_pool() {
     println!("Pool: {}", pool_address);
     println!("Token X: {}", pool_data.token_x_mint);
     println!("Token Y: {}", pool_data.token_y_mint);
-    println!("TRUMP is: {}", if pool_data.token_x_mint == trump_mint { "Token X" } else { "Token Y" });
+    println!(
+        "TRUMP is: {}",
+        if pool_data.token_x_mint == trump_mint {
+            "Token X"
+        } else {
+            "Token Y"
+        }
+    );
     println!("Active Bin ID: {}", pool_data.active_id);
     println!("Bin Step: {} bps", pool_data.bin_step);
     println!("Status: {}", pool_data.status);
-    
+
     println!("\nBin Array Bitmap:");
     for (i, bitmap) in pool_data.bin_array_bitmap.iter().enumerate() {
         if *bitmap != 0 {

@@ -2,7 +2,7 @@ use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::global::enums::direction::Direction;
-use crate::arb::pipeline::trade_strategy::token_balance_cache::get_balance_of_account;
+use crate::arb::global::state::token_balance_holder::get_balance_of_account;
 use crate::arb::util::alias::{AResult, MintAddress};
 use crate::arb::util::traits::option::OptionExt;
 use crate::f;
@@ -55,8 +55,8 @@ impl PumpAmmPoolData {
 mod tests {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
+    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
-    use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
 

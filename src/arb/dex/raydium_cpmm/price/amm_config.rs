@@ -1,4 +1,4 @@
-use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::alias::AResult;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;

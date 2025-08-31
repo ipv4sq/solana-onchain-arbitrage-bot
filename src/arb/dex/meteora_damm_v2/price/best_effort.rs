@@ -1,5 +1,6 @@
 use crate::arb::dex::meteora_damm_v2::misc::curve::{
-    get_delta_amount_a_unsigned, get_delta_amount_b_unsigned, get_next_sqrt_price_from_input, Rounding,
+    get_delta_amount_a_unsigned, get_delta_amount_b_unsigned, get_next_sqrt_price_from_input,
+    Rounding,
 };
 use crate::arb::dex::meteora_damm_v2::misc::fee::{FeeMode, FeeOnAmountResult};
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
@@ -55,12 +56,8 @@ impl MeteoraDammV2PoolData {
             has_referral: false,
         };
 
-        let swap_result = self.get_swap_result(
-            input_amount,
-            &fee_mode,
-            trade_direction,
-            current_point,
-        )?;
+        let swap_result =
+            self.get_swap_result(input_amount, &fee_mode, trade_direction, current_point)?;
 
         Ok(swap_result.output_amount)
     }
@@ -123,7 +120,7 @@ impl MeteoraDammV2PoolData {
                 self.activation_point,
                 self.has_partner(),
             )?;
-            
+
             actual_protocol_fee = protocol_fee;
             actual_lp_fee = lp_fee;
             actual_referral_fee = referral_fee;
@@ -142,12 +139,8 @@ impl MeteoraDammV2PoolData {
     }
 
     fn get_swap_result_from_a_to_b(&self, amount_in: u64) -> AResult<(u64, u128)> {
-        let next_sqrt_price = get_next_sqrt_price_from_input(
-            self.sqrt_price,
-            self.liquidity,
-            amount_in,
-            true,
-        )?;
+        let next_sqrt_price =
+            get_next_sqrt_price_from_input(self.sqrt_price, self.liquidity, amount_in, true)?;
 
         if next_sqrt_price < self.sqrt_min_price {
             return Err(anyhow!("Price range violation: price too low"));
@@ -164,12 +157,8 @@ impl MeteoraDammV2PoolData {
     }
 
     fn get_swap_result_from_b_to_a(&self, amount_in: u64) -> AResult<(u64, u128)> {
-        let next_sqrt_price = get_next_sqrt_price_from_input(
-            self.sqrt_price,
-            self.liquidity,
-            amount_in,
-            false,
-        )?;
+        let next_sqrt_price =
+            get_next_sqrt_price_from_input(self.sqrt_price, self.liquidity, amount_in, false)?;
 
         if next_sqrt_price > self.sqrt_max_price {
             return Err(anyhow!("Price range violation: price too high"));
@@ -195,8 +184,8 @@ mod tests {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::dex::meteora_damm_v2::pool_data::test::load_pool_data;
+    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
-    use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
     use std::str::FromStr;
@@ -204,16 +193,16 @@ mod tests {
     #[tokio::test]
     async fn test_get_amount_out_a_to_b() {
         let pool_data = load_pool_data();
-        
+
         let token_a_mint = pool_data.token_a_mint;
         let token_b_mint = pool_data.token_b_mint;
-        
+
         let input_amount = 1_000_000_000;
-        
+
         let result = pool_data
             .get_amount_out(input_amount, &token_a_mint, &token_b_mint)
             .await;
-        
+
         assert!(result.is_ok());
         let output_amount = result.unwrap();
         assert!(output_amount > 0);
@@ -223,16 +212,16 @@ mod tests {
     #[tokio::test]
     async fn test_get_amount_out_b_to_a() {
         let pool_data = load_pool_data();
-        
+
         let token_a_mint = pool_data.token_a_mint;
         let token_b_mint = pool_data.token_b_mint;
-        
+
         let input_amount = 1_000_000;
-        
+
         let result = pool_data
             .get_amount_out(input_amount, &token_b_mint, &token_a_mint)
             .await;
-        
+
         assert!(result.is_ok());
         let output_amount = result.unwrap();
         assert!(output_amount > 0);
@@ -241,16 +230,16 @@ mod tests {
     #[tokio::test]
     async fn test_get_amount_out_zero_input() {
         let pool_data = load_pool_data();
-        
+
         let token_a_mint = pool_data.token_a_mint;
         let token_b_mint = pool_data.token_b_mint;
-        
+
         let input_amount = 0;
-        
+
         let result = pool_data
             .get_amount_out(input_amount, &token_a_mint, &token_b_mint)
             .await;
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0);
     }
@@ -258,16 +247,16 @@ mod tests {
     #[tokio::test]
     async fn test_get_amount_out_invalid_mints() {
         let pool_data = load_pool_data();
-        
+
         let invalid_mint = Pubkey::from_str("11111111111111111111111111111111").unwrap();
         let token_b_mint = pool_data.token_b_mint;
-        
+
         let input_amount = 1_000_000;
-        
+
         let result = pool_data
             .get_amount_out(input_amount, &invalid_mint, &token_b_mint)
             .await;
-        
+
         assert!(result.is_err());
     }
 
@@ -283,8 +272,8 @@ mod tests {
             .await
             .expect("Failed to fetch pool account");
 
-        let pool_data = MeteoraDammV2PoolData::load_data(&account.data)
-            .expect("Failed to load pool data");
+        let pool_data =
+            MeteoraDammV2PoolData::load_data(&account.data).expect("Failed to load pool data");
 
         // Determine which token is which
         let (sol_mint, usdc_mint) = if pool_data.token_a_mint == wsol {
@@ -297,26 +286,36 @@ mod tests {
 
         // Test 1 SOL -> USDC
         let one_sol = 1_000_000_000u64;
-        let result = pool_data.get_amount_out(one_sol, &sol_mint, &usdc_mint).await;
+        let result = pool_data
+            .get_amount_out(one_sol, &sol_mint, &usdc_mint)
+            .await;
         assert!(result.is_ok());
-        
+
         let usdc_out = result.unwrap();
         let usdc_human = usdc_out as f64 / 1_000_000.0;
-        
+
         // Exchange rate should be reasonable (between $50 and $500 per SOL)
-        assert!(usdc_human > 50.0 && usdc_human < 500.0, 
-            "Exchange rate out of expected range: 1 SOL = {:.2} USDC", usdc_human);
+        assert!(
+            usdc_human > 50.0 && usdc_human < 500.0,
+            "Exchange rate out of expected range: 1 SOL = {:.2} USDC",
+            usdc_human
+        );
 
         // Test reverse swap
         let hundred_usdc = 100_000_000u64; // 100 USDC
-        let reverse_result = pool_data.get_amount_out(hundred_usdc, &usdc_mint, &sol_mint).await;
+        let reverse_result = pool_data
+            .get_amount_out(hundred_usdc, &usdc_mint, &sol_mint)
+            .await;
         assert!(reverse_result.is_ok());
-        
+
         let sol_out = reverse_result.unwrap();
         let sol_human = sol_out as f64 / 1_000_000_000.0;
-        
+
         // Should get reasonable amount of SOL for 100 USDC
-        assert!(sol_human > 0.2 && sol_human < 2.0,
-            "Reverse swap out of expected range: 100 USDC = {:.6} SOL", sol_human);
+        assert!(
+            sol_human > 0.2 && sol_human < 2.0,
+            "Reverse swap out of expected range: 100 USDC = {:.6} SOL",
+            sol_human
+        );
     }
 }

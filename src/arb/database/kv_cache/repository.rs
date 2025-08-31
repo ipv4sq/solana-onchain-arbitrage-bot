@@ -1,6 +1,6 @@
 use crate::arb::database::columns::CacheTypeColumn;
 use crate::arb::database::kv_cache::{model, KvCache, KvCacheTable};
-use crate::arb::global::state::db::get_db;
+use crate::arb::global::client::db::get_db;
 use crate::arb::util::structs::cache_type::CacheType;
 use anyhow::Result;
 use chrono::{DateTime, Utc};

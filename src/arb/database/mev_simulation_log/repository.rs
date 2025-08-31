@@ -1,7 +1,7 @@
 use crate::arb::database::columns::PubkeyType;
 use crate::arb::database::mev_simulation_log::model::{MevSimulationLogParams, SimulationAccount};
 use crate::arb::database::mev_simulation_log::{model, MevSimulationLog, MevSimulationLogTable};
-use crate::arb::global::state::db::get_db;
+use crate::arb::global::client::db::get_db;
 use anyhow::Result;
 use sea_orm::{
     ActiveValue::{NotSet, Set},

@@ -1,4 +1,4 @@
-use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
