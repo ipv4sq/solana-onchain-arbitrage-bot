@@ -1,5 +1,5 @@
 use crate::arb::global::constant::duration::Interval;
-use crate::arb::pipeline::event_processor::token_balance::processor::{
+use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
 use crate::arb::util::alias::MintAddress;

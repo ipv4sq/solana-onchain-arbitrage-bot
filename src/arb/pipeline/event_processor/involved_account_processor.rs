@@ -9,7 +9,7 @@ use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
-use crate::arb::pipeline::event_processor::token_balance::processor::TokenBalanceProcessor;
+use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::TokenBalanceProcessor;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
