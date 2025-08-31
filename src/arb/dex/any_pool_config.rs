@@ -28,7 +28,7 @@ pub enum AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
-    pub fn from_basis(
+    pub fn new(
         pool_address: PoolAddress,
         dex_type: DexType,
         data: &[u8],
@@ -66,21 +66,6 @@ impl AnyPoolConfig {
             dex_type: dex,
             pool_address: address,
         })
-    }
-
-    pub fn from_owner_and_data(
-        pool_address: &PoolAddress,
-        owner: &Pubkey,
-        data: &[u8],
-    ) -> AResult<AnyPoolConfig> {
-        let dex_type = DexType::determine_from(owner);
-        Self::from_basis(*pool_address, dex_type, data)
-    }
-
-    pub async fn from(pool_address: &Pubkey) -> Result<AnyPoolConfig> {
-        let account = rpc_client().get_account(pool_address).await?;
-        let dex_type = DexType::determine_from(&account.owner);
-        Self::from_basis(*pool_address, dex_type, &account.data)
     }
 }
 
