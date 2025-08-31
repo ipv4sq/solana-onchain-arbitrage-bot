@@ -1,15 +1,31 @@
 use crate::arb::global::constant::duration::Interval;
+use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
 use crate::arb::util::alias::MintAddress;
+use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
+use crate::{f, lazy_arc};
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
+use std::sync::Arc;
+use std::time::Duration;
+use tracing::warn;
 
 #[allow(non_upper_case_globals)]
 pub static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
     Lazy::new(|| TtlLoadingCache::new(20_000_000, Interval::WEEK, |_| async move { None }));
+
+#[allow(non_upper_case_globals)]
+static QueryRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
+    RateLimiter::new(
+        5,
+        Duration::from_secs(1),
+        10,
+        "AccountBalanceQueryRateLimiter".to_string(),
+    )
+});
 
 pub async fn get_balance_of_account(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmount> {
     let key = &(account.clone(), mint.clone());
@@ -21,5 +37,20 @@ pub async fn get_balance_of_account(account: &Pubkey, mint: &MintAddress) -> Opt
         return Some(amount);
     }
     // found from long live
-    LongTermCache.get(key).await
+    let long_live = LongTermCache.get(key).await;
+    if long_live.is_some() {
+        return long_live;
+    }
+
+    fetch_from_rpc(account, mint).await
+}
+
+async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmount> {
+    if !QueryRateLimiter.try_acquire() {
+        warn!("Query rate limiter expired.");
+        return None;
+    }
+    let data = rpc_client().get_account(account).await.ok()?;
+    TokenAccount::unpack_from_slice(&data.data);
+    todo!()
 }

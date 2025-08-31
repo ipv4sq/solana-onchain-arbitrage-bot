@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmAPoolData;
+    use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;
     // tx: https://solscan.io/tx/4mUwr6wFSxmmaThPELhF5WZECS9GLm6DQqBu3fUKQNaMQ8MXUvaykKnmJGfK8MCHMk3xVSTbrMVBnzKrKE3MnRXS
 
-    fn load_data() -> Result<RaydiumCpmmAPoolData> {
+    fn load_data() -> Result<RaydiumCpmmPoolData> {
         let data = general_purpose::STANDARD.decode(ACCOUNT_DATA_BASE64)?;
-        let account = RaydiumCpmmAPoolData::load_data(&data).expect("Failed to parse account data");
+        let account = RaydiumCpmmPoolData::load_data(&data).expect("Failed to parse account data");
         return Ok(account);
     }
 

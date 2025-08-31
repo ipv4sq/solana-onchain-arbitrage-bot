@@ -32,7 +32,7 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     RateLimiter::new(
         8,
         Duration::from_secs(1),
-        15,
+        10,
         "MevBotRateLimiter".to_string(),
     )
 });

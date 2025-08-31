@@ -9,15 +9,6 @@ use crate::f;
 use rust_decimal::Decimal;
 
 impl PumpAmmPoolData {
-    pub fn dir(&self, from: &MintAddress, to: &MintAddress) -> Direction {
-        if *from == self.base_mint && *to == self.quote_mint {
-            return Direction::XtoY;
-        } else if *from == self.quote_mint && *to == self.base_mint {
-            return Direction::YtoX;
-        }
-        panic!();
-    }
-
     pub async fn mid_price_for_quick_estimate(
         &self,
         from: &MintAddress,

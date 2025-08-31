@@ -6,7 +6,7 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
-pub struct RaydiumCpmmAPoolData {
+pub struct RaydiumCpmmPoolData {
     pub amm_config: Pubkey,
     pub pool_creator: Pubkey,
     pub token_0_vault: Pubkey,
@@ -37,7 +37,7 @@ pub struct RaydiumCpmmAPoolData {
     pub padding: [u64; 28],
 }
 
-impl PoolDataLoader for RaydiumCpmmAPoolData {
+impl PoolDataLoader for RaydiumCpmmPoolData {
     fn load_data(data: &[u8]) -> AResult<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(
@@ -45,7 +45,7 @@ impl PoolDataLoader for RaydiumCpmmAPoolData {
             ));
         }
 
-        RaydiumCpmmAPoolData::try_from_slice(&data[8..])
+        RaydiumCpmmPoolData::try_from_slice(&data[8..])
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
@@ -69,7 +69,7 @@ impl PoolDataLoader for RaydiumCpmmAPoolData {
 #[cfg(test)]
 mod tests {
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmAPoolData;
+    use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use base64::engine::general_purpose::STANDARD;
 
@@ -250,7 +250,7 @@ mod tests {
 
         println!("Decoded data length: {} bytes", decoded.len());
 
-        let loaded = RaydiumCpmmAPoolData::load_data(&decoded).unwrap();
+        let loaded = RaydiumCpmmPoolData::load_data(&decoded).unwrap();
 
         println!("Loaded amm_config: {:?}", loaded.amm_config);
         println!(

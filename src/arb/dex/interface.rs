@@ -104,4 +104,13 @@ pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
     fn pair(&self) -> MintPair {
         MintPair(self.base_mint(), self.quote_mint())
     }
+
+    fn dir(&self, from: &MintAddress, to: &MintAddress) -> Direction {
+        if *from == self.base_mint() && *to == self.quote_mint() {
+            return Direction::XtoY;
+        } else if *from == self.quote_mint() && *to == self.base_mint() {
+            return Direction::YtoX;
+        }
+        panic!();
+    }
 }
