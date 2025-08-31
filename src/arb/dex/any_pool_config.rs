@@ -34,15 +34,15 @@ impl AnyPoolConfig {
         data: &[u8],
     ) -> AResult<AnyPoolConfig> {
         let r = match dex_type {
-            // DexType::MeteoraDlmm => {
-            //     MeteoraDlmm(MeteoraDlmmConfig::from_data(pool_address, dex_type, data)?)
-            // }
-            // DexType::MeteoraDammV2 => MeteoraDammV2(MeteoraDammV2Config::from_data(
-            //     pool_address,
-            //     dex_type,
-            //     data,
-            // )?),
-            // DexType::PumpAmm => PumpAmm(PumpAmmConfig::from_data(pool_address, dex_type, data)?),
+            DexType::MeteoraDlmm => {
+                MeteoraDlmm(MeteoraDlmmConfig::from_data(pool_address, dex_type, data)?)
+            }
+            DexType::MeteoraDammV2 => MeteoraDammV2(MeteoraDammV2Config::from_data(
+                pool_address,
+                dex_type,
+                data,
+            )?),
+            DexType::PumpAmm => PumpAmm(PumpAmmConfig::from_data(pool_address, dex_type, data)?),
             DexType::RaydiumCpmm => {
                 RaydiumCpmm(RaydiumCpmmConfig::from_data(pool_address, dex_type, data)?)
             }

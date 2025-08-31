@@ -20,6 +20,7 @@ use sea_orm::{
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use std::time::Duration;
+use tracing::error;
 
 pub struct PoolRecordRepository;
 
@@ -136,9 +137,12 @@ impl PoolRecordRepository {
 
         match result {
             Ok(_) => Ok(pool),
-            Err(_) => Self::find_by_address(&pool.address.0)
-                .await?
-                .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing pool")),
+            Err(e) => {
+                error!("Failed to update pool record: {}", e);
+                Self::find_by_address(&pool.address.0)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing pool"))
+            }
         }
     }
 
