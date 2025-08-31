@@ -5,3 +5,4 @@ pub mod new_pool_processor;
 pub mod owner_account_debouncer;
 pub mod pool_update_processor;
 pub mod structs;
+pub mod token_balance;

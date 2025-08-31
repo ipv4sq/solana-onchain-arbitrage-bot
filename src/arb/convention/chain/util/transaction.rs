@@ -46,7 +46,7 @@ impl Transaction {
         let result: Vec<SwapInstruction> = ixs
             .iter()
             .filter(|ix| ix.accounts.len() > 3)
-            .filter_map(|ix| AnyPoolConfig::from_ix_to_swap(ix).ok())
+            .filter_map(|ix| AnyPoolConfig::parse_ix_to_swap(ix).ok())
             .collect();
         if result.len() > 0 {
             Some(result)

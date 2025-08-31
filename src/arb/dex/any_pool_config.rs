@@ -52,7 +52,7 @@ impl AnyPoolConfig {
         Ok(r)
     }
 
-    pub fn from_ix_to_swap(ix: &Instruction) -> Result<SwapInstruction> {
+    pub fn parse_ix_to_swap(ix: &Instruction) -> Result<SwapInstruction> {
         let program_id = ix.program_id;
         let dex_type = DexType::determine_from(&program_id);
         let (dex, address) = match dex_type {

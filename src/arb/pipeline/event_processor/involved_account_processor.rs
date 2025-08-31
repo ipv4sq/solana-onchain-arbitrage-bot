@@ -9,6 +9,7 @@ use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
+use crate::arb::pipeline::event_processor::token_balance::processor::TokenBalanceProcessor;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
@@ -52,6 +53,10 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     if !pump_pools.is_empty() {
         info!("Found {} pump pools in transaction", pump_pools.len());
     }
+
+    TokenBalanceProcessor
+        .publish(WithTrace(tx, trace.clone()))
+        .await?;
 
     if pump_pools.len() > ixs.len() * 2 {
         panic!("There must be something wrong here")
