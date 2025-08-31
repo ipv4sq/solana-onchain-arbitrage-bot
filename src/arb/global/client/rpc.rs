@@ -12,7 +12,7 @@ use solana_client::nonblocking::rpc_client;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcTransactionConfig;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::commitment_config::CommitmentLevel;
+use solana_sdk::commitment_config::{CommitmentConfig, CommitmentLevel};
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
@@ -69,7 +69,10 @@ pub fn fetch_tx_sync(client: &RpcClient, signature: &str) -> Result<Transaction>
 static RPC_HOLDER: Lazy<RwLock<Arc<rpc_client::RpcClient>>> = Lazy::new(|| {
     let url = std::env::var("SOLANA_RPC_URL")
         .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
-    RwLock::new(Arc::new(rpc_client::RpcClient::new(url)))
+    RwLock::new(Arc::new(rpc_client::RpcClient::new_with_commitment(
+        url,
+        CommitmentConfig::confirmed(),
+    )))
 });
 
 pub fn rpc_client() -> Arc<rpc_client::RpcClient> {
