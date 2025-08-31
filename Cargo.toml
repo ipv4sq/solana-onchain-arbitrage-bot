@@ -89,5 +89,5 @@ ctor = "0.5.0"
 panic = "unwind"
 
 [profile.dev]
-panic = "abort"
+panic = "unwind"
 debug = true

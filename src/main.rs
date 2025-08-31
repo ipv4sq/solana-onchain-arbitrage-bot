@@ -18,6 +18,13 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let backtrace = std::backtrace::Backtrace::force_capture();
+        eprintln!("PANIC: {}", panic_info);
+        eprintln!("Stack backtrace:\n{}", backtrace);
+        std::process::exit(1);
+    }));
+
     arb::util::logging::init()?;
 
     // Initialize database connection pool
