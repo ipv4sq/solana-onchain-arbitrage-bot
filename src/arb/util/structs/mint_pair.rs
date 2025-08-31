@@ -1,7 +1,6 @@
 use crate::arb::global::constant::mint::Mints;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
-use std::cmp::min;
 
 #[derive(Debug, Clone)]
 pub struct MintPair(pub Pubkey, pub Pubkey);

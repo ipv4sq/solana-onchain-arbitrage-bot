@@ -1,11 +1,7 @@
-use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::dex::interface::PoolConfig;
 use crate::arb::dex::pump_amm::config::PumpAmmConfig;
-use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
-use crate::arb::global::constant::mint::Mints;
-use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::{Trace, WithTrace};
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
