@@ -25,7 +25,7 @@ impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
         })
     }
 
-    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
+    fn pase_swap_from_ix(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
         ix.expect_program_id(&MeteoraDammV2.owner_program_id())?;
         let address = ix.account_at(1)?.pubkey;
         Ok((MeteoraDammV2, address))

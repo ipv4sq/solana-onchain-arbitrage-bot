@@ -1,6 +1,8 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::mapper::traits::ToUnified;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::dex::interface::RefinedPoolConfig;
+use crate::arb::dex::pump_amm::config::PumpAmmRefinedConfig;
 use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::pool_program::PoolProgram;
@@ -46,8 +48,10 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
 
     let pump_pools: Vec<PoolAddress> = ixs
         .iter()
-        .filter(|ix| ix.program_id == PoolProgram::PUMP_AMM)
-        .flat_map(|x| find_pump_swap(x))
+        // .filter(|ix| ix.program_id == PoolProgram::PUMP_AMM)
+        // .flat_map(|x| config::find_pump_swap(x))
+        .flat_map(|ix| PumpAmmRefinedConfig::pase_swap_from_ix(ix))
+        .map(|swap| swap.1)
         .collect();
 
     if !pump_pools.is_empty() {
@@ -63,6 +67,7 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     }
 
     // Deduplicate pools
+    use crate::arb::dex::pump_amm::config;
     use std::collections::HashSet;
     let unique_pools: HashSet<PoolAddress> = pump_pools.into_iter().collect();
 
@@ -82,34 +87,6 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     }
 
     unit_ok!()
-}
-
-pub fn find_pump_swap(ix: &Instruction) -> Option<PoolAddress> {
-    /*
-    #1 - Pool:Pump.fun AMM ( USDC-WSOL) Market
-    #2 - User:
-    #3 - Global Config:
-    #4 - Base Mint:
-    #5 - Quote Mint:
-    */
-    if ix.accounts.len() < 6 {
-        return None;
-    }
-    let account_1 = ix.accounts.get(0)?.pubkey;
-    let account_3 = ix.accounts.get(2)?.pubkey;
-    let account_4 = ix.accounts.get(3)?.pubkey;
-    let account_5 = ix.accounts.get(4)?.pubkey;
-
-    if account_3 != PUMP_GLOBAL_CONFIG {
-        return None;
-    }
-
-    let pair = MintPair(account_4, account_5);
-    if !pair.contains(&Mints::WSOL) || !pair.contains(&Mints::USDC) {
-        return None;
-    }
-
-    Some(account_1)
 }
 
 #[cfg(test)]

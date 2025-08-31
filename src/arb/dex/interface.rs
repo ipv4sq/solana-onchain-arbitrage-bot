@@ -35,7 +35,7 @@ pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     where
         Self: Sized;
 
-    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)>;
+    fn pase_swap_from_ix(ix: &Instruction) -> AResult<(DexType, PoolAddress)>;
 
     async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
 

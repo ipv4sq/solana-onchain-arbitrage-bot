@@ -4,9 +4,13 @@ use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
+use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
+use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
+use crate::arb::util::structs::mint_pair::MintPair;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
+use crate::arb::util::traits::option::OptionExt;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -24,9 +28,9 @@ impl RefinedPoolConfig<PumpAmmPoolData> for PumpAmmRefinedConfig {
         })
     }
 
-    fn extract_pool_from(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
+    fn pase_swap_from_ix(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
         ix.expect_program_id(&DexType::PumpAmm.owner_program_id())?;
-        let address = ix.account_at(0)?.pubkey;
+        let address = find_pump_swap(ix).or_err("Can not find pump swap address")?;
         Ok((DexType::PumpAmm, address))
     }
 
@@ -66,4 +70,32 @@ impl AsRef<PoolBase<PumpAmmPoolData>> for PoolBase<PumpAmmPoolData> {
     fn as_ref(&self) -> &PoolBase<PumpAmmPoolData> {
         self
     }
+}
+
+pub fn find_pump_swap(ix: &Instruction) -> Option<PoolAddress> {
+    /*
+    #1 - Pool:Pump.fun AMM ( USDC-WSOL) Market
+    #2 - User:
+    #3 - Global Config:
+    #4 - Base Mint:
+    #5 - Quote Mint:
+    */
+    if ix.accounts.len() < 6 {
+        return None;
+    }
+    let account_1 = ix.accounts.get(0)?.pubkey;
+    let account_3 = ix.accounts.get(2)?.pubkey;
+    let account_4 = ix.accounts.get(3)?.pubkey;
+    let account_5 = ix.accounts.get(4)?.pubkey;
+
+    if account_3 != PUMP_GLOBAL_CONFIG {
+        return None;
+    }
+
+    let pair = MintPair(account_4, account_5);
+    if !pair.contains(&Mints::WSOL) || !pair.contains(&Mints::USDC) {
+        return None;
+    }
+
+    Some(account_1)
 }

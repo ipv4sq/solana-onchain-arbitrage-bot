@@ -52,13 +52,13 @@ impl AnyPoolConfig {
         Ok(r)
     }
 
-    pub fn parse_ix_to_swap(ix: &Instruction) -> Result<SwapInstruction> {
+    pub fn parse_swap_from_ix(ix: &Instruction) -> Result<SwapInstruction> {
         let program_id = ix.program_id;
         let dex_type = DexType::determine_from(&program_id);
         let (dex, address) = match dex_type {
-            DexType::MeteoraDlmm => MeteoraDlmmRefinedConfig::extract_pool_from(ix),
-            DexType::MeteoraDammV2 => MeteoraDammV2RefinedConfig::extract_pool_from(ix),
-            DexType::PumpAmm => PumpAmmRefinedConfig::extract_pool_from(ix),
+            DexType::MeteoraDlmm => MeteoraDlmmRefinedConfig::pase_swap_from_ix(ix),
+            DexType::MeteoraDammV2 => MeteoraDammV2RefinedConfig::pase_swap_from_ix(ix),
+            DexType::PumpAmm => PumpAmmRefinedConfig::pase_swap_from_ix(ix),
             _ => return_error!("Unsupported dex {}", dex_type),
         }?;
 
