@@ -28,7 +28,7 @@ use strum_macros::Display;
 #[strum(serialize_all = "PascalCase")]
 pub enum DexType {
     RaydiumV4,
-    RaydiumCp,
+    RaydiumCpmm,
     RaydiumClmm,
     Pump,
     PumpAmm,
@@ -46,7 +46,7 @@ static PROGRAM_TO_DEX: Lazy<HashMap<Pubkey, DexType>> = Lazy::new(|| {
         .filter_map(|dex| {
             let program = match dex {
                 DexType::RaydiumV4 => PoolProgram::RAYDIUM_V4,
-                DexType::RaydiumCp => PoolProgram::RAYDIUM_CPMM,
+                DexType::RaydiumCpmm => PoolProgram::RAYDIUM_CPMM,
                 DexType::RaydiumClmm => PoolProgram::RAYDIUM_CLMM,
                 DexType::Pump => PoolProgram::PUMP,
                 DexType::PumpAmm => PoolProgram::PUMP_AMM,
