@@ -7,9 +7,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
-use std::collections::HashMap;
 use std::time::Duration;
-use tokio::sync::RwLock;
 
 #[allow(non_upper_case_globals)]
 static AmmConfigCache: Lazy<PersistentCache<Pubkey, CpmmAmmConfig>> = Lazy::new(|| {

@@ -7,7 +7,7 @@ use crate::arb::pipeline::event_processor::token_balance::token_balance_processo
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
-use crate::{f, lazy_arc};
+use crate::lazy_arc;
 use once_cell::sync::Lazy;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
