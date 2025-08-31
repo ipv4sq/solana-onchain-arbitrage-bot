@@ -1,5 +1,7 @@
 use crate::arb::convention::chain::AccountState;
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::global::constant::duration::Interval;
+use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType::{AccountUpdateDebounced, DeterminePoolExists};
 use crate::arb::global::trace::types::WithTrace;
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
@@ -8,15 +10,12 @@ use crate::arb::pipeline::event_processor::structs::pool_update::PoolUpdate;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcAccountUpdate;
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
-use crate::arb::util::structs::lazy_cache::LazyCache;
+use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use crate::lazy_arc;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use std::time::Duration;
-
-#[allow(non_upper_case_globals)]
-static LastPoolFromGrpc: LazyCache<Pubkey, AccountState> = LazyCache::new();
 
 #[allow(non_upper_case_globals)]
 pub static OwnerAccountDebouncer: Lazy<
@@ -28,8 +27,12 @@ pub static OwnerAccountDebouncer: Lazy<
 
 async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
     let WithTrace(update, trace) = update;
+    let previous = LastAccountUpdateCache.get_sync(&update.account);
     let updated = AccountState::from_grpc_update(&update);
-    let previous = LastPoolFromGrpc.put(update.account, updated.clone());
+    LastAccountUpdateCache
+        .put(update.account, updated.clone())
+        .await;
+
     let pool_update = PoolUpdate {
         previous,
         current: updated,
@@ -38,6 +41,14 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
 
     let recorded = PoolRecordRepository::is_pool_recorded(pool_update.pool()).await;
     trace.step_with(DeterminePoolExists, "account_address", recorded.to_string());
+
+    match update.owner {
+        PoolProgram::METEORA_DLMM => {}
+        PoolProgram::METEORA_DAMM_V2 => {}
+        PoolProgram::PUMP_AMM => {}
+        PoolProgram::RAYDIUM_CPMM => {}
+        _ => {}
+    }
 
     if recorded {
         let _ = PoolUpdateProcessor
@@ -49,3 +60,7 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
             .await;
     }
 }
+
+#[allow(non_upper_case_globals)]
+static LastAccountUpdateCache: Lazy<TtlLoadingCache<Pubkey, AccountState>> =
+    Lazy::new(|| TtlLoadingCache::new(10_000_000, Interval::HOUR, |_| async move { None }));

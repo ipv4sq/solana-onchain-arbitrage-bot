@@ -7,7 +7,6 @@ use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
-use tracing::info;
 
 const BIN_STEP_SCALE: u64 = 10_000;
 const SCALE: u128 = 1_000_000_000_000_000_000u128;

@@ -1,14 +1,12 @@
 use crate::arb::convention::chain::Transaction;
-use crate::arb::global::trace::types::{Trace, WithTrace};
+use crate::arb::global::trace::types::Trace;
 use crate::arb::util::alias::{AResult, MintAddress};
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::{f, lazy_arc, unit_ok};
+use crate::{f, unit_ok};
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
-use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Clone)]

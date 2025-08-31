@@ -9,7 +9,6 @@ use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmConfig;
 use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::config::PumpAmmConfig;
 use crate::arb::dex::raydium_cpmm::config::RaydiumCpmmConfig;
-use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;

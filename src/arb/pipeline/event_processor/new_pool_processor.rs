@@ -1,6 +1,4 @@
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
-use crate::arb::global::client::rpc::rpc_client;
-use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::block_reason::BlocklistReason;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::WithTrace;
@@ -14,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{debug, warn};
 
 #[allow(non_upper_case_globals)]
 pub static NewPoolProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Pubkey>>>> = lazy_arc!({

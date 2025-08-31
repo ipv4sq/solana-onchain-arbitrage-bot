@@ -5,7 +5,6 @@ use crate::arb::database::pool_record::converter::build_model;
 use crate::arb::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
-use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::client::db::get_db;
 use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::util::alias::{MintAddress, PoolAddress};
