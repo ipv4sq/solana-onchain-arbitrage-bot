@@ -12,8 +12,9 @@ caching, comprehensive logging, and robust error handling:
 - **Advanced Caching**: Multi-layer cache system with TTL support (LoadingCache, PersistentCache, TTLLoadingCache)
 - **Database Persistence**: SeaORM-based data management with complex simulation logging
 - **DEX Abstraction**: Unified trait-based interface for multiple DEX protocols
-- **Chain Subscription**: Transaction monitoring and pool discovery via gRPC
+- **Chain Subscription**: Transaction monitoring and pool discovery via Yellowstone gRPC
 - **Production Features**: Rate limiting, dual logging, background cache cleanup, connection pooling
+- **Supported DEXs**: Raydium (V4, CPMM, CLMM), Meteora (DLMM, DAMM, DAMM V2), Pump.fun (Classic & AMM), Orca Whirlpool, Solfi, Vertigo
 
 **Onchain Program ID**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
@@ -25,9 +26,11 @@ Claude Code has access to specialized MCP tools for Solana development:
 
 - **`mcp__solana-mcp-server__Solana_Expert__Ask_For_Help`**: Expert assistance for Solana development questions (how-to,
   concepts, APIs, SDKs, errors). Use for complex Solana-specific issues.
-- **`mcp__solana-mcp-server__Solana_Documentation_Search`**: RAG-based search across Solana ecosystem documentation. Use when
+- **`mcp__solana-mcp-server__Solana_Documentation_Search`**: RAG-based search across Solana ecosystem documentation. Use
+  when
   you need up-to-date information about Solana features.
-- **`mcp__solana-mcp-server__Ask_Solana_Anchor_Framework_Expert`**: Specialized help for Anchor Framework development. Use for
+- **`mcp__solana-mcp-server__Ask_Solana_Anchor_Framework_Expert`**: Specialized help for Anchor Framework development.
+  Use for
   Anchor-specific queries.
 
 ### Development Support Tools
@@ -56,10 +59,12 @@ cargo run --release --bin solana-onchain-arbitrage-bot -- --config config.toml
 
 # Setup configuration (first time only)
 cp config.toml.example config.toml
+# Edit config.toml with your RPC URL, wallet private key, and pool configurations
 
-# Setup database (required for new architecture)
+# Setup database and gRPC (required for new architecture)
 cp .env.example .env
-# Configure DATABASE_URL in .env
+# Configure DATABASE_URL in .env (PostgreSQL connection string)
+# Configure GRPC_URL and GRPC_TOKEN for Yellowstone gRPC subscription
 
 # Install sqlx-cli for migrations
 cargo install sqlx-cli --no-default-features --features postgres
@@ -118,6 +123,7 @@ Unified DEX interface with trait-based abstraction:
     - `meteora_damm/` - Legacy Meteora DAMM (minimal implementation)
 
 Each implementation contains:
+
 - `config.rs` - Pool configuration
 - `pool_data.rs` - Pool data structures
 - `price/` - Price calculation logic
@@ -128,9 +134,10 @@ Each implementation contains:
 Orchestrates the main business logic flow:
 
 - **Chain Subscriber** (`pipeline/chain_subscriber/`):
-    - `owner_account_subscriber.rs` - Monitor pool owner accounts
-    - `registrar.rs` - Bootstrap chain subscription
-    - `structs/` - Subscription data structures
+    - `owner_account_subscriber.rs` - Monitor pool owner accounts via gRPC
+    - `involved_account_subscriber.rs` - Monitor accounts involved in transactions
+    - `registrar.rs` - Bootstrap chain subscription (starts both monitors)
+    - `legacy/` - Legacy MEV bot transaction subscriber (currently disabled)
 
 - **Event Processor** (`pipeline/event_processor/`):
     - `mev_bot/` - MEV bot transaction processing
@@ -166,6 +173,7 @@ Advanced SeaORM-based persistence:
     - `mev_simulation_log/` - Complex MEV simulation logging
 
 Each entity module contains:
+
 - `model.rs` - SeaORM model definition
 - `repository.rs` - Data access layer
 - Optional: `cache.rs`, `loader.rs`, `converter.rs`
@@ -239,40 +247,61 @@ Production-grade utilities and abstractions:
 Located in `src/` alongside the main `arb` module:
 
 - `bot.rs` - Bot orchestration logic
-- `config.rs` - Configuration management
+- `config.rs` - Configuration management (supports environment variables with `$` prefix)
 - `legacy_dex/` - Legacy DEX implementations (being phased out)
+  - Contains legacy implementations for Raydium, Meteora, Pump, Whirlpool, Solfi, Vertigo
+  - Includes pool fetching and checking utilities
 - `pools.rs` - Pool management utilities
 - `refresh.rs` - Data refresh logic
 - `server.rs` - HTTP server for monitoring
 - `service/` - Service layer implementations
 - `transaction.rs` - Transaction utilities
 - `util/` - Additional utilities
+- `test/` - Test utilities and initialization
+- `main.rs` - Entry point: initializes logging, database, blockhash daemon, and chain subscriber
 
 ### DEX Support
 
 **Current DEX implementations** in `src/arb/dex/`:
 
-1. **Meteora DLMM** - Dynamic Liquidity Market Maker
+1. **Meteora DLMM** (`meteora_dlmm/`) - Dynamic Liquidity Market Maker
     - Bin-based liquidity with dynamic fees
     - Price calculation from bin ID: `price = (1 + bin_step/10000)^bin_id`
     - Up to 10 bins traversal for liquidity
     - Fee: base fee + variable fee (volatility-based)
+    - Program: `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`
 
-2. **Meteora DAMM V2** - Dynamic AMM with multiple curve types
+2. **Meteora DAMM V2** (`meteora_damm_v2/`) - Dynamic AMM with multiple curve types
     - Supports various bonding curves
     - Advanced fee structures
+    - Program: `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG`
 
-3. **Raydium CPMM** - Constant Product Market Maker
+3. **Meteora DAMM** (`meteora_damm/`) - Legacy Dynamic AMM
+    - Minimal implementation (being phased out)
+    - Program: `Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB`
+
+4. **Raydium CPMM** (`raydium_cpmm/`) - Constant Product Market Maker
     - Standard x*y=k AMM
     - Configurable fees via AMM config
+    - Program: `CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C`
 
-4. **Pump.fun AMM** - Token launch AMM
-    - Creator fee mechanism
+5. **Pump.fun AMM** (`pump_amm/`) - Token launch AMM
+    - Creator fee mechanism (fees go to token creator)
     - Bonding curve for fair launches
+    - Creator vault PDA: `["creator_vault", coin_creator_pubkey]`
+    - Program: `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA`
 
-5. **Orca Whirlpool** - Concentrated liquidity
+6. **Orca Whirlpool** (`whirlpool/`) - Concentrated liquidity
     - Tick-based liquidity
     - Position management
+    - Program: `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc`
+
+**Legacy DEX implementations** (in `src/legacy_dex/`, being phased out):
+- Raydium V4 (`675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`)
+- Raydium CLMM (`CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK`)
+- Pump.fun Classic (`6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`)
+- Solfi (`SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe`)
+- Vertigo (`vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ`)
 
 ### Configuration Structure
 
@@ -280,42 +309,57 @@ The `config.toml` includes:
 
 ```toml
 [bot]
-compute_unit_limit = 600000
+compute_unit_limit = 600000  # Max compute units per transaction
 
 [routing]
 [[routing.mint_config_list]]
-mint = "..."
-pump_pool_list = ["..."]
-raydium_pool_list = ["..."]
-meteora_damm_pool_list = []
-meteora_dlmm_pool_list = ["..."]
-meteora_damm_v2_pool_list = []
-whirlpool_pool_list = ["..."]
-raydium_clmm_pool_list = ["..."]
-raydium_cp_pool_list = []
-vertigo_pool_list = []
-lookup_table_accounts = ["..."]
-process_delay = 400
+mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # Token mint address
+pump_pool_list = ["..."]           # Pump.fun AMM pools
+raydium_pool_list = ["..."]        # Raydium V4 pools
+meteora_damm_pool_list = []        # Meteora DAMM pools
+meteora_dlmm_pool_list = ["..."]   # Meteora DLMM pools
+meteora_damm_v2_pool_list = []     # Meteora DAMM V2 pools
+whirlpool_pool_list = ["..."]      # Orca Whirlpool pools
+raydium_clmm_pool_list = ["..."]   # Raydium CLMM pools
+raydium_cp_pool_list = []          # Raydium CPMM pools
+solfi_pool_list = []                # Solfi pools
+vertigo_pool_list = []              # Vertigo pools
+lookup_table_accounts = ["..."]    # Address lookup tables for transaction size optimization
+process_delay = 400                 # Delay in ms between processing
 
 [rpc]
-url = "$RPC_URL"  # Can use environment variables
+url = "$RPC_URL"  # Can use environment variables with $ prefix
 
 [wallet]
-private_key = "$WALLET_PRIVATE_KEY"
+private_key = "$WALLET_PRIVATE_KEY"  # Supports env vars
 
-[spam]  # Optional
+[spam]  # Optional - for transaction spamming
 enabled = true
-sending_rpc_urls = ["..."]
+sending_rpc_urls = ["..."]  # Multiple RPC endpoints for redundancy
 compute_unit_price = 1000
 max_retries = 3
 
-[kamino_flashloan]  # Optional
+[flashloan]  # Optional - flashloan support
 enabled = true
+```
+
+### Environment Variables (.env)
+
+```bash
+# Database connection (PostgreSQL)
+DATABASE_URL=postgresql://username:password@localhost/database_name
+
+# Yellowstone gRPC for chain subscription
+GRPC_URL=https://your-grpc-endpoint.com
+GRPC_TOKEN=your-authentication-token
+
+# Optional: Override MEV program ID
+# MEV_PROGRAM_ID=MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz
 ```
 
 ## Database Schema
 
-### Active Tables (15 migrations)
+### Active Tables (16 migrations)
 
 #### `pools`
 
@@ -329,6 +373,7 @@ enabled = true
 - `created_at`, `updated_at` (TIMESTAMPTZ)
 
 Note: `base_vault` and `quote_vault` columns were dropped in migration 20250830055911
+Indexes: compound index on (base_mint, quote_mint), individual indexes on base_mint and quote_mint
 
 #### `mint_records`
 
@@ -349,6 +394,7 @@ Note: `base_vault` and `quote_vault` columns were dropped in migration 202508300
 #### `mev_simulation_log`
 
 Complex MEV simulation tracking with:
+
 - Transaction details (signature, compute units, errors)
 - Mint pairs (`minor_mint`, `desired_mint` with symbols)
 - Pool arrays and pool types
@@ -431,16 +477,16 @@ This is production code where bugs can result in financial loss. Exercise extrem
 ```rust
 // GOOD: Clear transformation pipeline
 let result = items
-    .into_iter()
-    .filter_map(|item| process(item).map(|v| (item.key, v)))
-    .collect();
+.into_iter()
+.filter_map( | item| process(item).map( | v| (item.key, v)))
+.collect();
 
 // BAD: Imperative with mutable state
 let mut result = HashMap::new();
 for item in items {
-    if let Some(value) = process(item) {
-        result.insert(item.key, value);
-    }
+if let Some(value) = process(item) {
+result.insert(item.key, value);
+}
 }
 ```
 
@@ -478,7 +524,7 @@ Located in `src/arb/dex/meteora_dlmm/price/best_effort.rs`:
 
 - **Price Calculation**: Always calculate from bin ID: `price = (1 + bin_step/10000)^bin_id`
 - **Bin Structure**: 70 bins per array, bin array index = bin_id / 70
-- **Bin Traversal**: 
+- **Bin Traversal**:
     - X→Y swap: Move to lower bin IDs (bins with Y liquidity)
     - Y→X swap: Move to higher bin IDs (bins with X liquidity)
 - **Common Issues**:
@@ -523,8 +569,13 @@ Located in `src/arb/dex/meteora_dlmm/price/best_effort.rs`:
 3. **Format code**: `cargo fmt` for consistent style
 4. **Test changes**: Run relevant tests with `cargo test`
 5. **Monitor logs**: Use dual console/file logging (`logs/bot_*.log`)
+   - Use `./tail_logs.sh` to tail the latest log file
+   - Logs rotate automatically with timestamp in filename
 6. **Database migrations**: Always use sqlx CLI for schema changes
 7. **Cache invalidation**: Remember to invalidate caches after updates
+8. **Chain Subscription**: Bot uses two monitors via gRPC:
+   - Owner account monitor - tracks pool owner accounts
+   - Involved account monitor - tracks accounts in transactions
 
 ## Creating Database Tables
 
@@ -574,13 +625,16 @@ sqlx migrate run
 ## Important Constants
 
 - **WSOL Mint**: `So11111111111111111111111111111111111111112`
+- **USDC Mint**: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
 - **Token Programs**: SPL Token and Token-2022 supported
-- **Blockhash Refresh**: Every 200ms via dedicated thread
-- **Database Pool**: 100 max connections, 5 min connections
+- **Blockhash Refresh**: Every 200ms via dedicated thread (`global::daemon::blockhash`)
+- **Database Pool**: Managed via `global::client::db` (SeaORM connection pool)
 - **RPC Client**: Access via `crate::arb::global::client::rpc::rpc_client()`
+- **MEV Bot Program**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
 # Important Instruction Reminders
 
+- If you are creating a tokio test, it will be good to call src/arb/global/client/db.rs:32 must_init_db() to init db
 - Do what has been asked; nothing more, nothing less
 - NEVER create files unless they're absolutely necessary for achieving your goal
 - ALWAYS prefer editing an existing file to creating a new one
