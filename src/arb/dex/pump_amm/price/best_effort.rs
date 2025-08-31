@@ -181,4 +181,50 @@ mod tests {
         let output = swap_base_input_without_fees(1000, 0, 10000);
         assert_eq!(output, 0);
     }
+    
+    #[tokio::test]
+    async fn test_tokabu_pool_price() {
+        must_init_db().await;
+        
+        let pool_address: Pubkey = "Ekv9HdumWqnXZgq5G6ge6bk1ZRHKXYC2WnSFL94sQmLJ".to_pubkey();
+        let tokabu: Pubkey = "H8xQ6poBjB9DTPMDTKWzWPrnxu4bDEhybxiouF8Ppump".to_pubkey();
+        let wsol: Pubkey = Mints::WSOL;
+        
+        let account = rpc_client()
+            .get_account(&pool_address)
+            .await
+            .expect("Failed to fetch pool account");
+        
+        let pool_data = PumpAmmPoolData::load_data(&account.data)
+            .expect("Failed to load pool data");
+        
+        println!("Pool data loaded:");
+        println!("  Base mint (TOKABU): {}", pool_data.base_mint);
+        println!("  Quote mint (WSOL): {}", pool_data.quote_mint);
+        println!("  Base vault: {}", pool_data.pool_base_token_account);
+        println!("  Quote vault: {}", pool_data.pool_quote_token_account);
+        
+        assert_eq!(pool_data.base_mint, tokabu);
+        assert_eq!(pool_data.quote_mint, wsol);
+        
+        let one_sol = 1_000_000_000; // 1 SOL = 1e9 lamports
+        
+        let tokabu_amount = pool_data
+            .get_amount_out(one_sol, &wsol, &tokabu)
+            .await
+            .expect("Failed to calculate amount out");
+        
+        println!("\n=== EXCHANGE RATE ===");
+        println!("1 SOL = {} TOKABU", tokabu_amount as f64 / 1e6);
+        println!("Raw amount: {} TOKABU units", tokabu_amount);
+        
+        let sol_back = pool_data
+            .get_amount_out(tokabu_amount, &tokabu, &wsol)
+            .await
+            .expect("Failed to calculate reverse amount");
+        
+        println!("\nReverse swap:");
+        println!("{} TOKABU -> {} SOL", tokabu_amount as f64 / 1e6, sol_back as f64 / 1e9);
+        println!("Slippage from fees: {:.4}%", (1.0 - sol_back as f64 / one_sol as f64) * 100.0);
+    }
 }

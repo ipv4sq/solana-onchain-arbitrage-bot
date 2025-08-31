@@ -37,8 +37,39 @@ where
         loader: F,
     ) -> Self
     where
-        F: Fn(&K) -> Fut + Send + Sync + 'static,
+        F: Fn(&K) -> Fut + Send + Sync + 'static + Clone,
         Fut: Future<Output = Option<V>> + Send + 'static,
+    {
+        Self::from_boxed_fn(cache_type, max_entries, default_ttl, move |key| {
+            Box::pin(loader(key))
+        })
+    }
+
+    pub fn new_with_result<F, Fut>(
+        cache_type: CacheType,
+        max_entries: usize,
+        default_ttl: Duration,
+        loader: F,
+    ) -> Self
+    where
+        F: Fn(&K) -> Fut + Send + Sync + 'static + Clone,
+        Fut: Future<Output = anyhow::Result<V>> + Send + 'static,
+    {
+        Self::from_boxed_fn(cache_type, max_entries, default_ttl, move |key: &K| {
+            let key = key.clone();
+            let loader = loader.clone();
+            Box::pin(async move { loader(&key).await.ok() })
+        })
+    }
+
+    pub fn from_boxed_fn<F>(
+        cache_type: CacheType,
+        max_entries: usize,
+        default_ttl: Duration,
+        loader: F,
+    ) -> Self
+    where
+        F: Fn(&K) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync + 'static + Clone,
     {
         let cache_type_clone = cache_type.clone();
         let ttl = default_ttl;
