@@ -1,3 +1,4 @@
+use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::global::constant::duration::Interval;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::{
@@ -8,10 +9,12 @@ use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
 use crate::{f, lazy_arc};
 use once_cell::sync::Lazy;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
+use spl_token::state::Account;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::warn;
+use tracing::{error, warn};
 
 #[allow(non_upper_case_globals)]
 pub static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
@@ -51,6 +54,13 @@ async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmo
         return None;
     }
     let data = rpc_client().get_account(account).await.ok()?;
-    TokenAccount::unpack_from_slice(&data.data);
-    todo!()
+    let vault = Account::unpack_from_slice(&data.data).ok()?;
+    if *mint != vault.mint {
+        error!("Fucked up here mint={:?}, vault={:?}", mint, vault);
+    }
+    let decimals = MintRecordRepository::get_decimal(mint).await.ok()??;
+    Some(TokenAmount {
+        amount: vault.amount,
+        decimals,
+    })
 }
