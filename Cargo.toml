@@ -86,7 +86,8 @@ serde_json = "1.0.143"
 ctor = "0.5.0"
 
 [profile.release]
-panic = "abort"
+panic = "unwind"
 
 [profile.dev]
 panic = "abort"
+debug = true

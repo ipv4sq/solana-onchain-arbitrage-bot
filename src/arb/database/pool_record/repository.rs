@@ -6,7 +6,7 @@ use crate::arb::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
-use crate::arb::global::client::db::get_db;
+use crate::arb::global::client::db::{get_db, is_db_initialized};
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
@@ -73,6 +73,9 @@ static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
     LoadingCache::new(100_000_000, |addr: &PoolAddress| {
         let addr = *addr;
         async move {
+            if !is_db_initialized() {
+                return None;
+            }
             Some(
                 PoolRecordEntity::find()
                     .filter(model::Column::Address.eq(PubkeyType::from(addr)))

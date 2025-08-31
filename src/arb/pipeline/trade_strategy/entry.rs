@@ -6,23 +6,23 @@ use crate::arb::global::state::any_pool_holder::PoolConfigCache;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::event_processor::pool_update_processor::get_minor_mint_for_pool;
 use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
-use crate::arb::util::alias::MintAddress;
-use crate::arb::util::alias::PoolAddress;
+use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
-use crate::arb::util::worker_runtime::ArbitrageOpportunityWorker;
-use futures::future::try_join_all;
-use rust_decimal::Decimal;
+use futures::stream::{self, StreamExt};
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use tracing::{info, warn};
+
+const MAX_OPPORTUNITIES: usize = 3;
+const MAX_PROCESSING_TIME_MS: u32 = 10_000;
+const WSOL_LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 pub async fn on_pool_update(
     pool_address: PoolAddress,
     updated_config: AnyPoolConfig,
     trace: Trace,
 ) -> Option<()> {
-    let mint_pair = MintPair(updated_config.base_mint(), updated_config.quote_mint());
-    if mint_pair.shall_contain(&Mints::WSOL).is_err() {
+    if !is_valid_pool(&updated_config) {
         return None;
     }
 
@@ -32,13 +32,10 @@ pub async fn on_pool_update(
         .put(pool_address, updated_config.clone())
         .await;
 
-    info!("🔍 on_pool_update triggered for pool: {}", pool_address);
+    let minor_mint = get_minor_mint_for_pool(&pool_address).await?;
 
-    let mint = get_minor_mint_for_pool(&pool_address).await?;
-
-    if trace.since_begin() > 10_000 {
-        // not do anything if it's buffered too long, so we can quickly catch up.
-        warn!("skipping oppotunity calculation because it's too long");
+    if trace.since_begin() > MAX_PROCESSING_TIME_MS {
+        warn!("Skipping opportunity calculation - processing time exceeded");
         return None;
     }
 
@@ -48,42 +45,25 @@ pub async fn on_pool_update(
         pool_address,
     );
 
-    if let Some(opportunities) =
-        compute_brute_force(&mint, &pool_address, &updated_config, &trace).await
-    {
-        if !opportunities.is_empty() {
-            trace.step_with(
-                StepType::DetermineOpportunityFinished,
-                "opportunities_count",
-                opportunities.len().to_string(),
-            );
+    let opportunities = find_arbitrage_opportunities(
+        &minor_mint,
+        &pool_address,
+        &updated_config,
+        &trace,
+    )
+    .await?;
 
-            for (i, opportunity) in opportunities.iter().enumerate() {
-                let pools_for_mev = vec![opportunity.first_pool, opportunity.second_pool];
-                info!(
-                    "🚀 MEV Opportunity #{}: First: {}, Second: {}, Output: {} SOL",
-                    i + 1,
-                    opportunity.first_pool,
-                    opportunity.second_pool,
-                    opportunity.output_sol
-                );
-                trace.step_with(
-                    StepType::MevTxTryToFile,
-                    "path",
-                    format!("{:?}", pools_for_mev),
-                );
-                let _ = FireMevBotConsumer
-                    .publish(MevBotFire {
-                        minor_mint: mint,
-                        pools: pools_for_mev,
-                        trace: trace.clone(),
-                    })
-                    .await;
-            }
-        }
-    } else {
-        info!("No arbitrage opportunity found for mint {}", mint);
+    if opportunities.is_empty() {
+        return None;
     }
+
+    trace.step_with(
+        StepType::DetermineOpportunityFinished,
+        "opportunities_count",
+        opportunities.len().to_string(),
+    );
+
+    execute_opportunities(opportunities, minor_mint, trace).await;
 
     None
 }
@@ -92,30 +72,23 @@ pub async fn on_pool_update(
 pub struct ArbitrageResult {
     pub first_pool: PoolAddress,
     pub second_pool: PoolAddress,
-    pub output_sol: Decimal,
+    pub profit_lamports: u64,
 }
 
-pub async fn compute_brute_force(
+fn is_valid_pool(config: &AnyPoolConfig) -> bool {
+    let mint_pair = MintPair(config.base_mint(), config.quote_mint());
+    mint_pair.shall_contain(&Mints::WSOL).is_ok()
+}
+
+async fn find_arbitrage_opportunities(
     minor_mint: &MintAddress,
     changed_pool: &PoolAddress,
     changed_config: &AnyPoolConfig,
     trace: &Trace,
 ) -> Option<Vec<ArbitrageResult>> {
-    info!(
-        "🔧 Computing brute force arbitrage for mint: {}",
-        minor_mint
-    );
     trace.step(StepType::DetermineOpportunityLoadingRelatedMints);
 
-    let related_pools = PoolRecordRepository::get_pools_contains_mint(minor_mint)
-        .await?
-        .into_iter()
-        .filter(|pool| pool.address.0 != *changed_pool)
-        .filter(|pool| {
-            let mint_pair = MintPair(pool.base_mint.0, pool.quote_mint.0);
-            mint_pair.consists_of(minor_mint, &Mints::WSOL).is_ok()
-        })
-        .collect::<Vec<_>>();
+    let related_pools = load_related_pools(minor_mint, changed_pool).await?;
 
     trace.step_with(
         StepType::DetermineOpportunityLoadedRelatedMints,
@@ -123,151 +96,219 @@ pub async fn compute_brute_force(
         related_pools.len().to_string(),
     );
 
-    info!(
-        "Found {} other pools for brute force with changed pool {}",
-        related_pools.len(),
-        changed_pool
-    );
-
     if related_pools.is_empty() {
-        info!("No other pools found for arbitrage on mint {}", minor_mint);
         return None;
     }
 
-    let input_sol = Decimal::ONE;
+    trace.step_with_custom("Checking arbitrage opportunities");
 
-    trace.step_with_custom("Checking arbitrage of each pool");
+    let opportunities = check_all_opportunities(
+        &related_pools,
+        changed_pool,
+        changed_config,
+        minor_mint,
+    )
+    .await;
 
-    // Clone values that need to be moved into async blocks
-    let changed_pool_owned = *changed_pool;
-    let changed_config_owned = changed_config.clone();
-    let minor_mint_owned = *minor_mint;
+    trace.step_with_custom("Completed arbitrage checks");
 
-    // Spawn all tasks on the dedicated 8-thread runtime
-    let handles: Vec<_> = related_pools
-        .into_iter()
-        .map(move |other_pool| {
-            let changed_config = changed_config_owned.clone();
-            ArbitrageOpportunityWorker.spawn(async move {
-                check_pool_arbitrage(
-                    other_pool,
-                    changed_pool_owned,
-                    changed_config,
-                    minor_mint_owned,
-                    input_sol,
-                )
-                .await
-            })
-        })
-        .collect();
-
-    // Collect all results at once
-    let all_results = try_join_all(handles).await.unwrap();
-    let mut results = all_results.into_iter().flatten().collect::<Vec<_>>();
-
-    trace.step_with_custom("Checked arbitrage of each pool");
-
-    results.sort_by(|a, b| b.output_sol.cmp(&a.output_sol));
-
-    let mut unique_pairs = HashSet::new();
-    let mut unique_results = Vec::new();
-
-    for result in results {
-        let pair = (result.first_pool, result.second_pool);
-        if unique_pairs.insert(pair) && unique_results.len() < 3 {
-            info!(
-                "🎯 Top opportunity: {} -> {} = {} SOL (profit: {} SOL)",
-                result.first_pool,
-                result.second_pool,
-                result.output_sol,
-                result.output_sol - Decimal::ONE
-            );
-            unique_results.push(result);
-        }
-    }
-
-    if unique_results.is_empty() {
-        None
-    } else {
-        Some(unique_results)
-    }
+    select_best_opportunities(opportunities)
 }
 
-async fn check_pool_arbitrage(
-    other_pool: crate::arb::database::pool_record::model::Model,
-    changed_pool: PoolAddress,
-    changed_config: AnyPoolConfig,
-    minor_mint: MintAddress,
-    input_sol: Decimal,
-) -> Vec<ArbitrageResult> {
-    let mut results = Vec::new();
+async fn load_related_pools(
+    minor_mint: &MintAddress,
+    exclude_pool: &PoolAddress,
+) -> Option<Vec<crate::arb::database::pool_record::model::Model>> {
+    PoolRecordRepository::get_pools_contains_mint(minor_mint)
+        .await
+        .map(|pools| {
+            pools
+                .into_iter()
+                .filter(|pool| {
+                    pool.address.0 != *exclude_pool
+                        && MintPair(pool.base_mint.0, pool.quote_mint.0)
+                            .consists_of(minor_mint, &Mints::WSOL)
+                            .is_ok()
+                })
+                .collect()
+        })
+}
 
+async fn check_all_opportunities(
+    related_pools: &[crate::arb::database::pool_record::model::Model],
+    changed_pool: &PoolAddress,
+    changed_config: &AnyPoolConfig,
+    minor_mint: &MintAddress,
+) -> Vec<ArbitrageResult> {
+    let input_lamports = WSOL_LAMPORTS_PER_SOL;
+
+    stream::iter(related_pools)
+        .then(|other_pool| async move {
+            check_bidirectional_arbitrage(
+                other_pool,
+                changed_pool,
+                changed_config,
+                minor_mint,
+                input_lamports,
+            )
+            .await
+        })
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
+}
+
+async fn check_bidirectional_arbitrage(
+    other_pool: &crate::arb::database::pool_record::model::Model,
+    changed_pool: &PoolAddress,
+    changed_config: &AnyPoolConfig,
+    minor_mint: &MintAddress,
+    input_lamports: u64,
+) -> Vec<ArbitrageResult> {
     let other_config = match PoolConfigCache.get(&other_pool.address.0).await {
         Some(config) => config,
-        None => {
-            info!(
-                "Failed to get config for pool {}, skipping",
-                other_pool.address.0
-            );
-            return results;
-        }
+        None => return vec![],
     };
 
-    if let Some(output_sol) =
-        simulate_path(input_sol, &changed_config, &other_config, minor_mint).await
+    let mut results = Vec::new();
+
+    // Check path: changed_pool -> other_pool
+    if let Some(profit) = simulate_arbitrage_path(
+        input_lamports,
+        changed_config,
+        &other_config,
+        minor_mint,
+    )
+    .await
     {
-        if output_sol > Decimal::ONE {
+        if profit > 0 {
             results.push(ArbitrageResult {
-                first_pool: changed_pool,
+                first_pool: *changed_pool,
                 second_pool: other_pool.address.0,
-                output_sol,
+                profit_lamports: profit,
             });
-            info!(
-                "✅ Scenario 1 profitable: {} -> {} = {} SOL",
-                changed_pool, other_pool.address.0, output_sol
-            );
         }
     }
 
-    if let Some(output_sol) =
-        simulate_path(input_sol, &other_config, &changed_config, minor_mint).await
+    // Check path: other_pool -> changed_pool
+    if let Some(profit) = simulate_arbitrage_path(
+        input_lamports,
+        &other_config,
+        changed_config,
+        minor_mint,
+    )
+    .await
     {
-        if output_sol > Decimal::ONE {
+        if profit > 0 {
             results.push(ArbitrageResult {
                 first_pool: other_pool.address.0,
-                second_pool: changed_pool,
-                output_sol,
+                second_pool: *changed_pool,
+                profit_lamports: profit,
             });
-            info!(
-                "✅ Scenario 2 profitable: {} -> {} = {} SOL",
-                other_pool.address.0, changed_pool, output_sol
-            );
         }
     }
 
     results
 }
 
-async fn simulate_path(
-    input_sol: Decimal,
+async fn simulate_arbitrage_path(
+    input_sol_lamports: u64,
     first_config: &AnyPoolConfig,
     second_config: &AnyPoolConfig,
-    minor_mint: MintAddress,
-) -> Option<Decimal> {
-    let tokens_received = simulate_swap(input_sol, first_config, &Mints::WSOL, &minor_mint).await?;
+    minor_mint: &MintAddress,
+) -> Option<u64> {
+    // First swap: WSOL -> minor_mint
+    let tokens_received = simulate_swap(
+        input_sol_lamports,
+        first_config,
+        &Mints::WSOL,
+        minor_mint,
+    )
+    .await?;
 
-    let output_sol =
-        simulate_swap(tokens_received, second_config, &minor_mint, &Mints::WSOL).await?;
+    // Second swap: minor_mint -> WSOL
+    let output_sol = simulate_swap(
+        tokens_received,
+        second_config,
+        minor_mint,
+        &Mints::WSOL,
+    )
+    .await?;
 
-    Some(output_sol)
+    // Calculate profit (can be negative if unprofitable)
+    Some(output_sol.saturating_sub(input_sol_lamports))
 }
 
 async fn simulate_swap(
-    input_amount: Decimal,
+    input_amount: u64,
     config: &AnyPoolConfig,
     from_mint: &Pubkey,
     to_mint: &Pubkey,
-) -> Option<Decimal> {
-    let quote = config.mid_price(from_mint, to_mint).await.ok()?;
-    Some(input_amount * quote.mid_price)
+) -> Option<u64> {
+    config
+        .get_amount_out(input_amount, from_mint, to_mint)
+        .await
+        .ok()
+}
+
+fn select_best_opportunities(
+    mut opportunities: Vec<ArbitrageResult>,
+) -> Option<Vec<ArbitrageResult>> {
+    if opportunities.is_empty() {
+        return None;
+    }
+
+    // Sort by profit descending
+    opportunities.sort_by(|a, b| b.profit_lamports.cmp(&a.profit_lamports));
+
+    // Deduplicate pool pairs and take top opportunities
+    let mut seen_pairs = HashSet::new();
+    let unique_opportunities: Vec<_> = opportunities
+        .into_iter()
+        .filter(|result| {
+            let pair = (result.first_pool, result.second_pool);
+            seen_pairs.insert(pair)
+        })
+        .take(MAX_OPPORTUNITIES)
+        .collect();
+
+    if unique_opportunities.is_empty() {
+        None
+    } else {
+        Some(unique_opportunities)
+    }
+}
+
+async fn execute_opportunities(
+    opportunities: Vec<ArbitrageResult>,
+    minor_mint: MintAddress,
+    trace: Trace,
+) {
+    for (i, opportunity) in opportunities.iter().enumerate() {
+        let pools_for_mev = vec![opportunity.first_pool, opportunity.second_pool];
+        
+        info!(
+            "🚀 MEV Opportunity #{}: {} -> {} (profit: {} SOL)",
+            i + 1,
+            opportunity.first_pool,
+            opportunity.second_pool,
+            opportunity.profit_lamports as f64 / WSOL_LAMPORTS_PER_SOL as f64,
+        );
+        
+        trace.step_with(
+            StepType::MevTxTryToFile,
+            "path",
+            format!("{:?}", pools_for_mev),
+        );
+        
+        let _ = FireMevBotConsumer
+            .publish(MevBotFire {
+                minor_mint,
+                pools: pools_for_mev,
+                trace: trace.clone(),
+            })
+            .await;
+    }
 }
