@@ -34,16 +34,9 @@ pub async fn must_init_db() {
 }
 
 pub async fn get_db() -> &'static DatabaseConnection {
-    // DB_CONNECTION
-    //     .get()
-    //     .expect("Database not initialized. Call init_db() first.")
     DB_CONNECTION
         .get_or_try_init(|| async { create_connection().await })
         .await
         .ok()
         .unwrap()
-}
-
-pub fn is_db_initialized() -> bool {
-    DB_CONNECTION.initialized()
 }
