@@ -1,5 +1,5 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::dex::interface::{PoolBase, PoolDataLoader, RefinedPoolConfig};
+use crate::arb::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
@@ -14,12 +14,12 @@ use crate::arb::util::traits::option::OptionExt;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-pub type PumpAmmRefinedConfig = PoolBase<PumpAmmPoolData>;
+pub type PumpAmmConfig = PoolBase<PumpAmmPoolData>;
 
-impl RefinedPoolConfig<PumpAmmPoolData> for PumpAmmRefinedConfig {
+impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
     fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self> {
         let pool_data = PumpAmmPoolData::load_data(data)?;
-        Ok(PumpAmmRefinedConfig {
+        Ok(PumpAmmConfig {
             pool_address: address,
             base_mint: pool_data.base_mint,
             quote_mint: pool_data.quote_mint,

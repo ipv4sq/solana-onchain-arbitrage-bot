@@ -1,5 +1,5 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::dex::interface::{PoolBase, PoolDataLoader, RefinedPoolConfig};
+use crate::arb::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
@@ -10,12 +10,12 @@ use crate::arb::util::traits::account_meta::ToAccountMeta;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-pub type MeteoraDlmmRefinedConfig = PoolBase<MeteoraDlmmPoolData>;
+pub type MeteoraDlmmConfig = PoolBase<MeteoraDlmmPoolData>;
 
-impl RefinedPoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmRefinedConfig {
+impl PoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmConfig {
     fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self> {
         let pool_data = MeteoraDlmmPoolData::load_data(data)?;
-        Ok(MeteoraDlmmRefinedConfig {
+        Ok(MeteoraDlmmConfig {
             pool_address: address,
             base_mint: pool_data.token_x_mint,
             quote_mint: pool_data.token_y_mint,
@@ -58,7 +58,7 @@ impl RefinedPoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmRefinedConfig {
     }
 }
 
-impl AsRef<PoolBase<MeteoraDlmmPoolData>> for MeteoraDlmmRefinedConfig {
+impl AsRef<PoolBase<MeteoraDlmmPoolData>> for MeteoraDlmmConfig {
     fn as_ref(&self) -> &PoolBase<MeteoraDlmmPoolData> {
         self
     }

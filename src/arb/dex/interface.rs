@@ -21,7 +21,7 @@ pub struct PoolBase<Data: PoolDataLoader> {
 }
 
 #[allow(async_fn_in_trait)]
-pub trait RefinedPoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
+pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     async fn from_address(address: &PoolAddress) -> AResult<Self>
     where
         Self: Sized,

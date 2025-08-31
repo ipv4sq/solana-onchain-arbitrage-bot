@@ -1,5 +1,5 @@
 use crate::arb::convention::chain::instruction::Instruction;
-use crate::arb::dex::interface::{PoolBase, PoolDataLoader, RefinedPoolConfig};
+use crate::arb::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::arb::dex::legacy_interface::InputAccountUtil;
 use crate::arb::dex::meteora_damm_v2::misc::input_account::MeteoraDammV2InputAccount;
 use crate::arb::dex::meteora_damm_v2::pool_data::MeteoraDammV2PoolData;
@@ -11,12 +11,12 @@ use crate::arb::util::traits::account_meta::ToAccountMeta;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
-pub type MeteoraDammV2RefinedConfig = PoolBase<MeteoraDammV2PoolData>;
+pub type MeteoraDammV2Config = PoolBase<MeteoraDammV2PoolData>;
 
-impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
+impl PoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2Config {
     fn from_data(address: PoolAddress, dex_type: DexType, data: &[u8]) -> AResult<Self> {
         let pool_data = MeteoraDammV2PoolData::load_data(data)?;
-        Ok(MeteoraDammV2RefinedConfig {
+        Ok(MeteoraDammV2Config {
             pool_address: address,
             base_mint: pool_data.token_a_mint,
             quote_mint: pool_data.token_b_mint,
@@ -55,7 +55,7 @@ impl RefinedPoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2RefinedConfig {
     }
 }
 
-impl AsRef<PoolBase<MeteoraDammV2PoolData>> for MeteoraDammV2RefinedConfig {
+impl AsRef<PoolBase<MeteoraDammV2PoolData>> for MeteoraDammV2Config {
     fn as_ref(&self) -> &PoolBase<MeteoraDammV2PoolData> {
         self
     }

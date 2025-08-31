@@ -1,11 +1,11 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
 use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
-use crate::arb::dex::interface::RefinedPoolConfig;
-use crate::arb::dex::meteora_damm_v2::config::MeteoraDammV2RefinedConfig;
-use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmRefinedConfig;
+use crate::arb::dex::interface::PoolConfig;
+use crate::arb::dex::meteora_damm_v2::config::MeteoraDammV2Config;
+use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmConfig;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
-use crate::arb::dex::pump_amm::config::PumpAmmRefinedConfig;
+use crate::arb::dex::pump_amm::config::PumpAmmConfig;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
@@ -20,9 +20,9 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub enum AnyPoolConfig {
-    MeteoraDlmm(MeteoraDlmmRefinedConfig),
-    MeteoraDammV2(MeteoraDammV2RefinedConfig),
-    PumpAmm(PumpAmmRefinedConfig),
+    MeteoraDlmm(MeteoraDlmmConfig),
+    MeteoraDammV2(MeteoraDammV2Config),
+    PumpAmm(PumpAmmConfig),
 }
 
 impl AnyPoolConfig {
@@ -32,21 +32,15 @@ impl AnyPoolConfig {
         data: &[u8],
     ) -> AResult<AnyPoolConfig> {
         let r = match dex_type {
-            DexType::MeteoraDlmm => MeteoraDlmm(MeteoraDlmmRefinedConfig::from_data(
+            DexType::MeteoraDlmm => {
+                MeteoraDlmm(MeteoraDlmmConfig::from_data(pool_address, dex_type, data)?)
+            }
+            DexType::MeteoraDammV2 => MeteoraDammV2(MeteoraDammV2Config::from_data(
                 pool_address,
                 dex_type,
                 data,
             )?),
-            DexType::MeteoraDammV2 => MeteoraDammV2(MeteoraDammV2RefinedConfig::from_data(
-                pool_address,
-                dex_type,
-                data,
-            )?),
-            DexType::PumpAmm => PumpAmm(PumpAmmRefinedConfig::from_data(
-                pool_address,
-                dex_type,
-                data,
-            )?),
+            DexType::PumpAmm => PumpAmm(PumpAmmConfig::from_data(pool_address, dex_type, data)?),
             _ => return_error!("unsupported dex type {:?}", dex_type),
         };
         Ok(r)
@@ -56,9 +50,9 @@ impl AnyPoolConfig {
         let program_id = ix.program_id;
         let dex_type = DexType::determine_from(&program_id);
         let (dex, address) = match dex_type {
-            DexType::MeteoraDlmm => MeteoraDlmmRefinedConfig::pase_swap_from_ix(ix),
-            DexType::MeteoraDammV2 => MeteoraDammV2RefinedConfig::pase_swap_from_ix(ix),
-            DexType::PumpAmm => PumpAmmRefinedConfig::pase_swap_from_ix(ix),
+            DexType::MeteoraDlmm => MeteoraDlmmConfig::pase_swap_from_ix(ix),
+            DexType::MeteoraDammV2 => MeteoraDammV2Config::pase_swap_from_ix(ix),
+            DexType::PumpAmm => PumpAmmConfig::pase_swap_from_ix(ix),
             _ => return_error!("Unsupported dex {}", dex_type),
         }?;
 
