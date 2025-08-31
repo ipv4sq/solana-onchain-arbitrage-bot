@@ -20,8 +20,10 @@ use tracing::info;
 async fn main() -> anyhow::Result<()> {
     arb::util::logging::init()?;
 
-    // Database will be automatically initialized on first use
-    info!("Database will be initialized on first access");
+    // Initialize database connection pool
+    info!("Initializing database connection pool...");
+    global::state::db::init_db().await?;
+    info!("Database connection pool initialized");
 
     // Initialize blockhash holder with fresh blockhash
     info!("Initializing blockhash holder...");
