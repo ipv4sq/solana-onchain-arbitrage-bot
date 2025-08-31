@@ -14,7 +14,6 @@ use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::TokenBalanceProcessor;
 use crate::arb::sdk::yellowstone::GrpcTransactionUpdate;
 use crate::arb::util::alias::{AResult, PoolAddress};
-use crate::arb::util::structs::mint_pair::MintPair;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use once_cell::sync::Lazy;
@@ -48,8 +47,6 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
 
     let pump_pools: Vec<PoolAddress> = ixs
         .iter()
-        // .filter(|ix| ix.program_id == PoolProgram::PUMP_AMM)
-        // .flat_map(|x| config::find_pump_swap(x))
         .flat_map(|ix| PumpAmmRefinedConfig::pase_swap_from_ix(ix))
         .map(|swap| swap.1)
         .collect();
@@ -67,7 +64,6 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     }
 
     // Deduplicate pools
-    use crate::arb::dex::pump_amm::config;
     use std::collections::HashSet;
     let unique_pools: HashSet<PoolAddress> = pump_pools.into_iter().collect();
 
