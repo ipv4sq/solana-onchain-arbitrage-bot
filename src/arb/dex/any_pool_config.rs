@@ -1,11 +1,14 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::convention::chain::types::SwapInstruction;
-use crate::arb::dex::any_pool_config::AnyPoolConfig::{MeteoraDammV2, MeteoraDlmm, PumpAmm};
+use crate::arb::dex::any_pool_config::AnyPoolConfig::{
+    MeteoraDammV2, MeteoraDlmm, PumpAmm, RaydiumCpmm,
+};
 use crate::arb::dex::interface::PoolConfig;
 use crate::arb::dex::meteora_damm_v2::config::MeteoraDammV2Config;
 use crate::arb::dex::meteora_dlmm::config::MeteoraDlmmConfig;
 use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::config::PumpAmmConfig;
+use crate::arb::dex::raydium_cpmm::config::RaydiumCpmmConfig;
 use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
@@ -21,6 +24,7 @@ pub enum AnyPoolConfig {
     MeteoraDlmm(MeteoraDlmmConfig),
     MeteoraDammV2(MeteoraDammV2Config),
     PumpAmm(PumpAmmConfig),
+    RaydiumCpmm(RaydiumCpmmConfig),
 }
 
 impl AnyPoolConfig {
@@ -39,6 +43,9 @@ impl AnyPoolConfig {
                 data,
             )?),
             DexType::PumpAmm => PumpAmm(PumpAmmConfig::from_data(pool_address, dex_type, data)?),
+            DexType::RaydiumCpmm => {
+                RaydiumCpmm(RaydiumCpmmConfig::from_data(pool_address, dex_type, data)?)
+            }
             _ => return_error!("unsupported dex type {:?}", dex_type),
         };
         Ok(r)
@@ -51,6 +58,7 @@ impl AnyPoolConfig {
             DexType::MeteoraDlmm => MeteoraDlmmConfig::pase_swap_from_ix(ix),
             DexType::MeteoraDammV2 => MeteoraDammV2Config::pase_swap_from_ix(ix),
             DexType::PumpAmm => PumpAmmConfig::pase_swap_from_ix(ix),
+            DexType::RaydiumCpmm => RaydiumCpmmConfig::pase_swap_from_ix(ix),
             _ => return_error!("Unsupported dex {}", dex_type),
         }?;
 
@@ -82,6 +90,7 @@ impl AnyPoolConfig {
             MeteoraDlmm(a) => a,
             MeteoraDammV2(b) => b,
             PumpAmm(c) => c,
+            RaydiumCpmm(d) => d,
         } {
             pub async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
             pub fn pool(&self) -> PoolAddress;

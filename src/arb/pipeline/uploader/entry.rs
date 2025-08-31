@@ -4,7 +4,7 @@ use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::daemon::blockhash::get_blockhash;
 use crate::arb::global::enums::step_type::StepType;
-use crate::arb::global::state::any_pool_holder::PoolConfigCache;
+use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::uploader::debug;
 use crate::arb::pipeline::uploader::mev_bot::construct;
@@ -44,7 +44,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
     let configs: Vec<_> = join_all(
         pools
             .iter()
-            .map(|pool_address| async move { PoolConfigCache.get(pool_address).await }),
+            .map(|pool_address| async move { AnyPoolHolder::get(pool_address).await }),
     )
     .await
     .into_iter()

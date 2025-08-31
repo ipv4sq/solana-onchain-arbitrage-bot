@@ -2,7 +2,7 @@ use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
-use crate::arb::global::state::any_pool_holder::PoolConfigCache;
+use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::event_processor::pool_update_processor::get_minor_mint_for_pool;
 use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
@@ -28,9 +28,7 @@ pub async fn on_pool_update(
 
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
 
-    PoolConfigCache
-        .put(pool_address, updated_config.clone())
-        .await;
+    AnyPoolHolder::upsert(updated_config.clone()).await;
 
     let minor_mint = get_minor_mint_for_pool(&pool_address).await?;
 
@@ -45,13 +43,8 @@ pub async fn on_pool_update(
         pool_address,
     );
 
-    let opportunities = find_arbitrage_opportunities(
-        &minor_mint,
-        &pool_address,
-        &updated_config,
-        &trace,
-    )
-    .await?;
+    let opportunities =
+        find_arbitrage_opportunities(&minor_mint, &pool_address, &updated_config, &trace).await?;
 
     if opportunities.is_empty() {
         return None;
@@ -102,13 +95,8 @@ async fn find_arbitrage_opportunities(
 
     trace.step_with_custom("Checking arbitrage opportunities");
 
-    let opportunities = check_all_opportunities(
-        &related_pools,
-        changed_pool,
-        changed_config,
-        minor_mint,
-    )
-    .await;
+    let opportunities =
+        check_all_opportunities(&related_pools, changed_pool, changed_config, minor_mint).await;
 
     trace.step_with_custom("Completed arbitrage checks");
 
@@ -167,7 +155,7 @@ async fn check_bidirectional_arbitrage(
     minor_mint: &MintAddress,
     input_lamports: u64,
 ) -> Vec<ArbitrageResult> {
-    let other_config = match PoolConfigCache.get(&other_pool.address.0).await {
+    let other_config = match AnyPoolHolder::get(&other_pool.address.0).await {
         Some(config) => config,
         None => return vec![],
     };
@@ -175,13 +163,8 @@ async fn check_bidirectional_arbitrage(
     let mut results = Vec::new();
 
     // Check path: changed_pool -> other_pool
-    if let Some(profit) = simulate_arbitrage_path(
-        input_lamports,
-        changed_config,
-        &other_config,
-        minor_mint,
-    )
-    .await
+    if let Some(profit) =
+        simulate_arbitrage_path(input_lamports, changed_config, &other_config, minor_mint).await
     {
         if profit > 0 {
             results.push(ArbitrageResult {
@@ -193,13 +176,8 @@ async fn check_bidirectional_arbitrage(
     }
 
     // Check path: other_pool -> changed_pool
-    if let Some(profit) = simulate_arbitrage_path(
-        input_lamports,
-        &other_config,
-        changed_config,
-        minor_mint,
-    )
-    .await
+    if let Some(profit) =
+        simulate_arbitrage_path(input_lamports, &other_config, changed_config, minor_mint).await
     {
         if profit > 0 {
             results.push(ArbitrageResult {
@@ -220,22 +198,12 @@ async fn simulate_arbitrage_path(
     minor_mint: &MintAddress,
 ) -> Option<u64> {
     // First swap: WSOL -> minor_mint
-    let tokens_received = simulate_swap(
-        input_sol_lamports,
-        first_config,
-        &Mints::WSOL,
-        minor_mint,
-    )
-    .await?;
+    let tokens_received =
+        simulate_swap(input_sol_lamports, first_config, &Mints::WSOL, minor_mint).await?;
 
     // Second swap: minor_mint -> WSOL
-    let output_sol = simulate_swap(
-        tokens_received,
-        second_config,
-        minor_mint,
-        &Mints::WSOL,
-    )
-    .await?;
+    let output_sol =
+        simulate_swap(tokens_received, second_config, minor_mint, &Mints::WSOL).await?;
 
     // Calculate profit (can be negative if unprofitable)
     Some(output_sol.saturating_sub(input_sol_lamports))
@@ -288,7 +256,7 @@ async fn execute_opportunities(
 ) {
     for (i, opportunity) in opportunities.iter().enumerate() {
         let pools_for_mev = vec![opportunity.first_pool, opportunity.second_pool];
-        
+
         info!(
             "🚀 MEV Opportunity #{}: {} -> {} (profit: {} SOL)",
             i + 1,
@@ -296,13 +264,13 @@ async fn execute_opportunities(
             opportunity.second_pool,
             opportunity.profit_lamports as f64 / WSOL_LAMPORTS_PER_SOL as f64,
         );
-        
+
         trace.step_with(
             StepType::MevTxTryToFile,
             "path",
             format!("{:?}", pools_for_mev),
         );
-        
+
         let _ = FireMevBotConsumer
             .publish(MevBotFire {
                 minor_mint,
