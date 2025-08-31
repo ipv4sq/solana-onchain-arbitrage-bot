@@ -113,4 +113,13 @@ pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
         }
         panic!();
     }
+
+    fn get_vault_in_dir(&self, from: &MintAddress, to: &MintAddress) -> AResult<(Pubkey, Pubkey)> {
+        self.consists_of(from, to)?;
+        if self.base_mint() == *from {
+            Ok((self.base_vault(), self.quote_vault()))
+        } else {
+            Ok((self.quote_vault(), self.base_vault()))
+        }
+    }
 }
