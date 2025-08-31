@@ -36,7 +36,6 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
         "signature",
         &update.signature,
     );
-    info!("Processing involved account transaction");
 
     let tx = update.to_unified()?;
     let ixs = tx.all_instructions();

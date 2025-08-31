@@ -60,7 +60,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
             async move {
                 PoolRecordEntity::find()
                     .filter(model::Column::Address.eq(PubkeyType::from(addr)))
-                    .one(get_db())
+                    .one(get_db().await)
                     .await
                     .ok()
                     .flatten()
@@ -79,7 +79,7 @@ static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
             Some(
                 PoolRecordEntity::find()
                     .filter(model::Column::Address.eq(PubkeyType::from(addr)))
-                    .one(get_db())
+                    .one(get_db().await)
                     .await
                     .ok()
                     .flatten()
@@ -110,7 +110,7 @@ impl PoolRecordRepository {
 
 impl PoolRecordRepository {
     async fn upsert_pool(pool: PoolRecord) -> Result<PoolRecord> {
-        let db = get_db();
+        let db = get_db().await;
         let active_model = model::ActiveModel {
             address: Set(pool.address.clone()),
             name: Set(pool.name.clone()),
@@ -146,7 +146,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_mints(mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(PoolRecordEntity::find()
             .filter(
                 model::Column::BaseMint
@@ -161,7 +161,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(PoolRecordEntity::find()
             .filter(model::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
             .all(db)
@@ -169,7 +169,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(PoolRecordEntity::find()
             .filter(model::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
             .all(db)
@@ -177,7 +177,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_any_mint(mint: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(PoolRecordEntity::find()
             .filter(
                 model::Column::BaseMint
@@ -189,7 +189,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn find_by_address(address: &Pubkey) -> Result<Option<PoolRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(PoolRecordEntity::find_by_id(PubkeyType::from(*address))
             .one(db)
             .await?)

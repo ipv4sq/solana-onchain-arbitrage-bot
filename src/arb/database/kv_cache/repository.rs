@@ -15,7 +15,7 @@ pub struct KvCacheRepository;
 
 impl KvCacheRepository {
     pub async fn get(cache_type: CacheType, key: &str) -> Result<Option<KvCache>> {
-        let db = get_db();
+        let db = get_db().await;
 
         let now = Utc::now();
         let cache_type_column = CacheTypeColumn::from(cache_type);
@@ -35,7 +35,7 @@ impl KvCacheRepository {
         value: JsonValue,
         valid_until: DateTime<Utc>,
     ) -> Result<()> {
-        let db = get_db();
+        let db = get_db().await;
 
         let active_model = model::ActiveModel {
             r#type: Set(CacheTypeColumn::from(cache_type)),
@@ -59,7 +59,7 @@ impl KvCacheRepository {
     }
 
     pub async fn evict(cache_type: CacheType, key: &str) -> Result<()> {
-        let db = get_db();
+        let db = get_db().await;
 
         let cache_type_column = CacheTypeColumn::from(cache_type);
         KvCacheTable::delete_many()
@@ -72,7 +72,7 @@ impl KvCacheRepository {
     }
 
     pub async fn cleanup_expired() -> Result<u64> {
-        let db = get_db();
+        let db = get_db().await;
 
         let now = Utc::now();
         let result = KvCacheTable::delete_many()

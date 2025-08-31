@@ -44,7 +44,7 @@ impl MintRecordRepository {
 
 impl MintRecordRepository {
     pub async fn upsert_mint(mint: MintRecord) -> Result<MintRecord> {
-        let db = get_db();
+        let db = get_db().await;
         let active_model = model::ActiveModel {
             address: Set(mint.address.clone()),
             symbol: Set(mint.symbol.clone()),
@@ -76,7 +76,7 @@ impl MintRecordRepository {
     }
 
     pub async fn find_by_address(address: Pubkey) -> Result<Option<MintRecord>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(MintRecordTable::find()
             .filter(model::Column::Address.eq(PubkeyType::from(address)))
             .one(db)

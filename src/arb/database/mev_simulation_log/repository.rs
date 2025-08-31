@@ -54,7 +54,7 @@ impl MevSimulationLogRepository {
             updated_at: NotSet,
         };
 
-        let db = get_db();
+        let db = get_db().await;
         let result = MevSimulationLogTable::insert(model).exec(db).await?;
 
         Self::find_by_id(result.last_insert_id)
@@ -63,7 +63,7 @@ impl MevSimulationLogRepository {
     }
 
     pub async fn find_by_id(id: i32) -> Result<Option<MevSimulationLog>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(MevSimulationLogTable::find_by_id(id).one(db).await?)
     }
 
@@ -71,7 +71,7 @@ impl MevSimulationLogRepository {
         minor_mint: Pubkey,
         desired_mint: Pubkey,
     ) -> Result<Vec<MevSimulationLog>> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(MevSimulationLogTable::find()
             .filter(model::Column::MinorMint.eq(PubkeyType::from(minor_mint)))
             .filter(model::Column::DesiredMint.eq(PubkeyType::from(desired_mint)))
@@ -81,7 +81,7 @@ impl MevSimulationLogRepository {
     }
 
     pub async fn find_profitable(limit: u64) -> Result<Vec<MevSimulationLog>> {
-        let db = get_db();
+        let db = get_db().await;
         let paginator = MevSimulationLogTable::find()
             .filter(model::Column::Profitable.eq(true))
             .order_by_desc(model::Column::CreatedAt)
@@ -90,7 +90,7 @@ impl MevSimulationLogRepository {
     }
 
     pub async fn find_recent(limit: u64) -> Result<Vec<MevSimulationLog>> {
-        let db = get_db();
+        let db = get_db().await;
         let paginator = MevSimulationLogTable::find()
             .order_by_desc(model::Column::CreatedAt)
             .paginate(db, limit);
@@ -98,12 +98,12 @@ impl MevSimulationLogRepository {
     }
 
     pub async fn count_total() -> Result<u64> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(MevSimulationLogTable::find().count(db).await?)
     }
 
     pub async fn count_profitable() -> Result<u64> {
-        let db = get_db();
+        let db = get_db().await;
         Ok(MevSimulationLogTable::find()
             .filter(model::Column::Profitable.eq(true))
             .count(db)
@@ -111,7 +111,7 @@ impl MevSimulationLogRepository {
     }
 
     pub async fn find_failed_simulations(limit: u64) -> Result<Vec<MevSimulationLog>> {
-        let db = get_db();
+        let db = get_db().await;
         let paginator = MevSimulationLogTable::find()
             .filter(model::Column::SimulationStatus.eq("failed"))
             .order_by_desc(model::Column::CreatedAt)

@@ -148,10 +148,6 @@ impl MeteoraDlmmPoolData {
             let actual_amount_in = amount_in_with_fee.min(amount_in_left);
 
             let swap_amount_out = if swap_for_y {
-                // For X -> Y swap: amount_out = amount_in * price
-                // Price is the ratio, but we need to adjust for decimal differences
-                // TRUMP has 9 decimals, USDC has 6 decimals
-                // So we need to adjust by 10^(9-6) = 10^3
                 let decimal_adj = if from_decimals > to_decimals {
                     10u128.pow((from_decimals - to_decimals) as u32)
                 } else {
@@ -166,12 +162,21 @@ impl MeteoraDlmmPoolData {
                 amount_out_128.min(reserve_out) as u64
             } else {
                 // For Y -> X swap: amount_out = amount_in / price
-                let decimal_adj = 10u128.pow((to_decimals - from_decimals) as u32);
-                let amount_out_128 = (actual_amount_in as u128)
+                let amount_out_base = (actual_amount_in as u128)
                     .saturating_mul(SCALE)
                     .checked_div(price)
-                    .unwrap_or(0)
-                    .saturating_mul(decimal_adj);
+                    .unwrap_or(0);
+
+                let amount_out_128 = if to_decimals > from_decimals {
+                    let decimal_adj = 10u128.pow((to_decimals - from_decimals) as u32);
+                    amount_out_base.saturating_mul(decimal_adj)
+                } else if from_decimals > to_decimals {
+                    let decimal_adj = 10u128.pow((from_decimals - to_decimals) as u32);
+                    amount_out_base.checked_div(decimal_adj).unwrap_or(0)
+                } else {
+                    amount_out_base
+                };
+
                 amount_out_128.min(reserve_out) as u64
             };
 
