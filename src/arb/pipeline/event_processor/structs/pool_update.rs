@@ -2,12 +2,12 @@ use crate::arb::convention::chain::AccountState;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, Debug)]
-pub struct PoolUpdate {
+pub struct AccountComparison {
     pub previous: Option<AccountState>,
     pub current: AccountState,
 }
 
-impl PoolUpdate {
+impl AccountComparison {
     pub fn pool(&self) -> &Pubkey {
         &self.current.pubkey
     }

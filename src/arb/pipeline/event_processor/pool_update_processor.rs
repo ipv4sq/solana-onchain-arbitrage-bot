@@ -29,8 +29,7 @@ pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<(
     trace.step(StepType::ReceivePoolUpdate);
 
     match trigger {
-        Trigger::PoolUpdate(update) => {
-            info!("Pool data changed for: {}", pool_addr);
+        Trigger::AccountCompare(update) => {
             // update pool
             let updated_config = AnyPoolHolder::update_config(
                 update.pool(),
@@ -38,6 +37,7 @@ pub async fn process_pool_update(update: WithTrace<Trigger>) -> anyhow::Result<(
                 &update.current.data,
             )
             .await?;
+            info!("Pool data changed for: {}", pool_addr);
             on_pool_update(pool_addr, updated_config, trace).await;
         }
         Trigger::PoolAddress(addr) => {

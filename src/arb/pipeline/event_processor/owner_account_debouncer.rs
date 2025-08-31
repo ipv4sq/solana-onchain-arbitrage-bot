@@ -3,10 +3,11 @@ use crate::arb::database::pool_record::repository::PoolRecordRepository;
 use crate::arb::global::constant::duration::Interval;
 use crate::arb::global::constant::pool_program::PoolProgram;
 use crate::arb::global::enums::step_type::StepType::{AccountUpdateDebounced, DeterminePoolExists};
+use crate::arb::global::state::account_data_holder::AccountDataHolder;
 use crate::arb::global::trace::types::WithTrace;
 use crate::arb::pipeline::event_processor::new_pool_processor::NewPoolProcessor;
 use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProcessor;
-use crate::arb::pipeline::event_processor::structs::pool_update::PoolUpdate;
+use crate::arb::pipeline::event_processor::structs::pool_update::AccountComparison;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcAccountUpdate;
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
@@ -33,17 +34,21 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
         .put(update.account, updated.clone())
         .await;
 
-    let pool_update = PoolUpdate {
+    let comparison = AccountComparison {
         previous,
         current: updated,
     };
     trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
 
-    let recorded = PoolRecordRepository::is_pool_recorded(pool_update.pool()).await;
+    let recorded = PoolRecordRepository::is_pool_recorded(comparison.pool()).await;
     trace.step_with(DeterminePoolExists, "account_address", recorded.to_string());
 
     match update.owner {
-        PoolProgram::METEORA_DLMM => {}
+        PoolProgram::METEORA_DLMM => {
+            // this is for caching bin arrays
+            AccountDataHolder::update(comparison.current.pubkey, comparison.current.data.clone())
+                .await;
+        }
         PoolProgram::METEORA_DAMM_V2 => {}
         PoolProgram::PUMP_AMM => {}
         PoolProgram::RAYDIUM_CPMM => {}
@@ -52,11 +57,11 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
 
     if recorded {
         let _ = PoolUpdateProcessor
-            .publish(WithTrace(Trigger::PoolUpdate(pool_update), trace))
+            .publish(WithTrace(Trigger::AccountCompare(comparison), trace))
             .await;
     } else {
         let _ = NewPoolProcessor
-            .publish(WithTrace(*pool_update.pool(), trace))
+            .publish(WithTrace(*comparison.pool(), trace))
             .await;
     }
 }

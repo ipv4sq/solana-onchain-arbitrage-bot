@@ -4,6 +4,7 @@ use crate::arb::dex::meteora_dlmm::misc::bin_array::{
 };
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::arb::global::client::rpc::rpc_client;
+use crate::arb::global::state::account_data_holder::AccountDataHolder;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
@@ -66,11 +67,12 @@ impl MeteoraDlmmPoolData {
         while amount_in_left > 0 && bins_traversed < max_bins_to_traverse {
             let bin_array_index = bin_id_to_bin_array_index(current_active_id);
             let bin_array_pubkey = get_bin_array_pda(&pool_address, bin_array_index);
+            let bin_array_data = AccountDataHolder::get_account_data(&bin_array_pubkey).await;
 
-            let bin_array_data = match rpc_client().get_account_data(&bin_array_pubkey).await {
-                Ok(data) => data,
-                Err(_) => break,
-            };
+            if bin_array_data.is_none() {
+                break;
+            }
+            let bin_array_data = bin_array_data.unwrap();
 
             if bin_array_data.len() < 8 {
                 break;

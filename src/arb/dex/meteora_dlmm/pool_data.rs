@@ -2,9 +2,11 @@ use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::misc::pool_data_type::{
     ProtocolFee, RewardInfo, StaticParameters, VariableParameters,
 };
+use crate::return_error;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
+
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct MeteoraDlmmPoolData {
@@ -50,7 +52,9 @@ impl PoolDataLoader for MeteoraDlmmPoolData {
                 "Account data too short, expected at least 8 bytes"
             ));
         }
-
+        if data.len() > 10000 {
+            return_error!("Account data too long, likely bin array");
+        }
         MeteoraDlmmPoolData::try_from_slice(&data[8..])
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
