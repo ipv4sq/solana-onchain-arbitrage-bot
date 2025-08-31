@@ -1,6 +1,7 @@
 use crate::arb::global::constant::mint::Mints;
 use anyhow::Result;
 use solana_program::pubkey::Pubkey;
+use std::cmp::min;
 
 #[derive(Debug, Clone)]
 pub struct MintPair(pub Pubkey, pub Pubkey);
@@ -43,6 +44,14 @@ impl MintPair {
                 self.0,
                 self.1
             ))
+        }
+    }
+
+    pub fn contains(&self, mint: &Pubkey) -> bool {
+        if self.0 == *mint || self.1 == *mint {
+            true
+        } else {
+            false
         }
     }
 

@@ -42,8 +42,11 @@ impl Transaction {
         Some((ix, inner_ixs))
     }
 
-    pub fn extract_known_swap_ix(&self, ixs: &Vec<Instruction>) -> Option<Vec<SwapInstruction>> {
-        let result: Vec<SwapInstruction> = ixs
+    pub fn extract_known_swap_ix(
+        &self,
+        know_swap_ixs: &Vec<Instruction>,
+    ) -> Option<Vec<SwapInstruction>> {
+        let result: Vec<SwapInstruction> = know_swap_ixs
             .iter()
             .filter(|ix| ix.accounts.len() > 3)
             .filter_map(|ix| AnyPoolConfig::parse_ix_to_swap(ix).ok())

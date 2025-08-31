@@ -84,25 +84,32 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
     unit_ok!()
 }
 
-fn find_pump_swap(ix: &Instruction) -> Option<PoolAddress> {
+pub fn find_pump_swap(ix: &Instruction) -> Option<PoolAddress> {
+    /*
+    #1 - Pool:Pump.fun AMM ( USDC-WSOL) Market
+    #2 - User:
+    #3 - Global Config:
+    #4 - Base Mint:
+    #5 - Quote Mint:
+    */
     if ix.accounts.len() < 6 {
         return None;
     }
+    let account_1 = ix.accounts.get(0)?.pubkey;
+    let account_3 = ix.accounts.get(2)?.pubkey;
+    let account_4 = ix.accounts.get(3)?.pubkey;
+    let account_5 = ix.accounts.get(4)?.pubkey;
 
-    let third = ix.accounts.get(2)?.pubkey;
-    if third != PUMP_GLOBAL_CONFIG {
+    if account_3 != PUMP_GLOBAL_CONFIG {
         return None;
     }
 
-    let at_4 = ix.accounts.get(4)?.pubkey;
-    let at_5 = ix.accounts.get(5)?.pubkey;
-    let pair = MintPair(at_4, at_5);
-
-    if !pair.shall_contain(&Mints::WSOL).is_ok() {
+    let pair = MintPair(account_4, account_5);
+    if !pair.contains(&Mints::WSOL) || !pair.contains(&Mints::USDC) {
         return None;
     }
-    let pool = ix.accounts.get(1)?.pubkey;
-    Some(pool)
+
+    Some(account_1)
 }
 
 #[cfg(test)]
