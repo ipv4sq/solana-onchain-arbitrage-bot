@@ -79,7 +79,6 @@ pub async fn build_tx(
         &jito_tip,
         (0.001 * LAMPORTS_PER_SOL as f64) as u64,
     );
-    instructions.push(jito_tip_ix);
 
     if include_create_token_account_ix {
         instructions.push(ensure_token_account_exists(
@@ -100,6 +99,7 @@ pub async fn build_tx(
     )
     .await?;
     instructions.push(swap_ix);
+    instructions.push(jito_tip_ix);
 
     let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
     let tx = VersionedTransaction::try_new(
