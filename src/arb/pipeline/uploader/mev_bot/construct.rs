@@ -11,25 +11,46 @@ use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::Trace;
+use crate::arb::pipeline::uploader::helius::sender;
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::solana::pda::{ata, ata_sol_token};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
+use crate::arb::util::traits::option::OptionExt;
+use crate::arb::util::traits::pubkey::ToPubkey;
+use crate::unit_ok;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
+use rand::prelude::IndexedRandom;
+use rand::rng;
 use solana_program::instruction::Instruction;
+use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
 use solana_sdk::message::v0::Message;
 use solana_sdk::signature::{Keypair, Signature, Signer};
+use solana_sdk::system_instruction;
+use solana_sdk::system_instruction::SystemInstruction;
 use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use system_instruction::transfer;
 use tracing::{error, info};
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
-
+const TIP_ACCOUNTS: &[&str] = &[
+    "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
+    "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
+    "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta",
+    "5VY91ws6B2hMmBFRsXkoAAdsPHBJwRfBht4DXox3xkwn",
+    "2nyhqdwKcJZR2vcqCyrYsaPVdAnFoJjiksCXJ7hfEYgD",
+    "2q5pghRs6arqVjRvT5gfgWfWcHWmw1ZuCzphgd5KfWGJ",
+    "wyvPkWjVZz1M8fHQnMMCDTQDbkManefNNhweYk5WkcF",
+    "3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT",
+    "4vieeGHPYPG2MmyPRcYjdiDmmhN3ww7hsFNap8pVN3Ey",
+    "4TQLFNWK8AovT1gFvda5jfw2oJeRMKEmw7aH6MGBJ3or",
+];
 pub async fn build_tx(
     wallet: &Keypair,
     minor_mint: &Pubkey,
@@ -43,12 +64,22 @@ pub async fn build_tx(
     include_create_token_account_ix: bool,
 ) -> Result<VersionedTransaction> {
     let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
+
     let wallet_pub = wallet.pubkey();
     let mint_token_program = MintRecordRepository::get_mint(minor_mint)
         .await?
         .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
         .program
         .0;
+    let jito_tip = random_select(TIP_ACCOUNTS)
+        .or_err("Cannot randomly find tip account")?
+        .to_pubkey();
+    let jito_tip_ix = transfer(
+        &wallet_pub,
+        &jito_tip,
+        (0.001 * LAMPORTS_PER_SOL as f64) as u64,
+    );
+    instructions.push(jito_tip_ix);
 
     if include_create_token_account_ix {
         instructions.push(ensure_token_account_exists(
@@ -187,15 +218,17 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
     Ok(result)
 }
 
-pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<Signature> {
+pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<()> {
     trace.step(StepType::MevRealTxRpcCall);
-    let response = rpc_client().send_transaction(tx).await?;
+    // let response = rpc_client().send_transaction(tx).await?;
+    sender(tx).await;
     trace.step(StepType::MevRealTxRpcReturned);
-    info!(
-        "MEV transaction sent successfully: {}",
-        response.to_string()
-    );
-    Ok(response)
+    // info!(
+    //     "MEV transaction sent successfully: {}",
+    //     response.to_string()
+    // );
+    // Ok(response)
+    unit_ok!()
 }
 
 pub async fn log_mev_simulation(

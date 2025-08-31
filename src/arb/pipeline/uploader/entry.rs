@@ -7,6 +7,7 @@ use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::uploader::debug;
+use crate::arb::pipeline::uploader::helius::sender;
 use crate::arb::pipeline::uploader::mev_bot::construct;
 use crate::arb::pipeline::uploader::mev_bot::construct::{
     log_mev_simulation, real_mev_tx, simulate_mev_tx,
@@ -21,6 +22,7 @@ use crate::unit_ok;
 use construct::build_tx;
 use futures::future::join_all;
 use solana_program::pubkey::Pubkey;
+use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use tracing::warn;
@@ -54,13 +56,13 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
 
     let wallet_pubkey = wallet.pubkey();
     build_and_send(
-        &wallet,    //
-        minor_mint, //
-        350_000,    //
-        20_000,     //
-        &configs,   //
-        20000,      //
-        true,       //
+        &wallet,                                   //
+        minor_mint,                                //
+        350_000,                                   //
+        20_000,                                    //
+        &configs,                                  //
+        (0.0015 * LAMPORTS_PER_SOL as f64) as u64, //
+        true,                                      //
         trace,
     )
     .await
@@ -111,21 +113,22 @@ pub async fn build_and_send(
     if simulation_result.err.is_none() {
         // alright, let's get it
         if *ENABLE_SEND_TX {
-            let no_abort_tx = build_tx(
-                wallet,
-                minor_mint,
-                compute_unit_limit,
-                unit_price,
-                pools,
-                get_blockhash().await?,
-                &alts,
-                minimum_profit,
-                true,
-                include_create_token_account_ix,
-            )
-            .await?;
+            // let no_abort_tx = build_tx(
+            //     wallet,
+            //     minor_mint,
+            //     compute_unit_limit,
+            //     unit_price,
+            //     pools,
+            //     get_blockhash().await?,
+            //     &alts,
+            //     minimum_profit,
+            //     false,
+            //     include_create_token_account_ix,
+            // )
+            // .await?;
             trace.step(StepType::MevRealTxBuilding);
-            real_mev_tx(&no_abort_tx, &trace).await?;
+            real_mev_tx(&tx, &trace).await?;
+            // sender(&tx).await?
         }
     }
 
