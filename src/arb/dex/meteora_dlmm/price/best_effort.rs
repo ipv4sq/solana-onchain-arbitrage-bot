@@ -210,6 +210,7 @@ mod tests {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::global::state::db::must_init_db;
+    use crate::arb::global::state::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
@@ -219,6 +220,7 @@ mod tests {
         let pool_address = "9d9mb8kooFfaD3SctgZtkxQypkshx6ezhbKio89ixyy2".to_pubkey();
         let trump_mint = "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN".to_pubkey();
         let usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
+        let one_trump = 1_000_000;
         let account_data = rpc_client().get_account_data(&pool_address).await.unwrap();
         let pool_data = MeteoraDlmmPoolData::load_data(&account_data).unwrap();
 
@@ -232,6 +234,14 @@ mod tests {
             .await
             .unwrap();
 
-        println!("usdc_out: {}", usdc_out);
+        let trump_decimals = 6;
+        let usdc_decimals = 6;
+        let trump_amount = one_trump as f64 / 10_f64.powi(trump_decimals);
+        let usdc_amount = usdc_out as f64 / 10_f64.powi(usdc_decimals);
+        
+        println!("\n=== Swap Result ===");
+        println!("Input: {} TRUMP ({} lamports)", trump_amount, one_trump);
+        println!("Output: {} USDC ({} lamports)", usdc_amount, usdc_out);
+        println!("\n1 TRUMP = {} USDC", usdc_amount / trump_amount);
     }
 }
