@@ -11,8 +11,8 @@ async fn create_connection() -> Result<DatabaseConnection> {
     let database_url = env::var("DATABASE_URL")?;
 
     let mut opt = ConnectOptions::new(database_url);
-    opt.max_connections(30)
-        .min_connections(2)
+    opt.max_connections(50)
+        .min_connections(5)
         .connect_timeout(Duration::from_secs(10))
         .acquire_timeout(Duration::from_secs(3))
         .idle_timeout(Duration::from_secs(600))
