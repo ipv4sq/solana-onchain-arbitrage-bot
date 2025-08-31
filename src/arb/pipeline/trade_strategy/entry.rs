@@ -26,6 +26,10 @@ pub async fn on_pool_update(
     if !mints.contains(&Mints::WSOL) {
         return None;
     }
+    if mints.minor_mint().ok()? == Mints::USDC {
+        info!("Skipping USDC pools");
+        return None;
+    }
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
 
     if trace.since_begin() > MAX_PROCESSING_TIME_MS {
