@@ -1,9 +1,13 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
+use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::arb::global::enums::direction::Direction;
 use crate::arb::global::state::rpc::rpc_client;
+use crate::arb::pipeline::trade_strategy::token_balance_cache::get_balance_of_account;
 use crate::arb::util::alias::{AResult, MintAddress};
+use crate::arb::util::traits::option::OptionExt;
+use crate::f;
 use anyhow::anyhow;
 use rust_decimal::Decimal;
 use spl_token::solana_program::program_pack::Pack;
@@ -24,25 +28,26 @@ impl PumpAmmPoolData {
         from: &MintAddress,
         to: &MintAddress,
     ) -> AResult<DlmmQuote> {
-        let base_account = rpc_client()
-            .get_account(&self.pool_base_token_account)
-            .await?;
-        let quote_account = rpc_client()
-            .get_account(&self.pool_quote_token_account)
-            .await?;
+        let base_cached = get_balance_of_account(&self.base_vault(), &self.base_mint)
+            .await
+            .or_err(f!(
+                "Unable to get balance of owner {} mint {}",
+                self.base_vault(),
+                self.base_mint
+            ))?;
+        let quote_cached = get_balance_of_account(&self.quote_vault(), &self.quote_mint)
+            .await
+            .or_err(f!(
+                "Unable to get balance of owner {} mint {}",
+                self.quote_vault(),
+                self.quote_mint
+            ))?;
 
-        let base_vault = TokenAccount::unpack_from_slice(&base_account.data)?;
-        let quote_vault = TokenAccount::unpack_from_slice(&quote_account.data)?;
+        let base_balance = base_cached.amount;
+        let base_decimals = base_cached.decimals;
 
-        let base_balance = base_vault.amount;
-        let quote_balance = quote_vault.amount;
-
-        let base_decimals = MintRecordRepository::get_decimal(&self.base_mint)
-            .await?
-            .ok_or_else(|| anyhow!("Base mint decimals not found in cache"))?;
-        let quote_decimals = MintRecordRepository::get_decimal(&self.quote_mint)
-            .await?
-            .ok_or_else(|| anyhow!("Quote mint decimals not found in cache"))?;
+        let quote_balance = quote_cached.amount;
+        let quote_decimals = quote_cached.decimals;
 
         let base_balance_dec =
             Decimal::from(base_balance) / Decimal::from(10u64.pow(base_decimals as u32));
