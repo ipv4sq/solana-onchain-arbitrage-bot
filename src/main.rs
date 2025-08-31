@@ -13,7 +13,6 @@ pub mod util;
 
 use crate::arb::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
 use solana_onchain_arbitrage_bot::arb::global;
-use solana_onchain_arbitrage_bot::arb::pipeline::chain_subscriber::owner_account_subscriber::start_pool_monitor;
 use tracing::info;
 
 #[tokio::main]
@@ -38,9 +37,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Blockhash holder initialized");
 
     // 2. Start the SolanaMevBotOnchainListener
-    let listener_handle = spawn_with_error_handling!("MEV bot subscriber", bootstrap_subscriber());
-
-    let handle = spawn_with_error_handling!("Pool account subscriber", start_pool_monitor());
+    let listener_handle = spawn_with_error_handling!("Subscriber", bootstrap_subscriber());
 
     // 3. Block until Ctrl+C
     info!("Press Ctrl+C to shutdown");

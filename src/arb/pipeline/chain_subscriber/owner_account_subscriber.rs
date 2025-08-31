@@ -20,12 +20,13 @@ impl OwnerSubscriber {
     }
 
     pub async fn start(self) -> Result<()> {
-        info!("Starting pool account subscription for Meteora DLMM and DAMM V2 programs");
+        info!("Starting owner account subscriber");
 
         let filter = AccountFilter::new("meteora_pools").with_owners(&[
             PoolProgram::METEORA_DLMM,
             PoolProgram::METEORA_DAMM_V2,
             PoolProgram::PUMP_AMM,
+            PoolProgram::RAYDIUM_CPMM,
         ]);
 
         self.client
@@ -47,7 +48,7 @@ impl OwnerSubscriber {
     }
 }
 
-pub async fn start_pool_monitor() -> Result<()> {
+pub async fn start_owner_account_monitor() -> Result<()> {
     let monitor = OwnerSubscriber::new();
     monitor.start().await
 }

@@ -35,6 +35,7 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
         current: updated,
     };
     trace.step_with_address(AccountUpdateDebounced, "account_address", update.account);
+
     let recorded = PoolRecordRepository::is_pool_recorded(pool_update.pool()).await;
     trace.step_with(DeterminePoolExists, "account_address", recorded.to_string());
 
