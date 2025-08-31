@@ -1,9 +1,0 @@
-{
-  "entryPoints": [
-    "./src"
-  ],
-  "githubPages": false,
-  "hideGenerator": true,
-  "out": "dist",
-  "preserveWatchOutput": true
-}

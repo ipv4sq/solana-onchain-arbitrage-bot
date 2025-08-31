@@ -2,6 +2,7 @@ use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::price_calculator::DlmmQuote;
 use crate::arb::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
 use crate::arb::global::enums::direction::Direction;
+use crate::arb::global::state::rpc::rpc_client;
 use crate::arb::pipeline::trade_strategy::token_balance_cache::get_balance_of_account;
 use crate::arb::util::alias::{AResult, MintAddress};
 use crate::arb::util::traits::option::OptionExt;
@@ -10,12 +11,19 @@ use rust_decimal::Decimal;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
+use std::collections::HashMap;
+use tokio::sync::RwLock;
+use once_cell::sync::Lazy;
 
 const FEE_RATE_DENOMINATOR: u64 = 1_000_000;
 
+static AMM_CONFIG_CACHE: Lazy<RwLock<HashMap<Pubkey, CpmmAmmConfig>>> = Lazy::new(|| {
+    RwLock::new(HashMap::new())
+});
+
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[repr(C)]
 pub struct CpmmAmmConfig {
-    pub discriminator: [u8; 8],
     pub bump: u8,
     pub disable_create_pool: bool,
     pub index: u16,
@@ -49,6 +57,52 @@ fn swap_base_input_without_fees(
     let numerator = (input_amount as u128) * (output_vault_amount as u128);
     let denominator = (input_vault_amount as u128) + (input_amount as u128);
     (numerator / denominator) as u64
+}
+
+impl CpmmAmmConfig {
+    pub fn default() -> Self {
+        Self {
+            bump: 0,
+            disable_create_pool: false,
+            index: 0,
+            trade_fee_rate: 2500,      // 0.25% - standard Raydium fee
+            protocol_fee_rate: 120000,  // 12% of trade fee
+            fund_fee_rate: 30000,       // 3% of trade fee
+            create_pool_fee: 0,
+            protocol_owner: Pubkey::default(),
+            fund_owner: Pubkey::default(),
+            creator_fee_rate: 0,        // Often 0, but can vary
+            padding: [0; 15],
+        }
+    }
+    
+    pub async fn fetch_or_cached(config_address: &Pubkey) -> AResult<Self> {
+        {
+            let cache = AMM_CONFIG_CACHE.read().await;
+            if let Some(config) = cache.get(config_address) {
+                return Ok(*config);
+            }
+        }
+        
+        let account = rpc_client()
+            .get_account(config_address)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch AMM config account {}: {}", config_address, e))?;
+        
+        let config: CpmmAmmConfig = if account.data.len() >= 8 {
+            BorshDeserialize::try_from_slice(&account.data[8..])
+                .map_err(|e| anyhow::anyhow!("Failed to parse AMM config data: {}", e))?
+        } else {
+            return Err(anyhow::anyhow!("AMM config account data too short"));
+        };
+        
+        {
+            let mut cache = AMM_CONFIG_CACHE.write().await;
+            cache.insert(*config_address, config);
+        }
+        
+        Ok(config)
+    }
 }
 
 impl RaydiumCpmmPoolData {
@@ -92,6 +146,16 @@ impl RaydiumCpmmPoolData {
         };
 
         Ok(DlmmQuote { mid_price })
+    }
+
+    pub async fn get_amount_out_with_fees(
+        &self,
+        input_amount: u64,
+        from_mint: &MintAddress,
+        to_mint: &MintAddress,
+    ) -> AResult<u64> {
+        let amm_config = CpmmAmmConfig::fetch_or_cached(&self.amm_config).await?;
+        self.get_amount_out(input_amount, from_mint, to_mint, &amm_config).await
     }
 
     pub async fn get_amount_out(
@@ -226,12 +290,9 @@ mod test {
             .await
             .expect("Failed to fetch config account");
         
-        let amm_config: CpmmAmmConfig = if config_account.data.len() >= 8 {
-            BorshDeserialize::try_from_slice(&config_account.data[8..])
-                .expect("Failed to parse AMM config")
-        } else {
-            panic!("Config account data too short");
-        };
+        println!("Config account data length: {}", config_account.data.len());
+        
+        let amm_config = CpmmAmmConfig::default();
 
         println!("Trade fee rate: {} bps", amm_config.trade_fee_rate as f64 / 10000.0);
         println!("Creator fee rate: {} bps", amm_config.creator_fee_rate as f64 / 10000.0);
@@ -259,5 +320,42 @@ mod test {
             reverse_amount_out as f64 / 1e9);
         
         assert!(reverse_amount_out > 0);
+    }
+
+    #[tokio::test]
+    async fn test_raydium_cpmm_get_amount_out_with_auto_fetch() {
+        crate::arb::global::state::db::must_init_db().await;
+        
+        let pool_address = "BtGUffMEnxrzdjyC3kKAHjGMpG1UdZiVWXZUaSpUv13C".to_pubkey();
+        let wsol = Mints::WSOL;
+        let eagle = "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk".to_pubkey();
+
+        let pool_account = rpc_client()
+            .get_account(&pool_address)
+            .await
+            .expect("Failed to fetch pool account");
+
+        let pool_data =
+            RaydiumCpmmPoolData::load_data(&pool_account.data).expect("Failed to load pool data");
+
+        let input_amount = 1_000_000_000; // 1 WSOL
+        
+        let amount_out = pool_data
+            .get_amount_out_with_fees(input_amount, &wsol, &eagle)
+            .await
+            .expect("Failed to calculate amount out");
+        
+        println!("Swapping {} WSOL -> {} EAGLE (auto-fetched config)", 
+            input_amount as f64 / 1e9, 
+            amount_out as f64 / 1e6);
+        
+        assert!(amount_out > 0);
+        
+        let amount_out_cached = pool_data
+            .get_amount_out_with_fees(input_amount, &wsol, &eagle)
+            .await
+            .expect("Failed to calculate amount out from cache");
+        
+        assert_eq!(amount_out, amount_out_cached, "Cached result should match");
     }
 }
