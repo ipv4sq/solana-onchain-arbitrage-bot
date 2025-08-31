@@ -10,8 +10,10 @@ use crate::arb::pipeline::event_processor::pool_update_processor::PoolUpdateProc
 use crate::arb::pipeline::event_processor::structs::pool_update::AccountComparison;
 use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::sdk::yellowstone::GrpcAccountUpdate;
+use crate::arb::util::alias::AResult;
 use crate::arb::util::structs::buffered_debouncer::BufferedDebouncer;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
+use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::lazy_arc;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
@@ -22,11 +24,28 @@ use std::time::Duration;
 pub static OwnerAccountDebouncer: Lazy<
     Arc<BufferedDebouncer<Pubkey, WithTrace<GrpcAccountUpdate>>>,
 > = lazy_arc!(BufferedDebouncer::new(
-    Duration::from_millis(1),
-    route_pool_update,
+    Duration::from_millis(7),
+    send_to_router,
 ));
 
-async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
+async fn send_to_router(update: WithTrace<GrpcAccountUpdate>) {
+    AccountUpdateRouteProcessor.publish(update).await.ok();
+}
+
+#[allow(non_upper_case_globals)]
+pub static AccountUpdateRouteProcessor: Lazy<Arc<PubSubProcessor<WithTrace<GrpcAccountUpdate>>>> =
+    lazy_arc!({
+        PubSubProcessor::new(
+            PubSubConfig {
+                worker_pool_size: 16,
+                channel_buffer_size: 50000,
+                name: "AccountUpdateRouteProcessor".to_string(),
+            },
+            route_pool_update,
+        )
+    });
+
+async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) -> AResult<()> {
     let WithTrace(update, trace) = update;
     let previous = LastAccountUpdateCache.get_sync(&update.account);
     let updated = AccountState::from_grpc_update(&update);
@@ -64,6 +83,7 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) {
             .publish(WithTrace(*comparison.pool(), trace))
             .await;
     }
+    Ok(())
 }
 
 #[allow(non_upper_case_globals)]

@@ -1,4 +1,5 @@
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::database::pool_record::PoolRecord;
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::constant::mint::Mints;
 use crate::arb::global::enums::step_type::StepType;
@@ -114,24 +115,31 @@ async fn load_related_pools(
 }
 
 async fn check_all_opportunities(
-    related_pools: &[crate::arb::database::pool_record::model::Model],
+    related_pools: &[PoolRecord],
     changed_pool: &PoolAddress,
     changed_config: &AnyPoolConfig,
     minor_mint: &MintAddress,
 ) -> Vec<ArbitrageResult> {
     let input_lamports = WSOL_LAMPORTS_PER_SOL;
+    let changed_pool = *changed_pool;
+    let changed_config = changed_config.clone();
+    let minor_mint = *minor_mint;
 
-    stream::iter(related_pools)
-        .then(|other_pool| async move {
-            check_bidirectional_arbitrage(
-                other_pool,
-                changed_pool,
-                changed_config,
-                minor_mint,
-                input_lamports,
-            )
-            .await
+    stream::iter(related_pools.iter().cloned())
+        .map(move |other_pool| {
+            let changed_config = changed_config.clone();
+            async move {
+                check_bidirectional_arbitrage(
+                    &other_pool,
+                    &changed_pool,
+                    &changed_config,
+                    &minor_mint,
+                    input_lamports,
+                )
+                .await
+            }
         })
+        .buffer_unordered(5)
         .collect::<Vec<_>>()
         .await
         .into_iter()
