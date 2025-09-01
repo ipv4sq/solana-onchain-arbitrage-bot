@@ -209,7 +209,7 @@ fn ensure_token_account_exists(
 }
 
 pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<SimulationResult> {
-    if trace.since_begin() > 400 {
+    if trace.since_begin() > 200 {
         info!(
             "Gave up on simulation tx because it takes {} milliseconds from trigger to now",
             trace.since_begin()
