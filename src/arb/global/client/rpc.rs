@@ -31,7 +31,7 @@ pub async fn send_tx_with_retry(tx: &VersionedTransaction, max_retries: u64) -> 
             solana_client::rpc_config::RpcSendTransactionConfig {
                 skip_preflight: true,
                 max_retries: Some(max_retries as usize),
-                preflight_commitment: Some(CommitmentLevel::Confirmed),
+                preflight_commitment: Some(CommitmentLevel::Processed),
                 ..Default::default()
             },
         )

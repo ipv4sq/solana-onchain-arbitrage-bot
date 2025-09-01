@@ -80,10 +80,13 @@ impl SolanaGrpcClient {
     async fn connect(&mut self) -> Result<()> {
         info!("Attempting to connect to gRPC endpoint: {}", self.endpoint);
         info!("Token present: {}", !self.token.is_empty());
-        
+
         let endpoint = tonic::transport::Endpoint::from_shared(self.endpoint.clone())
             .map_err(|e| {
-                error!("Failed to create endpoint from URL '{}': {}", self.endpoint, e);
+                error!(
+                    "Failed to create endpoint from URL '{}': {}",
+                    self.endpoint, e
+                );
                 e
             })
             .context("Failed to create endpoint")?
@@ -95,12 +98,15 @@ impl SolanaGrpcClient {
             .context("Failed to configure TLS")?;
 
         info!("Endpoint configured, attempting to establish connection...");
-        
+
         let channel = endpoint
             .connect()
             .await
             .map_err(|e| {
-                error!("Failed to connect to gRPC endpoint '{}': {}", self.endpoint, e);
+                error!(
+                    "Failed to connect to gRPC endpoint '{}': {}",
+                    self.endpoint, e
+                );
                 error!("Connection error type: {:?}", e);
                 if let Some(source) = e.source() {
                     error!("Error source: {}", source);
@@ -108,7 +114,7 @@ impl SolanaGrpcClient {
                 e
             })
             .context("Failed to connect to gRPC endpoint")?;
-        
+
         info!("Successfully connected to gRPC endpoint");
 
         use tonic::metadata::AsciiMetadataValue;
@@ -146,7 +152,10 @@ impl SolanaGrpcClient {
 
         self.client = Some(GeyserGrpcClient::new(health_client, geyser_client));
 
-        info!("gRPC client successfully initialized for endpoint: {}", self.endpoint);
+        info!(
+            "gRPC client successfully initialized for endpoint: {}",
+            self.endpoint
+        );
         Ok(())
     }
 
@@ -169,7 +178,7 @@ impl SolanaGrpcClient {
             blocks: HashMap::new(),
             blocks_meta: HashMap::new(),
             entry: HashMap::new(),
-            commitment: Some(CommitmentLevel::Confirmed as i32),
+            commitment: Some(CommitmentLevel::Processed as i32),
             accounts_data_slice: vec![],
             ping: None,
             from_slot: None,
