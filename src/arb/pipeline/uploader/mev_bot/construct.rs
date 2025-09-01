@@ -17,8 +17,8 @@ use crate::arb::util::solana::pda::{ata, ata_sol_token};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::unit_ok;
 use crate::util::random_select;
+use crate::{return_error, unit_ok};
 use anyhow::{anyhow, Result};
 use rand::prelude::IndexedRandom;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
@@ -37,7 +37,7 @@ use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 use system_instruction::transfer;
-use tracing::error;
+use tracing::{error, info};
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -209,6 +209,13 @@ fn ensure_token_account_exists(
 }
 
 pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<SimulationResult> {
+    if trace.since_begin() > 400 {
+        info!(
+            "Gave up on simulation tx because it takes {} milliseconds from trigger to now",
+            trace.since_begin()
+        );
+        return_error!("Gave up");
+    }
     trace.step(StepType::MevSimulationTxRpcCall);
 
     // Use the simpler simulate_transaction for better performance
@@ -234,6 +241,13 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
 }
 
 pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<()> {
+    if trace.since_begin() > 400 {
+        info!(
+            "Gave up on landing tx because it takes {} milliseconds from trigger to now",
+            trace.since_begin()
+        );
+        return_error!("Gave up");
+    }
     trace.step(StepType::MevRealTxRpcCall);
     // let response = rpc_client().send_transaction(tx).await?;
     sender(tx).await;
