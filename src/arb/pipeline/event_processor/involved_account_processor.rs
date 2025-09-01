@@ -63,7 +63,7 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
             }
             false => {
                 NewPoolProcessor
-                    .publish(WithTrace(pool, trace.clone()))
+                    .publish(WithTrace(Trigger::PoolAddress(pool), trace.clone()))
                     .await?
             }
         }

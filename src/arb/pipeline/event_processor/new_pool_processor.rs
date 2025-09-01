@@ -4,10 +4,12 @@ use crate::arb::global::enums::block_reason::BlocklistReason;
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::WithTrace;
+use crate::arb::pipeline::event_processor::structs::trigger::Trigger;
 use crate::arb::util::alias::AResult;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
 use crate::arb::util::structs::rate_limiter::RateLimitError;
+use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use chrono::{DateTime, Utc};
@@ -18,7 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 #[allow(non_upper_case_globals)]
-pub static NewPoolProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Pubkey>>>> = lazy_arc!({
+pub static NewPoolProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Trigger>>>> = lazy_arc!({
     let config = PubSubConfig {
         worker_pool_size: 16,
         channel_buffer_size: 100_000,
@@ -27,11 +29,24 @@ pub static NewPoolProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Pubkey>>>> = laz
     PubSubProcessor::new(config, on_new_pool_received)
 });
 
-pub async fn on_new_pool_received(with_trace: WithTrace<Pubkey>) -> anyhow::Result<()> {
-    let WithTrace(pool_address, trace) = with_trace;
+pub async fn on_new_pool_received(with_trace: WithTrace<Trigger>) -> anyhow::Result<()> {
+    let WithTrace(trigger, trace) = with_trace;
     trace.step(StepType::IsAccountPoolData);
 
-    record_if_real_pool(&pool_address).await;
+    match trigger {
+        Trigger::AccountCompare(compare) => {
+            let _ = AnyPoolHolder::update_config(
+                compare.pool(),
+                &compare.current.owner,
+                &*compare.current.data,
+            )
+            .await?;
+            PoolRecordRepository::ensure_exists(compare.pool()).await;
+        }
+        Trigger::PoolAddress(pool_address) => {
+            record_if_real_pool(&pool_address).await;
+        }
+    }
 
     unit_ok!()
 }

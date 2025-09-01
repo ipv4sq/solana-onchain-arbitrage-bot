@@ -80,7 +80,7 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) -> AResult<()> 
             .await;
     } else {
         let _ = NewPoolProcessor
-            .publish(WithTrace(*comparison.pool(), trace))
+            .publish(WithTrace(Trigger::AccountCompare(comparison), trace))
             .await;
     }
     Ok(())
