@@ -12,6 +12,7 @@ use crate::arb::util::structs::mint_pair::MintPair;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
 use solana_program::instruction::AccountMeta;
+use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
 
 pub type PumpAmmConfig = PoolBase<PumpAmmPoolData>;
@@ -41,6 +42,17 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             &self.pool_data,
         )
         .await?;
+        let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
+        let pump_program = pubkey!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
+        let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
+
+        let (pump_fee_config_pda, _) =
+            Pubkey::find_program_address(&[b"fee_config", &pump_program.as_ref()], &fee_program);
+
+        let (pump_amm_fee_config_pda, _) = Pubkey::find_program_address(
+            &[b"fee_config", &pump_amm_program.as_ref()],
+            &fee_program,
+        );
 
         let accounts: Vec<AccountMeta> = vec![
             built.program,
@@ -56,6 +68,8 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             built.coin_creator_vault_authority,
             built.global_volume_accumulator.unwrap(),
             built.user_volume_accumulator.unwrap(),
+            pump_fee_config_pda.to_readonly(),
+            pump_amm_fee_config_pda.to_readonly(),
         ];
 
         Ok(accounts)
