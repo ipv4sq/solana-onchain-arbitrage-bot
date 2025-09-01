@@ -59,12 +59,7 @@ impl RateLimiter {
             Ok(())
         } else {
             let inner = self.inner.read();
-            Err(RateLimitError::ExceededLimit {
-                name: self.config.name.clone(),
-                available_tokens: inner.available_tokens,
-                requested: 1,
-                rejected_count: inner.rejected_count,
-            })
+            Err(RateLimitError::ExceededLimit {})
         }
     }
 
@@ -87,12 +82,7 @@ impl RateLimiter {
             Ok(())
         } else {
             let inner = self.inner.read();
-            Err(RateLimitError::ExceededLimit {
-                name: self.config.name.clone(),
-                available_tokens: inner.available_tokens,
-                requested: n,
-                rejected_count: inner.rejected_count,
-            })
+            Err(RateLimitError::ExceededLimit {})
         }
     }
 
@@ -167,27 +157,13 @@ impl RateLimiter {
 
 #[derive(Debug, Clone)]
 pub enum RateLimitError {
-    ExceededLimit {
-        name: String,
-        available_tokens: f64,
-        requested: u32,
-        rejected_count: u64,
-    },
+    ExceededLimit {},
 }
 
 impl fmt::Display for RateLimitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RateLimitError::ExceededLimit {
-                name,
-                available_tokens,
-                requested,
-                rejected_count,
-            } => write!(
-                f,
-                "Rate limit exceeded for {}: available_tokens={:.2}, requested={}, total_rejected={}",
-                name, available_tokens, requested, rejected_count
-            ),
+            RateLimitError::ExceededLimit {} => write!(f, "Rate limit exceeded",),
         }
     }
 }
@@ -372,15 +348,11 @@ mod tests {
 
         assert!(limiter.try_acquire_err().is_ok());
         assert!(limiter.try_acquire_err().is_ok());
-        
+
         let result = limiter.try_acquire_err();
         assert!(result.is_err());
-        
-        if let Err(RateLimitError::ExceededLimit { name, available_tokens, requested, rejected_count }) = result {
-            assert_eq!(name, "error_test");
-            assert!(available_tokens < 1.0);
-            assert_eq!(requested, 1);
-            assert_eq!(rejected_count, 1);
+
+        if let Err(RateLimitError::ExceededLimit {}) = result {
         } else {
             panic!("Expected RateLimitError::ExceededLimit");
         }
@@ -388,19 +360,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_acquire_n_err() {
-        let limiter = RateLimiter::new(5, Duration::from_secs(1), 10, "batch_error_test".to_string());
+        let limiter = RateLimiter::new(
+            5,
+            Duration::from_secs(1),
+            10,
+            "batch_error_test".to_string(),
+        );
 
         assert!(limiter.try_acquire_n_err(5).is_ok());
         assert!(limiter.try_acquire_n_err(5).is_ok());
-        
+
         let result = limiter.try_acquire_n_err(3);
         assert!(result.is_err());
-        
-        if let Err(RateLimitError::ExceededLimit { name, available_tokens, requested, rejected_count }) = result {
-            assert_eq!(name, "batch_error_test");
-            assert!(available_tokens < 3.0);
-            assert_eq!(requested, 3);
-            assert_eq!(rejected_count, 3);
+
+        if let Err(RateLimitError::ExceededLimit {}) = result {
         } else {
             panic!("Expected RateLimitError::ExceededLimit");
         }
