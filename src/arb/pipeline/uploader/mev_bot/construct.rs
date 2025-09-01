@@ -21,21 +21,23 @@ use crate::unit_ok;
 use crate::util::random_select;
 use anyhow::{anyhow, Result};
 use rand::prelude::IndexedRandom;
-use rand::rng;
+use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
+use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::commitment_config::CommitmentLevel::Processed;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
 use solana_sdk::message::v0::Message;
-use solana_sdk::signature::{Keypair, Signature, Signer};
+use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::system_instruction;
-use solana_sdk::system_instruction::SystemInstruction;
 use solana_sdk::transaction::VersionedTransaction;
+use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 use system_instruction::transfer;
-use tracing::{error, info};
+use tracing::error;
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
@@ -211,7 +213,20 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
 
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
-    let response = rpc_client().simulate_transaction(tx).await?;
+    let response = rpc_client()
+        .simulate_transaction_with_config(
+            tx,
+            RpcSimulateTransactionConfig {
+                sig_verify: false,
+                replace_recent_blockhash: false,
+                commitment: Some(CommitmentConfig::processed()),
+                encoding: Some(UiTransactionEncoding::Base64),
+                accounts: None,
+                min_context_slot: None,
+                inner_instructions: false,
+            },
+        )
+        .await?;
     let result = SimulationResult::from(&response.value);
     trace.step(StepType::MevSimulationTxRpcReturned);
 

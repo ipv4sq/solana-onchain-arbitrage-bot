@@ -3,7 +3,6 @@ use crate::arb::dex::meteora_dlmm::misc::bin_array::{
     bin_id_to_bin_array_index, get_bin_array_pda,
 };
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::state::account_data_holder::AccountDataHolder;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use borsh::BorshDeserialize;
