@@ -47,7 +47,15 @@ async fn record_if_real_pool(addr: &Pubkey) {
         }
         Err(e) => {
             // if it's not rate limit error, we block it.
-            if !e.is::<RateLimitError>() {
+            if e.is::<RateLimitError>() {
+                NonPoolBlocklist
+                    .put_with_ttl(
+                        *addr,
+                        BlocklistEntry::new(BlocklistReason::QueryFailed),
+                        Duration::from_secs(60),
+                    )
+                    .await;
+            } else {
                 NonPoolBlocklist
                     .put(*addr, BlocklistEntry::new(BlocklistReason::SaveFailed))
                     .await;
