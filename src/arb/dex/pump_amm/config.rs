@@ -11,6 +11,7 @@ use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
+use chrono::Utc;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
@@ -54,7 +55,7 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             &fee_program,
         );
 
-        let accounts: Vec<AccountMeta> = vec![
+        let mut accounts: Vec<AccountMeta> = vec![
             built.program,
             self.pool_data.pair().desired_mint()?.to_readonly(),
             built.global_config,
@@ -68,9 +69,16 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             built.coin_creator_vault_authority,
             built.global_volume_accumulator.unwrap(),
             built.user_volume_accumulator.unwrap(),
-            pump_fee_config_pda.to_readonly(),
-            pump_amm_fee_config_pda.to_readonly(),
         ];
+
+        let cutoff_timestamp =
+            chrono::DateTime::parse_from_rfc3339("2025-09-01T20:00:00Z")?.timestamp();
+        let current_timestamp = Utc::now().timestamp();
+
+        if current_timestamp >= cutoff_timestamp {
+            accounts.push(pump_fee_config_pda.to_readonly());
+            accounts.push(pump_amm_fee_config_pda.to_readonly());
+        }
 
         Ok(accounts)
     }
