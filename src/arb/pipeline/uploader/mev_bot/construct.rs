@@ -222,7 +222,7 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
                 commitment: Some(CommitmentConfig::processed()),
                 encoding: Some(UiTransactionEncoding::Base64),
                 accounts: None,
-                min_context_slot: None,
+                min_context_slot: Some(trace.slot),
                 inner_instructions: false,
             },
         )

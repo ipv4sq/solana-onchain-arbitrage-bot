@@ -36,7 +36,7 @@ impl InvolvedAccountSubscriber {
     }
 
     async fn handle_transaction_update(update: GrpcTransactionUpdate) -> Result<()> {
-        let trace = Trace::new();
+        let trace = Trace::new(update.slot);
 
         trace.step_with(
             StepType::Custom("TransactionReceived".to_string()),

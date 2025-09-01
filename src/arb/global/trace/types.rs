@@ -17,6 +17,7 @@ pub struct WithTrace<T>(pub T, pub Trace);
 #[derive(Clone)]
 pub struct Trace {
     pub id: String,
+    pub slot: u64,
     steps: Arc<Mutex<Vec<Step>>>,
 }
 
@@ -29,10 +30,11 @@ pub struct Step {
 }
 
 impl Trace {
-    pub fn new() -> Self {
+    pub fn new(slot: u64) -> Self {
         let sequence = TRACE_COUNTER.fetch_add(1, Ordering::SeqCst);
         Self {
             id: format!("trace_{}", sequence),
+            slot,
             steps: Arc::new(Mutex::new(Vec::new())),
         }
     }

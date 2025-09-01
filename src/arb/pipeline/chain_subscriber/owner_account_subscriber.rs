@@ -35,7 +35,7 @@ impl OwnerSubscriber {
     }
 
     async fn handle_account_update(update: GrpcAccountUpdate) -> Result<()> {
-        let trace = Trace::new();
+        let trace = Trace::new(update.slot);
         trace.step_with_address(
             StepType::AccountUpdateReceived,
             "account_address",
