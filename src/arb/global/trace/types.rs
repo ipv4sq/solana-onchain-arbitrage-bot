@@ -140,6 +140,7 @@ impl Trace {
             .collect();
 
         json!({
+            "slot": self.slot,
             "trace_id": self.id,
             "total_duration_ms": (steps.last().unwrap().happened_at - first_timestamp).num_milliseconds(),
             "steps": steps_json,
