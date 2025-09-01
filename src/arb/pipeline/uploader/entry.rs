@@ -113,21 +113,21 @@ pub async fn build_and_send(
     if simulation_result.err.is_none() {
         // alright, let's get it
         if *ENABLE_SEND_TX {
-            // let no_abort_tx = build_tx(
-            //     wallet,
-            //     minor_mint,
-            //     compute_unit_limit,
-            //     unit_price,
-            //     pools,
-            //     get_blockhash().await?,
-            //     &alts,
-            //     minimum_profit,
-            //     false,
-            //     include_create_token_account_ix,
-            // )
-            // .await?;
+            let new_tx = build_tx(
+                wallet,
+                minor_mint,
+                compute_unit_limit,
+                unit_price,
+                pools,
+                get_blockhash().await?,
+                &alts,
+                minimum_profit,
+                false,
+                include_create_token_account_ix,
+            )
+            .await?;
             trace.step(StepType::MevRealTxBuilding);
-            real_mev_tx(&tx, &trace).await?;
+            real_mev_tx(&new_tx, &trace).await?;
             // sender(&tx).await?
         }
     }
