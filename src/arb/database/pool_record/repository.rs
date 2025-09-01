@@ -131,9 +131,14 @@ impl PoolRecordRepository {
             .await;
 
         // update corresponding cache
-        MINT_TO_POOLS.evict(&pool.address).await;
-        MINT_TO_POOLS.ensure_exists(&pool.address).await;
         POOL_RECORDED.put(pool.address.0, true).await;
+        // update mint to pool cache
+        for mint in [pool.base_mint, pool.quote_mint] {
+            if let Some(mut pools) = MINT_TO_POOLS.get(mint.as_ref()).await {
+                pools.insert(pool.clone());
+                MINT_TO_POOLS.put(mint.0, pools).await;
+            }
+        }
 
         match result {
             Ok(_) => Ok(pool),

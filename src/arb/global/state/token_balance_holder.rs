@@ -23,9 +23,9 @@ static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> 
 #[allow(non_upper_case_globals)]
 pub static QueryRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     RateLimiter::new(
-        25,
-        Duration::from_secs(1),
         35,
+        Duration::from_secs(1),
+        40,
         "AccountBalanceQueryRateLimiter".to_string(),
     )
 });
@@ -53,8 +53,8 @@ pub async fn get_balance_of_account(account: &Pubkey, mint: &MintAddress) -> Opt
 }
 
 async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmount> {
-    if !QueryRateLimiter.try_acquire() {
-        warn!("Query rate limiter expired.");
+    if let Err(e) = QueryRateLimiter.try_acquire_err() {
+        warn!("Query rate limiter expired: {}", e);
         return None;
     }
     let data = rpc_client().get_account(account).await.ok()?;

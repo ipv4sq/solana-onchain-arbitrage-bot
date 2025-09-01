@@ -1,9 +1,13 @@
 use crate::arb::database::pool_record::repository::PoolRecordRepository;
+use crate::arb::dex::any_pool_config::AnyPoolConfig;
 use crate::arb::global::enums::block_reason::BlocklistReason;
 use crate::arb::global::enums::step_type::StepType;
+use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::WithTrace;
+use crate::arb::util::alias::AResult;
 use crate::arb::util::structs::cache_type::CacheType;
 use crate::arb::util::structs::persistent_cache::PersistentCache;
+use crate::arb::util::structs::rate_limiter::RateLimitError;
 use crate::arb::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
 use chrono::{DateTime, Utc};
@@ -32,17 +36,24 @@ pub async fn on_new_pool_received(with_trace: WithTrace<Pubkey>) -> anyhow::Resu
     unit_ok!()
 }
 
-async fn record_if_real_pool(addr: &Pubkey) -> bool {
+async fn record_if_real_pool(addr: &Pubkey) {
     if NonPoolBlocklist.get(addr).await.is_some() {
-        return false;
+        return;
     }
-    let saved = PoolRecordRepository::ensure_exists(addr).await.is_some();
-    if !saved {
-        let entry = BlocklistEntry::new(BlocklistReason::SaveFailed);
-        NonPoolBlocklist.put(*addr, entry).await;
-        return false;
+    let result = AnyPoolHolder::fresh_get(addr).await;
+    match result {
+        Ok(c) => {
+            let _ = PoolRecordRepository::ensure_exists(addr).await;
+        }
+        Err(e) => {
+            // if it's not rate limit error, we block it.
+            if !e.is::<RateLimitError>() {
+                NonPoolBlocklist
+                    .put(*addr, BlocklistEntry::new(BlocklistReason::SaveFailed))
+                    .await;
+            }
+        }
     }
-    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
