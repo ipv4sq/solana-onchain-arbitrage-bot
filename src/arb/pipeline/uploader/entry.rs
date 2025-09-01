@@ -58,7 +58,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         &wallet,                                   //
         minor_mint,                                //
         350_000,                                   //
-        20_000,                                    //
+        30_000,                                    //
         &configs,                                  //
         (0.0015 * LAMPORTS_PER_SOL as f64) as u64, //
         true,                                      //

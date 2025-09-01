@@ -79,7 +79,7 @@ pub async fn build_tx(
     let jito_tip_ix = transfer(
         &wallet_pub,
         &jito_tip,
-        (0.001 * LAMPORTS_PER_SOL as f64) as u64,
+        (0.0006 * LAMPORTS_PER_SOL as f64) as u64,
     );
 
     if include_create_token_account_ix {
