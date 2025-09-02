@@ -12,6 +12,7 @@ use crate::arb::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::uploader::helius::sender;
+use crate::arb::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
 use crate::arb::util::solana::pda::{ata, ata_sol_token};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
@@ -41,7 +42,7 @@ use tracing::{error, info};
 
 const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
 const DEFAULT_UNIT_PRICE: u64 = 500_000;
-const TIP_ACCOUNTS: &[&str] = &[
+const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
     "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
     "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta",
@@ -73,13 +74,15 @@ pub async fn build_tx(
         .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
         .program
         .0;
-    let jito_tip = random_select(TIP_ACCOUNTS)
-        .or_err("Cannot randomly find tip account")?
-        .to_pubkey();
+    let jito_tip_account = get_random_tip_account();
+    let p75_jito_tip = get_jito_tips()
+        .map(|t| t.landed_tips_75th_percentile)
+        .unwrap_or(0.00001);
+
     let jito_tip_ix = transfer(
         &wallet_pub,
-        &jito_tip,
-        (0.0006 * LAMPORTS_PER_SOL as f64) as u64,
+        &jito_tip_account,
+        (p75_jito_tip * LAMPORTS_PER_SOL as f64) as u64,
     );
 
     if include_create_token_account_ix {
@@ -240,7 +243,7 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
     Ok(result)
 }
 
-pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<()> {
+pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<String> {
     if trace.since_begin() > 400 {
         info!(
             "Gave up on landing tx because it takes {} milliseconds from trigger to now",
@@ -250,14 +253,15 @@ pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<()>
     }
     trace.step(StepType::MevRealTxRpcCall);
     // let response = rpc_client().send_transaction(tx).await?;
-    sender(tx).await;
-    trace.step(StepType::MevRealTxRpcReturned);
-    // info!(
-    //     "MEV transaction sent successfully: {}",
-    //     response.to_string()
-    // );
-    // Ok(response)
-    unit_ok!()
+    // sender(tx).await;
+    let response = send_bundle(tx).await?;
+    trace.step_with(
+        StepType::MevRealTxRpcReturned,
+        "jito_bundle_id",
+        response.clone(),
+    );
+    info!("MEV transaction sent successfully: jito id: {}", response);
+    Ok(response)
 }
 
 pub async fn log_mev_simulation(

@@ -7,6 +7,7 @@ use crate::arb::global::enums::step_type::StepType;
 use crate::arb::global::state::any_pool_holder::AnyPoolHolder;
 use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::uploader::debug;
+use crate::arb::pipeline::uploader::jito::get_jito_tips;
 use crate::arb::pipeline::uploader::mev_bot::construct;
 use crate::arb::pipeline::uploader::mev_bot::construct::{
     log_mev_simulation, real_mev_tx, simulate_mev_tx,
@@ -54,14 +55,19 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
 
     let wallet_pubkey = wallet.pubkey();
+    let jito_tips = get_jito_tips()
+        .map(|t| t.landed_tips_75th_percentile)
+        .unwrap_or(0.00001);
+    let minimum_profit = jito_tips + 0.0001;
     build_and_send(
-        &wallet,                                   //
-        minor_mint,                                //
-        350_000,                                   //
-        30_000,                                    //
-        &configs,                                  //
-        (0.0015 * LAMPORTS_PER_SOL as f64) as u64, //
-        true,                                      //
+        &wallet,    //
+        minor_mint, //
+        350_000,    //
+        // 30_000,
+        1,                                                 //
+        &configs,                                          //
+        (minimum_profit * LAMPORTS_PER_SOL as f64) as u64, //
+        true,                                              //
         trace,
     )
     .await
@@ -82,7 +88,6 @@ pub async fn build_and_send(
     let alt_keys = vec![
         // this seems to be legit
         "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-        // "q52amtQzHcXs2PA3c4Xqv1LRRZCbFMzd4CGHu1tHdp1".to_pubkey(),
     ];
     trace.step(StepType::MevIxBuilding);
 
