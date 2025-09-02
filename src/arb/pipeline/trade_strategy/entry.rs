@@ -9,6 +9,7 @@ use crate::arb::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::arb::util::alias::{MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
 use futures::stream::{self, StreamExt};
+use maplit::hashset;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use tracing::{info, warn};
@@ -26,8 +27,12 @@ pub async fn on_pool_update(
     if !mints.contains(&Mints::WSOL) {
         return None;
     }
-    if mints.minor_mint().ok()? == Mints::USDC {
-        info!("Skipping USDC pools");
+
+    let minor_mint = mints.minor_mint().ok()?;
+    let blocklist = hashset! {Mints::USDC, Mints::USDT};
+
+    if blocklist.contains(&minor_mint) {
+        info!("Skipping blocklist pools");
         return None;
     }
     trace.step_with_address(StepType::TradeStrategyStarted, "pool_address", pool_address);
