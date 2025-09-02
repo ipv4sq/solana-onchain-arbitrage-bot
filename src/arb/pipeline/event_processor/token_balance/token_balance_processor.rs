@@ -18,9 +18,9 @@ pub struct TokenAmount {
 pub static TokenBalanceShortLivingCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
     Lazy::new(|| {
         TtlLoadingCache::new(
-            20_000_000,
+            10_000_000,
             //
-            Duration::from_secs(3600 * 12),
+            Duration::from_secs(3600 * 3),
             |_| async move { None },
         )
     });
