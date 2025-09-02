@@ -136,9 +136,8 @@ impl JitoClient {
     }
 
     pub async fn fetch_tip_amounts(&self) -> AResult<TipFloorData> {
-        let tip_floor_url = format!("{}/api/v1/bundles/tip_floor", self.base_url);
-
-        let response = self.client.get(&tip_floor_url).send().await?;
+        let tip_floor_url = "https://bundles.jito.wtf/api/v1/bundles/tip_floor";
+        let response = self.client.get(tip_floor_url).send().await?;
 
         if !response.status().is_success() {
             return Err(anyhow!(
