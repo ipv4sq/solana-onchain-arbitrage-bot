@@ -40,7 +40,7 @@ impl AnyPoolHolder {
 
 #[allow(non_upper_case_globals)]
 static cache: Lazy<LoadingCache<Pubkey, AnyPoolConfig>> = Lazy::new(|| {
-    LoadingCache::new(10_000_000, |pool: &Pubkey| {
+    LoadingCache::new(2_000_000, |pool: &Pubkey| {
         let pool = *pool;
         async move { AnyPoolConfig::from(&pool).await.ok() }
     })

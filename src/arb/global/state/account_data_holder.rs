@@ -8,7 +8,7 @@ use tracing::warn;
 
 #[allow(non_upper_case_globals)]
 static AccountDataCache: Lazy<TtlLoadingCache<Pubkey, Vec<u8>>> =
-    Lazy::new(|| TtlLoadingCache::new(10_000_000, Interval::HOUR, |_| async move { None }));
+    Lazy::new(|| TtlLoadingCache::new(5_000_000, Interval::HOUR, |_| async move { None }));
 
 pub struct AccountDataHolder {}
 
