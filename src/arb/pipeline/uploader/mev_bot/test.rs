@@ -1,19 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use crate::arb::dex::any_pool_config::AnyPoolConfig;
-
     use crate::arb::global::client::rpc::{ensure_mint_account_exists, fetch_tx};
-    use crate::arb::global::enums::dex_type::DexType;
-    use crate::arb::pipeline::uploader::mev_bot::construct::*;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};
 
-    use crate::arb::global::constant::token_program::TokenProgram;
-    use crate::arb::global::trace::types::Trace;
-    use crate::arb::pipeline::uploader::entry::build_and_send;
     use crate::arb::util::debug::log_account_metas;
 
     fn get_wallet() -> Keypair {
