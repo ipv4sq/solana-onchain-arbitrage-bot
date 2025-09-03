@@ -17,8 +17,13 @@ use std::time::Duration;
 use tracing::{error, warn};
 
 #[allow(non_upper_case_globals)]
-static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
-    Lazy::new(|| TtlLoadingCache::new(5_000_000, Interval::WEEK, |_| async move { None }));
+static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> = Lazy::new(|| {
+    TtlLoadingCache::new(
+        1_000_000,
+        Duration::from_secs(3600 * 3),
+        |_| async move { None },
+    )
+});
 
 #[allow(non_upper_case_globals)]
 pub static QueryRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
