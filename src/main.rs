@@ -1,7 +1,6 @@
 pub mod arb;
 #[cfg(test)]
 pub mod test;
-pub mod util;
 
 use crate::arb::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
 use solana_onchain_arbitrage_bot::arb::global;

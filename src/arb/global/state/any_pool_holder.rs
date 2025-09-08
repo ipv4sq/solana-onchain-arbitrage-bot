@@ -4,11 +4,9 @@ use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::token_balance_holder::QueryRateLimiter;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::structs::loading_cache::LoadingCache;
-use crate::arb::util::structs::rate_limiter::RateLimitError;
 use crate::arb::util::traits::option::OptionExt;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
-use tracing::warn;
 
 pub struct AnyPoolHolder;
 

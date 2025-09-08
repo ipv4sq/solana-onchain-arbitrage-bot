@@ -1,6 +1,5 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
 use crate::arb::global::client::rpc::rpc_client;
-use crate::arb::global::constant::duration::Interval;
 use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
