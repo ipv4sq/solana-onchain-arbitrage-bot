@@ -189,10 +189,10 @@ mod tests {
     use crate::arb::dex::meteora_damm_v2::misc::input_account::MeteoraDammV2InputAccount;
     use crate::arb::dex::meteora_damm_v2::misc::input_data::is_meteora_damm_v2_swap;
     use crate::arb::dex::meteora_damm_v2::pool_data::test::load_pool_data;
-    use crate::arb::global::client::rpc::fetch_tx_sync;
     use crate::arb::global::constant::pool_program::PoolProgram;
     use crate::arb::global::constant::token_program::TokenProgram;
     use crate::arb::program::mev_bot::ix::extract_mev_instruction;
+    use crate::arb::sdk::solana_rpc::utils::fetch_tx_sync;
     use crate::arb::util::traits::account_meta::ToAccountMeta;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use crate::test::test_utils::get_test_rpc_client;

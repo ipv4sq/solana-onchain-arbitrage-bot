@@ -133,9 +133,9 @@ fn find_ata_owner(ata: &Pubkey, mint: &Pubkey, potential_owners: &[Pubkey]) -> O
 
 #[cfg(test)]
 mod tests {
-    use crate::arb::global::client::rpc::fetch_tx;
     use crate::arb::global::constant::mint::Mints;
     use crate::arb::program::mev_bot::ix::{extract_mev_instruction, is_mev_box_ix_profitable};
+    use crate::arb::sdk::solana_rpc::utils::fetch_tx;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

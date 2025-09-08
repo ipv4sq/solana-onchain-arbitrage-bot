@@ -1,4 +1,4 @@
-use crate::arb::global::client::rpc;
+use crate::arb::sdk::solana_rpc::rpc;
 use anyhow::Result;
 use parking_lot::RwLock;
 use solana_client::nonblocking::rpc_client::RpcClient;

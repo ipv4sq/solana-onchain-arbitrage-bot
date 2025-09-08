@@ -8,6 +8,5 @@ pub mod random;
 pub mod serde_helpers;
 pub mod solana;
 pub mod structs;
-pub mod sync;
 pub mod traits;
 pub mod worker;

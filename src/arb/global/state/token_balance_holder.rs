@@ -1,8 +1,9 @@
 use crate::arb::database::mint_record::repository::MintRecordRepository;
-use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
+use crate::arb::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::arb::sdk::solana_rpc::rpc::rpc_client;
 use crate::arb::util::alias::MintAddress;
 use crate::arb::util::structs::rate_limiter::RateLimiter;
 use crate::arb::util::structs::ttl_loading_cache::TtlLoadingCache;
@@ -61,7 +62,7 @@ async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmo
         warn!("Query rate limiter expired: {}", e);
         return None;
     }
-    let data = rpc_client().get_account(account).await.ok()?;
+    let data = buffered_get_account(account).await.ok()?;
     let vault = Account::unpack_from_slice(&data.data).ok()?;
     if *mint != vault.mint {
         error!("Fucked up here mint={:?}, vault={:?}", mint, vault);

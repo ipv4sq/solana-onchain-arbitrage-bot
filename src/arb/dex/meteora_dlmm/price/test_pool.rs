@@ -1,6 +1,6 @@
 use crate::arb::dex::interface::PoolDataLoader;
 use crate::arb::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::arb::global::client::rpc::rpc_client;
+use crate::arb::sdk::solana_rpc::rpc::rpc_client;
 use crate::arb::util::traits::pubkey::ToPubkey;
 
 #[tokio::test]

@@ -1,5 +1,5 @@
 use crate::arb::dex::pump_amm::PUMP_GLOBAL_CONFIG;
-use crate::arb::global::client::rpc::rpc_client;
+use crate::arb::sdk::solana_rpc::rpc::rpc_client;
 use crate::arb::util::alias::AResult;
 use crate::arb::util::serde_helpers;
 use crate::arb::util::structs::cache_type::CacheType;

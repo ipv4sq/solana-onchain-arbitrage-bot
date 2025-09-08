@@ -1,8 +1,9 @@
 use crate::arb::convention::chain::instruction::Instruction;
 use crate::arb::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
-use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::enums::direction::Direction;
+use crate::arb::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::arb::sdk::solana_rpc::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::arb::util::structs::mint_pair::MintPair;
 use serde::{Deserialize, Serialize};
@@ -26,7 +27,7 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     where
         Self: Sized,
     {
-        let account = rpc_client().get_account(address).await?;
+        let account = buffered_get_account(address).await?;
         let dex_type = DexType::determine_from(&account.owner);
         Self::from_data(*address, dex_type, &account.data)
     }

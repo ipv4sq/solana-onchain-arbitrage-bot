@@ -57,8 +57,8 @@ mod test {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
     use crate::arb::global::client::db::must_init_db;
-    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
+    use crate::arb::sdk::solana_rpc::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

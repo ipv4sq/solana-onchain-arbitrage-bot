@@ -55,8 +55,8 @@ impl PumpAmmPoolData {
 mod tests {
     use super::*;
     use crate::arb::dex::interface::PoolDataLoader;
-    use crate::arb::global::client::rpc::rpc_client;
     use crate::arb::global::constant::mint::Mints;
+    use crate::arb::sdk::solana_rpc::rpc::rpc_client;
     use crate::arb::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
 

@@ -1,7 +1,7 @@
 use crate::arb::dex::any_pool_config::AnyPoolConfig;
-use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::enums::dex_type::DexType;
 use crate::arb::global::state::token_balance_holder::QueryRateLimiter;
+use crate::arb::sdk::solana_rpc::rpc::rpc_client;
 use crate::arb::util::alias::{AResult, PoolAddress};
 use crate::arb::util::structs::loading_cache::LoadingCache;
 use crate::arb::util::traits::option::OptionExt;
