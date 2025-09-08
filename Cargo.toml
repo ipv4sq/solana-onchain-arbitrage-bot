@@ -80,6 +80,7 @@ tonic-health = "0.12.3"
 tokio-stream = "0.1.17"
 yellowstone-grpc-client = "8.0.0"
 yellowstone-grpc-proto = "8.0.0"
+time = "0.3.41"
 
 
 [dev-dependencies]
