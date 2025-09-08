@@ -1,9 +1,10 @@
-pub mod arb;
 #[cfg(test)]
 pub mod test;
 
-use solana_onchain_arbitrage_bot::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
 use solana_onchain_arbitrage_bot::global;
+use solana_onchain_arbitrage_bot::pipeline::chain_subscriber::registrar::bootstrap_subscriber;
+use solana_onchain_arbitrage_bot::spawn_with_error_handling;
+use solana_onchain_arbitrage_bot::util;
 use tracing::info;
 
 #[tokio::main]
@@ -15,7 +16,9 @@ async fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     }));
 
-    solana_onchain_arbitrage_bot::util::logging::init()?;
+    util::logging::init()?;
+
+    // Access database URL to trigger lazy initialization and validate env vars
 
     // Initialize database connection pool
     info!("Initializing database connection pool...");

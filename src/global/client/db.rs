@@ -1,3 +1,4 @@
+use crate::util::env::holder::ENV_CONFIG;
 use anyhow::Result;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::env;
@@ -8,7 +9,7 @@ static DB_CONNECTION: OnceCell<DatabaseConnection> = OnceCell::const_new();
 
 async fn create_connection() -> Result<DatabaseConnection> {
     dotenv::dotenv().ok();
-    let database_url = env::var("DATABASE_URL")?;
+    let database_url = ENV_CONFIG.database_url.clone();
 
     let mut opt = ConnectOptions::new(database_url);
     opt.max_connections(50)
