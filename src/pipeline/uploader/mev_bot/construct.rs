@@ -11,12 +11,12 @@ use crate::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
+use crate::return_error;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
-use crate::return_error;
 use anyhow::{anyhow, Result};
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
@@ -185,7 +185,7 @@ fn fee_collector(use_flashloan: bool) -> Pubkey {
     }
 }
 
-fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u32) {
+pub fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u32) {
     let seed = rand::random::<u32>() % 1000;
     let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(compute_limit + seed);
     // 1 lamport = 1_000_000

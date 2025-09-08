@@ -28,7 +28,7 @@ pub fn json_config() -> RpcTransactionConfig {
 #[cfg(test)]
 pub fn _set_test_client() {
     *RPC_HOLDER.write() = Arc::new(rpc_client::RpcClient::new_with_commitment(
-        "".to_string(),
+        "http://127.0.0.1:8899".to_string(),
         CommitmentConfig::processed(),
     ));
 }
