@@ -71,22 +71,14 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
 
     match response {
         Ok(accounts) => {
-            let some_accounts = accounts
-                .iter()
-                .filter_map(|a| a.as_ref())
-                .collect::<Vec<_>>();
-
-            for account in some_accounts {
-                if let Some(x) = current_batch.remove(&account.owner) {
-                    let _ = x.on_response.send(Ok(account.clone())).await;
+            for (pubkey, account_option) in public_keys.iter().zip(accounts.iter()) {
+                if let Some(request) = current_batch.remove(pubkey) {
+                    let result = match account_option {
+                        Some(account) => Ok(account.clone()),
+                        None => Err(anyhow!("{} Not found", pubkey)),
+                    };
+                    let _ = request.on_response.send(result).await;
                 }
-            }
-
-            for (leftover, request) in current_batch {
-                let _ = request
-                    .on_response
-                    .send(Err(anyhow!("{} Not found", leftover)))
-                    .await;
             }
         }
         Err(e) => {
