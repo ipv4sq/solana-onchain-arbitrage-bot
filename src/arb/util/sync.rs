@@ -1,23 +1,51 @@
 use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::util::alias::AResult;
+use crate::arb::util::traits::option::OptionExt;
+use anyhow::anyhow;
 use solana_sdk::account::Account;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::{select, sync::mpsc, time};
+use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc, OnceCell};
+use tokio::{select, time};
 
 struct Request {
     address: Pubkey,
-    response_tx: mpsc::Sender<AResult<Account>>,
+    on_response: Sender<AResult<Account>>,
 }
 
-async fn the_entry() {
-    let (_tx, mut pipeline) = mpsc::channel::<Request>(100);
-    async fn async_call() {
-        let (_sx, _rx) = mpsc::channel::<Pubkey>(100);
-        todo!()
+static CHANNEL: OnceCell<mpsc::Sender<Request>> = OnceCell::const_new();
+
+async fn get_sender() -> &'static Sender<Request> {
+    CHANNEL
+        .get_or_init(|| async {
+            let (tx, rx) = mpsc::channel::<Request>(1000);
+            tokio::spawn(loop_forever(rx));
+            tx
+        })
+        .await
+}
+
+pub async fn buffered_get_account(address: Pubkey) -> AResult<Account> {
+    let (tx, mut rx) = mpsc::channel::<AResult<Account>>(1);
+    let request = Request {
+        address,
+        on_response: tx,
+    };
+    let _ = get_sender().await.send(request).await?;
+    rx.recv().await.or_err("channel closed unexpectedly")?
+}
+
+async fn loop_forever(mut pipeline: mpsc::Receiver<Request>) {
+    loop {
+        every_batch(&mut pipeline).await;
     }
+}
+
+async fn every_batch(pipeline: &mut mpsc::Receiver<Request>) {
     let mut ticker = time::interval(Duration::from_secs(400));
+
     let mut current_batch: HashMap<Pubkey, Request> = HashMap::new();
 
     loop {
@@ -39,20 +67,28 @@ async fn the_entry() {
     let response = rpc_client().get_multiple_accounts(&public_keys).await;
     match response {
         Ok(accounts) => {
-            for (pubkey, account_option) in public_keys.iter().zip(accounts.iter()) {
-                if let Some(request) = current_batch.remove(pubkey) {
-                    let result = account_option
-                        .as_ref()
-                        .cloned()
-                        .ok_or_else(|| anyhow::anyhow!("Account not found: {}", pubkey));
-                    let _ = request.response_tx.send(result).await;
+            let some_accounts = accounts
+                .iter()
+                .filter_map(|a| a.as_ref())
+                .collect::<Vec<_>>();
+
+            for account in some_accounts {
+                if let Some(x) = current_batch.remove(&account.owner) {
+                    let _ = x.on_response.send(Ok(account.clone())).await;
                 }
+            }
+
+            for (leftover, request) in current_batch {
+                let _ = request
+                    .on_response
+                    .send(Err(anyhow!("{} Not found", leftover)))
+                    .await;
             }
         }
         Err(e) => {
             for (_, request) in current_batch {
                 let _ = request
-                    .response_tx
+                    .on_response
                     .send(Err(anyhow::anyhow!("RPC error: {}", e)))
                     .await;
             }
