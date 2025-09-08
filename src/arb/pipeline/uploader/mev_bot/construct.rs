@@ -14,11 +14,11 @@ use crate::arb::global::trace::types::Trace;
 use crate::arb::pipeline::uploader::helius::sender;
 use crate::arb::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
 use crate::arb::util::alias::{MintAddress, TokenProgramAddress};
+use crate::arb::util::random::random_select;
 use crate::arb::util::solana::pda::{ata, ata_sol_token};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::arb::util::traits::option::OptionExt;
 use crate::arb::util::traits::pubkey::ToPubkey;
-use crate::util::random_select;
 use crate::{return_error, unit_ok};
 use anyhow::{anyhow, Result};
 use rand::prelude::IndexedRandom;
@@ -266,11 +266,7 @@ pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<Str
             Ok(bundle_id)
         }
         Err(e) => {
-            trace.step_with(
-                StepType::MevRealTxRpcReturned,
-                "error",
-                e.to_string(),
-            );
+            trace.step_with(StepType::MevRealTxRpcReturned, "error", e.to_string());
             error!("Failed to send MEV transaction: {}", e);
             Err(e)
         }

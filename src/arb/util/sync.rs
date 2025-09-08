@@ -1,5 +1,5 @@
 use crate::arb::global::client::rpc::rpc_client;
-use crate::arb::global::constant::mint::Mints;
+use crate::arb::util::alias::AResult;
 use solana_sdk::account::Account;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
@@ -8,7 +8,7 @@ use tokio::{select, sync::mpsc, time};
 
 struct Request {
     address: Pubkey,
-    response_rx: mpsc::Receiver<Account>,
+    response_tx: mpsc::Sender<AResult<Account>>,
 }
 
 async fn the_entry() {
@@ -33,6 +33,29 @@ async fn the_entry() {
             }
         }
     }
-    let a = rpc_client().get_account(&Mints::WSOL).await.unwrap();
-    // get multiaccount
+
+    let public_keys = current_batch.keys().cloned().collect::<Vec<_>>();
+
+    let response = rpc_client().get_multiple_accounts(&public_keys).await;
+    match response {
+        Ok(accounts) => {
+            for (pubkey, account_option) in public_keys.iter().zip(accounts.iter()) {
+                if let Some(request) = current_batch.remove(pubkey) {
+                    let result = account_option
+                        .as_ref()
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!("Account not found: {}", pubkey));
+                    let _ = request.response_tx.send(result).await;
+                }
+            }
+        }
+        Err(e) => {
+            for (_, request) in current_batch {
+                let _ = request
+                    .response_tx
+                    .send(Err(anyhow::anyhow!("RPC error: {}", e)))
+                    .await;
+            }
+        }
+    }
 }
