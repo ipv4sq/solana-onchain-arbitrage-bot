@@ -1,14 +1,14 @@
 use crate::arb::global::client::rpc::rpc_client;
 use crate::arb::global::constant::mint::Mints;
-use maplit::hashset;
+use solana_sdk::account::Account;
 use solana_sdk::pubkey::Pubkey;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::time::Duration;
 use tokio::{select, sync::mpsc, time};
 
 struct Request {
     address: Pubkey,
-    response_rx: mpsc::Receiver<String>,
+    response_rx: mpsc::Receiver<Account>,
 }
 
 async fn the_entry() {
