@@ -3,6 +3,7 @@ pub mod instruction;
 pub mod mapper;
 pub mod message;
 pub mod meta;
+pub mod simulation;
 pub mod transaction;
 pub mod types;
 pub mod util;

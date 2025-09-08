@@ -1,23 +1,33 @@
+use crate::convention::chain::simulation::SimulationResponse;
 use crate::convention::chain::util::alt::get_alt_by_key;
+use crate::dex::interface::PoolConfig;
+use crate::dex::legacy_interface::InputAccountUtil;
+use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
+use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_dlmm::misc::input_data::MeteoraDlmmIxData;
 use crate::global::constant::pool_program::PoolProgram;
-use crate::global::daemon::blockhash::get_blockhash;
-use crate::global::enums::step_type::StepType;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
+use solana_account_decoder::UiAccountEncoding;
+use solana_client::rpc_config::{
+    RpcSimulateTransactionAccountsConfig, RpcSimulateTransactionConfig,
+};
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::message::v0::Message;
+use solana_program::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::VersionedTransaction;
+use solana_transaction_status::UiTransactionEncoding;
+use spl_token::state::Account as TokenAccount;
 
-async fn build_tx(signer: Pubkey, accounts: Vec<AccountMeta>) -> AResult<VersionedTransaction> {
+async fn build_tx(signer: Pubkey, accounts: Vec<AccountMeta>, amount_in: u64, min_amount_out: u64) -> AResult<VersionedTransaction> {
     let (mut instructions, _limit) = gas_instructions(100_000, 0);
     let data = MeteoraDlmmIxData {
-        amount_in: 10000000000,
-        min_amount_out: 0,
+        amount_in,
+        min_amount_out,
     };
     let swap_ix = Instruction {
         program_id: PoolProgram::METEORA_DLMM,
@@ -45,13 +55,112 @@ async fn build_tx(signer: Pubkey, accounts: Vec<AccountMeta>) -> AResult<Version
     Ok(tx)
 }
 
+#[derive(Debug, Clone)]
+pub struct SwapSimulationResult {
+    pub balance_diff_in: i128,
+    pub balance_diff_out: i128,
+    pub compute_units: Option<u64>,
+    pub error: Option<String>,
+}
+
+pub async fn simulate_swap_and_get_balance_diff(
+    pool_address: &Pubkey,
+    payer: &Pubkey,
+    amount_in: u64,
+    min_amount_out: u64,
+) -> AResult<SwapSimulationResult> {
+    let config = MeteoraDlmmConfig::from_address(pool_address).await?;
+    
+    let accounts = MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
+        payer,
+        pool_address,
+        &config.pool_data,
+    )
+    .await?
+    .to_list_cloned();
+    
+    let tx = build_tx(*payer, accounts.clone(), amount_in, min_amount_out).await?;
+    
+    let user_token_in = accounts[4].pubkey;
+    let user_token_out = accounts[5].pubkey;
+    
+    // Get pre-simulation balances
+    let pre_token_in = rpc_client().get_account(&user_token_in).await?;
+    let pre_token_out = rpc_client().get_account(&user_token_out).await?;
+    
+    let pre_balance_in = if pre_token_in.lamports > 0 {
+        TokenAccount::unpack(&pre_token_in.data)?.amount
+    } else {
+        0
+    };
+    
+    let pre_balance_out = if pre_token_out.lamports > 0 {
+        TokenAccount::unpack(&pre_token_out.data)?.amount
+    } else {
+        0
+    };
+    
+    // Simulate the transaction
+    let rpc_response = rpc_client()
+        .simulate_transaction_with_config(
+            &tx,
+            RpcSimulateTransactionConfig {
+                sig_verify: false,
+                replace_recent_blockhash: true,
+                commitment: None,
+                encoding: Some(UiTransactionEncoding::Base64),
+                accounts: Some(RpcSimulateTransactionAccountsConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
+                    addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+                }),
+                min_context_slot: None,
+                inner_instructions: true,
+            },
+        )
+        .await?;
+    
+    let sim_response = SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
+    
+    if let Some(err) = &sim_response.error {
+        return Ok(SwapSimulationResult {
+            balance_diff_in: 0,
+            balance_diff_out: 0,
+            compute_units: sim_response.compute_units,
+            error: Some(err.clone()),
+        });
+    }
+    
+    // Get post-simulation balances
+    let post_balance_in = sim_response
+        .get_account(&user_token_in)
+        .and_then(|acc| acc.get_token_balance().ok().flatten())
+        .unwrap_or(0);
+    
+    let post_balance_out = sim_response
+        .get_account(&user_token_out)
+        .and_then(|acc| acc.get_token_balance().ok().flatten())
+        .unwrap_or(0);
+    
+    let balance_diff_in = post_balance_in as i128 - pre_balance_in as i128;
+    let balance_diff_out = post_balance_out as i128 - pre_balance_out as i128;
+    
+    Ok(SwapSimulationResult {
+        balance_diff_in,
+        balance_diff_out,
+        compute_units: sim_response.compute_units,
+        error: None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::convention::chain::simulation::{SimulationHelper, SimulationResponse};
+    use crate::database::mint_record::repository::MintRecordRepository;
     use crate::dex::interface::PoolConfig;
     use crate::dex::legacy_interface::InputAccountUtil;
     use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
     use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
-    use crate::dex::meteora_dlmm::verification::build_tx;
+    use crate::dex::meteora_dlmm::verification::{build_tx, simulate_swap_and_get_balance_diff};
     use crate::global::client::db::must_init_db;
     use crate::sdk::solana_rpc::rpc::{_set_test_client, rpc_client};
     use crate::unit_ok;
@@ -66,7 +175,6 @@ mod tests {
     use solana_sdk::pubkey::Pubkey;
     use solana_transaction_status::UiTransactionEncoding;
     use sqlx::__rt::sleep;
-    use std::hash::Hash;
     use std::time::Duration;
 
     static POOL: Pubkey = pubkey!("5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6");
@@ -81,7 +189,7 @@ mod tests {
     async fn simulate() -> AResult<()> {
         _set_test_client();
         must_init_db().await;
-        
+
         // Give services time to initialize
         sleep(Duration::from_millis(100)).await;
 
@@ -94,7 +202,7 @@ mod tests {
         )
         .await?
         .to_list_cloned();
-        let tx = build_tx(payer, accounts.clone()).await?;
+        let tx = build_tx(payer, accounts.clone(), 10000000000, 0).await?;
 
         // Get the user token accounts from the instruction accounts
         let user_token_in = accounts[4].pubkey;
@@ -104,23 +212,32 @@ mod tests {
         let token_x_mint = config.pool_data.token_x_mint;
         let token_y_mint = config.pool_data.token_y_mint;
 
-        // Fetch token symbols from database
+        // Fetch token symbols and decimals from database
         use crate::database::mint_record::repository::MintRecordRepository;
         let token_x_record = MintRecordRepository::get_mint(&token_x_mint).await?;
         let token_x_symbol = token_x_record
-            .map(|m| m.symbol)
+            .as_ref()
+            .map(|m| m.symbol.clone())
             .unwrap_or_else(|| token_x_mint.to_string()[..6].to_string());
+        let token_x_decimals = token_x_record
+            .as_ref()
+            .and_then(|m| m.decimals.try_into().ok())
+            .unwrap_or(9u32);
 
         let token_y_record = MintRecordRepository::get_mint(&token_y_mint).await?;
         let token_y_symbol = token_y_record
-            .map(|m| m.symbol)
+            .as_ref()
+            .map(|m| m.symbol.clone())
             .unwrap_or_else(|| token_y_mint.to_string()[..6].to_string());
+        let token_y_decimals = token_y_record
+            .as_ref()
+            .and_then(|m| m.decimals.try_into().ok())
+            .unwrap_or(6u32);
 
         println!("Pool: {}", POOL);
         println!("Swap: {} -> {}", token_x_symbol, token_y_symbol);
 
         // Fetch pre-simulation token balances
-        use solana_account_decoder::parse_token::parse_token;
         use spl_token::state::Account as TokenAccount;
 
         let pre_token_in = rpc_client().get_account(&user_token_in).await?;
@@ -139,10 +256,18 @@ mod tests {
         };
 
         println!("\nPre-simulation balances:");
-        println!("  {} (in):  {}", token_x_symbol, pre_balance_in);
-        println!("  {} (out): {}", token_y_symbol, pre_balance_out);
+        println!(
+            "  {} (in):  {}",
+            token_x_symbol,
+            SimulationHelper::format_amount_with_raw(pre_balance_in, token_x_decimals)
+        );
+        println!(
+            "  {} (out): {}",
+            token_y_symbol,
+            SimulationHelper::format_amount_with_raw(pre_balance_out, token_y_decimals)
+        );
 
-        let response = rpc_client()
+        let rpc_response = rpc_client()
             .simulate_transaction_with_config(
                 &tx,
                 RpcSimulateTransactionConfig {
@@ -160,67 +285,88 @@ mod tests {
             )
             .await?;
 
-        println!("\nUnits consumed: {:?}", response.value.units_consumed);
+        // Convert to our unified SimulationResponse structure
+        let sim_response =
+            SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
+
+        println!("\nUnits consumed: {:?}", sim_response.compute_units);
 
         // Check simulation result
-        if let Some(err) = response.value.err {
-            println!("Simulation error: {:?}", err);
+        if let Some(err) = &sim_response.error {
+            println!("Simulation error: {}", err);
         } else {
             println!("Simulation successful!");
 
-            // Get post-simulation account states
-            if let Some(accounts) = response.value.accounts {
-                if accounts.len() >= 2 {
-                    // Decode the base64 account data to get actual balances
-                    use base64::Engine;
+            // Get post-simulation token balances using the unified structure
+            if let Some(token_in_account) = sim_response.get_account(&user_token_in) {
+                if let Some(token_out_account) = sim_response.get_account(&user_token_out) {
+                    // Extract token balances
+                    let post_balance_in = token_in_account.get_token_balance()?.unwrap_or(0);
+                    let post_balance_out = token_out_account.get_token_balance()?.unwrap_or(0);
 
-                    if let Some(account_in) = &accounts[0] {
-                        if let solana_account_decoder::UiAccountData::Binary(base64_str, _) =
-                            &account_in.data
-                        {
-                            let decoded =
-                                base64::engine::general_purpose::STANDARD.decode(base64_str)?;
-                            if decoded.len() >= 72 {
-                                let post_balance_in = TokenAccount::unpack(&decoded)?.amount;
-                                println!("\nPost-simulation balances:");
-                                println!(
-                                    "  {} (in):  {} (diff: {})",
-                                    &token_x_symbol,
-                                    post_balance_in,
-                                    post_balance_in as i128 - pre_balance_in as i128
-                                );
-                            }
-                        }
-                    }
+                    println!("\nPost-simulation balances:");
 
-                    if let Some(account_out) = &accounts[1] {
-                        if let solana_account_decoder::UiAccountData::Binary(base64_str, _) =
-                            &account_out.data
-                        {
-                            let decoded =
-                                base64::engine::general_purpose::STANDARD.decode(base64_str)?;
-                            if decoded.len() >= 72 {
-                                let post_balance_out = TokenAccount::unpack(&decoded)?.amount;
-                                println!(
-                                    "  {} (out): {} (diff: +{})",
-                                    &token_y_symbol,
-                                    post_balance_out,
-                                    post_balance_out as i128 - pre_balance_out as i128
-                                );
-                            }
-                        }
-                    }
+                    let diff_in = post_balance_in as i128 - pre_balance_in as i128;
+                    println!(
+                        "  {} (in):  {} (diff: {}{})",
+                        &token_x_symbol,
+                        SimulationHelper::format_amount_with_raw(post_balance_in, token_x_decimals),
+                        if diff_in < 0 { "-" } else { "" },
+                        SimulationHelper::format_amount(
+                            diff_in.unsigned_abs() as u64,
+                            token_x_decimals
+                        )
+                    );
+
+                    let diff_out = post_balance_out as i128 - pre_balance_out as i128;
+                    println!(
+                        "  {} (out): {} (diff: {}{})",
+                        &token_y_symbol,
+                        SimulationHelper::format_amount_with_raw(
+                            post_balance_out,
+                            token_y_decimals
+                        ),
+                        if diff_out > 0 { "+" } else { "" },
+                        SimulationHelper::format_amount(
+                            diff_out.unsigned_abs() as u64,
+                            token_y_decimals
+                        )
+                    );
                 }
             }
 
             // Show logs if available
-            if let Some(logs) = response.value.logs {
+            if !sim_response.logs.is_empty() {
                 println!("\nSimulation logs (first 10):");
-                for log in logs.iter().take(10) {
+                for log in sim_response.logs.iter().take(10) {
                     println!("  {}", log);
                 }
             }
         }
+        unit_ok!()
+    }
+
+    #[tokio::test]
+    async fn test_simulate_swap() -> AResult<()> {
+        _set_test_client();
+        must_init_db().await;
+        
+        let pool = POOL;
+        let payer = "BMnT51N4iSNhWU5PyFFgWwFvN1jgaiiDr9ZHgnkm3iLJ".to_pubkey();
+        let amount_in = 10000000000; // 10 tokens with 9 decimals
+        let min_amount_out = 0;
+        
+        let result = simulate_swap_and_get_balance_diff(&pool, &payer, amount_in, min_amount_out).await?;
+        
+        if let Some(error) = result.error {
+            println!("Simulation failed: {}", error);
+        } else {
+            println!("Simulation successful!");
+            println!("Balance diff in: {}", result.balance_diff_in);
+            println!("Balance diff out: {}", result.balance_diff_out);
+            println!("Compute units: {:?}", result.compute_units);
+        }
+        
         unit_ok!()
     }
 
