@@ -19,7 +19,7 @@ mod tests {
     use solana_program::pubkey::Pubkey;
 
     fn new_unique_pubkey() -> Pubkey {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let bytes: [u8; 32] = rng.gen();
         Pubkey::new_from_array(bytes)
     }

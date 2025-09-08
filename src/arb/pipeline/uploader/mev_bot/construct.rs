@@ -18,7 +18,6 @@ use crate::arb::util::solana::pda::{ata, ata_sol_token};
 use crate::arb::util::traits::account_meta::ToAccountMeta;
 use crate::return_error;
 use anyhow::{anyhow, Result};
-use rand::prelude::IndexedRandom;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
@@ -29,15 +28,11 @@ use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
 use solana_sdk::message::v0::Message;
 use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::system_instruction;
+use solana_sdk::system_instruction::transfer;
 use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
-use system_instruction::transfer;
 use tracing::{error, info};
-
-const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 500_000;
-const DEFAULT_UNIT_PRICE: u64 = 500_000;
 const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
     "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
@@ -62,7 +57,7 @@ pub async fn build_tx(
     never_abort: bool,
     include_create_token_account_ix: bool,
 ) -> Result<VersionedTransaction> {
-    let (mut instructions, limit) = gas_instructions(compute_unit_limit, unit_price);
+    let (mut instructions, _limit) = gas_instructions(compute_unit_limit, unit_price);
 
     let wallet_pub = wallet.pubkey();
     let mint_token_program = MintRecordRepository::get_mint(minor_mint)
@@ -291,7 +286,7 @@ pub async fn log_mev_simulation(
     let logs = Some(result.logs.clone());
     let compute_units_consumed = result.units_consumed.map(|u| u as i64);
 
-    let return_data = if let Some(ref meta) = result.meta {
+    let return_data = if let Some(ref _meta) = result.meta {
         // Extract return data from meta if available
         None // TransactionMeta doesn't have return_data field based on the struct
     } else {
@@ -457,7 +452,7 @@ pub async fn simulate_and_log_mev(
     minor_mint: &Pubkey,
     desired_mint: &Pubkey,
     pools: &[AnyPoolConfig],
-    minimum_profit: u64,
+    _minimum_profit: u64,
     trace: Trace,
 ) -> Result<(SimulationResult, Trace)> {
     let result = simulate_mev_tx(tx, &trace).await?;

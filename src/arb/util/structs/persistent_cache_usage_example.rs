@@ -93,7 +93,7 @@ impl CacheManager {
 pub async fn example_usage() {
     let cache_manager = CacheManager::new();
     
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let bytes: [u8; 32] = rng.gen();
     let pool = Pubkey::new_from_array(bytes);
     if let Some(pool_data) = cache_manager.get_pool_data(&pool).await {
