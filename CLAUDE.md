@@ -14,7 +14,8 @@ caching, comprehensive logging, and robust error handling:
 - **DEX Abstraction**: Unified trait-based interface for multiple DEX protocols
 - **Chain Subscription**: Transaction monitoring and pool discovery via Yellowstone gRPC
 - **Production Features**: Rate limiting, dual logging, background cache cleanup, connection pooling
-- **Supported DEXs**: Raydium (V4, CPMM, CLMM), Meteora (DLMM, DAMM, DAMM V2), Pump.fun (Classic & AMM), Orca Whirlpool, Solfi, Vertigo
+- **Supported DEXs**: Raydium (V4, CPMM, CLMM), Meteora (DLMM, DAMM, DAMM V2), Pump.fun (Classic & AMM), Orca Whirlpool,
+  Solfi, Vertigo
 
 **Onchain Program ID**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
@@ -61,8 +62,6 @@ cargo run --release --bin solana-onchain-arbitrage-bot -- --config config.toml
 cp config.toml.example config.toml
 # Edit config.toml with your RPC URL, wallet private key, and pool configurations
 
-# Setup database and gRPC (required for new architecture)
-cp .env.example .env
 # Configure DATABASE_URL in .env (PostgreSQL connection string)
 # Configure GRPC_URL and GRPC_TOKEN for Yellowstone gRPC subscription
 
@@ -249,8 +248,8 @@ Located in `src/` alongside the main `arb` module:
 - `bot.rs` - Bot orchestration logic
 - `config.rs` - Configuration management (supports environment variables with `$` prefix)
 - `legacy_dex/` - Legacy DEX implementations (being phased out)
-  - Contains legacy implementations for Raydium, Meteora, Pump, Whirlpool, Solfi, Vertigo
-  - Includes pool fetching and checking utilities
+    - Contains legacy implementations for Raydium, Meteora, Pump, Whirlpool, Solfi, Vertigo
+    - Includes pool fetching and checking utilities
 - `pools.rs` - Pool management utilities
 - `refresh.rs` - Data refresh logic
 - `server.rs` - HTTP server for monitoring
@@ -297,6 +296,7 @@ Located in `src/` alongside the main `arb` module:
     - Program: `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc`
 
 **Legacy DEX implementations** (in `src/legacy_dex/`, being phased out):
+
 - Raydium V4 (`675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`)
 - Raydium CLMM (`CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK`)
 - Pump.fun Classic (`6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`)
@@ -569,13 +569,13 @@ Located in `src/arb/dex/meteora_dlmm/price/best_effort.rs`:
 3. **Format code**: `cargo fmt` for consistent style
 4. **Test changes**: Run relevant tests with `cargo test`
 5. **Monitor logs**: Use dual console/file logging (`logs/bot_*.log`)
-   - Use `./tail_logs.sh` to tail the latest log file
-   - Logs rotate automatically with timestamp in filename
+    - Use `./tail_logs.sh` to tail the latest log file
+    - Logs rotate automatically with timestamp in filename
 6. **Database migrations**: Always use sqlx CLI for schema changes
 7. **Cache invalidation**: Remember to invalidate caches after updates
 8. **Chain Subscription**: Bot uses two monitors via gRPC:
-   - Owner account monitor - tracks pool owner accounts
-   - Involved account monitor - tracks accounts in transactions
+    - Owner account monitor - tracks pool owner accounts
+    - Involved account monitor - tracks accounts in transactions
 
 ## Creating Database Tables
 
