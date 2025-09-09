@@ -9,6 +9,7 @@ mod tests {
     use crate::dex::verification::common::simulate_pump_amm_swap_and_get_balance_diff;
     use crate::global::client::db::must_init_db;
     use crate::global::enums::dex_type::DexType;
+    use crate::sdk::solana_rpc::rpc::_set_test_client;
     use crate::unit_ok;
     use crate::util::alias::AResult;
     use crate::util::traits::account_meta::ToAccountMeta;
@@ -196,8 +197,8 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn verify_quote_to_base_matches_simulation() -> AResult<()> {
-        // _set_test_client();
         must_init_db().await;
+        _set_test_client();
 
         // Give services time to initialize
         sleep(Duration::from_millis(100)).await;
@@ -343,10 +344,12 @@ mod tests {
 
         let config = PumpAmmConfig::from_address(&POOL).await?;
         let payer = "AnyiYYecsbzSW9P35R3dy6Js2KpPCxaF7vpspMeWS6bV".to_pubkey();
-        let mut accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
+        let mut accounts = PumpAmmInputAccounts::build_accounts_with_direction(
             &payer,
             &POOL,
             &config.pool_data,
+            &config.pool_data.quote_mint,
+            &config.pool_data.base_mint,
         )
         .await?
         .to_list_cloned();
