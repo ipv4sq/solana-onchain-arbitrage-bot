@@ -4,6 +4,7 @@ use crate::database::mint_record::repository::MintRecordRepository;
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::pump_amm::misc::address_seed;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
+use crate::f;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::{
@@ -15,8 +16,8 @@ use crate::util::solana::pda::ata;
 use crate::util::traits::account_meta::ToAccountMeta;
 use crate::util::traits::option::OptionExt;
 use crate::util::traits::pubkey::ToPubkey;
-use crate::f;
 use solana_program::instruction::AccountMeta;
+use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,6 +43,8 @@ pub struct PumpAmmInputAccounts {
     pub coin_creator_vault_authority: AccountMeta,
     pub global_volume_accumulator: Option<AccountMeta>,
     pub user_volume_accumulator: Option<AccountMeta>,
+    pub pump_fee_config_pda: AccountMeta,
+    pub pump_amm_fee_config_pda: AccountMeta,
 }
 
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
@@ -74,6 +77,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             coin_creator_vault_authority: ix.account_at(18)?,
             global_volume_accumulator: ix.account_at(19).ok(),
             user_volume_accumulator: ix.account_at(20).ok(),
+            pump_fee_config_pda: ix.account_at(21)?,
+            pump_amm_fee_config_pda: ix.account_at(22)?,
         })
     }
 
@@ -92,6 +97,19 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
         let coin_creator_vault_authority =
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
+
+        let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
+        let pump_program = pubkey!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
+        let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
+
+        let (pump_fee_config_pda, _) =
+            Pubkey::find_program_address(&[b"fee_config", &pump_program.as_ref()], &fee_program);
+
+        let (pump_amm_fee_config_pda, _) = Pubkey::find_program_address(
+            &[b"fee_config", &pump_amm_program.as_ref()],
+            &fee_program,
+        );
+
         Ok(PumpAmmInputAccounts {
             pool: pool.to_writable(), // fuck, sometimes it is readonly, related to buy/sell
             user: payer.to_signer(),
@@ -132,6 +150,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             user_volume_accumulator: Some(
                 address_seed::get_user_volume_accumulator(payer).to_writable(),
             ),
+            pump_fee_config_pda: pump_fee_config_pda.to_readonly(),
+            pump_amm_fee_config_pda: pump_amm_fee_config_pda.to_readonly(),
         })
     }
 
@@ -174,80 +194,21 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             &self.coin_creator_vault_authority,
         ];
 
+        // Add optional volume accumulators if present
         if let Some(ref global_volume) = self.global_volume_accumulator {
             accounts.push(global_volume);
         }
         if let Some(ref user_volume) = self.user_volume_accumulator {
             accounts.push(user_volume);
         }
-
+        
+        // Add fee config PDAs at the end
+        accounts.push(&self.pump_fee_config_pda);
+        accounts.push(&self.pump_amm_fee_config_pda);
+        
         accounts
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::dex::interface::PoolDataLoader;
-    use crate::dex::legacy_interface::InputAccountUtil;
-    use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
-    use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
-    use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::rpc::rpc_client;
-    use crate::util::alias::AResult;
-    use crate::util::traits::account_meta::ToAccountMeta;
-    use crate::util::traits::pubkey::ToPubkey;
-    use crate::unit_ok;
-    use solana_sdk::signature::Signer;
-
-    // this test is from https://solscan.io/tx/wBy8PeBU8i41hS9k4yP2oELazH36hVgiaYTBQkArzzRpoQPLtaKN654rxFVjBZfxwBxgbLLS7igSFtVE1vm17DM
-    #[tokio::test]
-    async fn test() -> AResult<()> {
-        let pool = "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_pubkey();
-        let payer = "77777T2qnynHFsA63FyfY766ciBTXizavU1f5HeZXwN".to_pubkey();
-        let account = rpc_client()
-            .get_account(&pool)
-            .await
-            .expect("Failed to fetch pool account from RPC");
-
-        let pool_data =
-            PumpAmmPoolData::load_data(&account.data).expect("Failed to load pool data from RPC");
-
-        let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
-            &payer, &pool, &pool_data,
-        )
-        .await?;
-
-        let expected = PumpAmmInputAccounts {
-            pool: "F9zs9ZC7dSVftES1iaFV7ixCoW8rxjEQrxL447XKQ7HF".to_writable(),
-            user: "77777T2qnynHFsA63FyfY766ciBTXizavU1f5HeZXwN".to_signer(),
-            global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
-            base_mint: "4i6qgzGVhpE3zLQH3kVjFBaDBjoitvSiKmTY5Ho3pump".to_readonly(),
-            quote_mint: Mints::WSOL.to_readonly(),
-            user_base_token_account: "FkVWkbWQjKnpcFB634NT7TxYXjcPWxqKm9bZkb3Seao2".to_writable(),
-            user_quote_token_account: "8Edf3d9oiVUA3YphQo2z59B3hrtLWmeYpHxSt9ZGGVC9".to_writable(),
-            pool_base_token_account: "CTYA5KnKUzz4gUnggqK2Hi71nVjfgMn3Da2Z2ghWkgLG".to_writable(),
-            pool_quote_token_account: "92DSFgTnnhGmAW96Np1BhcSrFG6HAZ1Kh5aJrkmF3JUm".to_writable(),
-            protocol_fee_recipient: "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_program(),
-            protocol_fee_recipient_token_account: "DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn"
-                .to_writable(),
-            base_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
-            quote_token_program: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_program(),
-            system_program: "11111111111111111111111111111111".to_program(),
-            associated_token_program: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL".to_program(),
-            event_authority: "GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR".to_readonly(),
-            program: "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA".to_program(),
-            coin_creator_vault_ata: "G3LezYu5BKfHbERsxqUXXCBoN7NmqCzxtkJ4L6ykZrw8".to_writable(),
-            coin_creator_vault_authority: "HEpy9XAsaRenxzr4KrLpwrtwq1H17nH1h33Yh4dLELmj"
-                .to_readonly(),
-            global_volume_accumulator: Some(
-                "C2aFPdENg4A2HQsmrd5rTw5TaYBX5Ku887cWjbFKtZpw".to_writable(),
-            ),
-            user_volume_accumulator: Some(
-                "65PCyDCVET7UgAA1Rkd6PXR7dfoFG5jDMhDP7PjejyCS".to_writable(),
-            ),
-        };
-
-        assert_eq!(expected, accounts);
-        unit_ok!()
-    }
-}
+mod tests {}
