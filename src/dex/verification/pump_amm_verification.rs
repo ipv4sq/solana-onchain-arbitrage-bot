@@ -8,6 +8,7 @@ mod tests {
     use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
     use crate::dex::verification::common::simulate_pump_amm_swap_and_get_balance_diff;
     use crate::global::client::db::must_init_db;
+    use crate::global::enums::dex_type::DexType;
     use crate::sdk::solana_rpc::rpc::_set_test_client;
     use crate::unit_ok;
     use crate::util::alias::AResult;
@@ -22,7 +23,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn verify_base_to_quote_matches_simulation() -> AResult<()> {
-        _set_test_client();
+        // _set_test_client();
         must_init_db().await;
 
         // Give services time to initialize
@@ -84,7 +85,7 @@ mod tests {
         println!("  Quote mint: {}", config.pool_data.quote_mint);
         println!("  Creator: {}", config.pool_data.creator);
         println!("  Coin creator: {}", config.pool_data.coin_creator);
-        
+
         // Build accounts to inspect them
         let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
             &payer,
@@ -95,10 +96,22 @@ mod tests {
         println!("\nAccounts for simulation:");
         println!("  Pool: {}", accounts.pool.pubkey);
         println!("  User: {}", accounts.user.pubkey);
-        println!("  User base token: {}", accounts.user_base_token_account.pubkey);
-        println!("  User quote token: {}", accounts.user_quote_token_account.pubkey);
-        println!("  Coin creator vault: {}", accounts.coin_creator_vault_ata.pubkey);
-        println!("  Coin creator vault auth: {}", accounts.coin_creator_vault_authority.pubkey);
+        println!(
+            "  User base token: {}",
+            accounts.user_base_token_account.pubkey
+        );
+        println!(
+            "  User quote token: {}",
+            accounts.user_quote_token_account.pubkey
+        );
+        println!(
+            "  Coin creator vault: {}",
+            accounts.coin_creator_vault_ata.pubkey
+        );
+        println!(
+            "  Coin creator vault auth: {}",
+            accounts.coin_creator_vault_authority.pubkey
+        );
 
         // Simulate actual swap to get real output (base->quote direction)
         let result = simulate_pump_amm_swap_and_get_balance_diff(
@@ -341,7 +354,14 @@ mod tests {
   {}",
             accounts
                 .iter()
-                .map(|account| format!("--clone {}", account.pubkey))
+                .map(|account| {
+                    let dex_type = DexType::determine_from(&account.pubkey);
+                    return if dex_type != DexType::Unknown {
+                        format!("--clone-upgradeable-program {}", account.pubkey)
+                    } else {
+                        format!("--clone {}", account.pubkey)
+                    };
+                })
                 .collect::<Vec<_>>()
                 .join(" \\\n  ")
         );

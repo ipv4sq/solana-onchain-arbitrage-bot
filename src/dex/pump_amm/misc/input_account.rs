@@ -1,6 +1,7 @@
 use crate::convention::chain::instruction::Instruction;
 use crate::convention::chain::Transaction;
 use crate::database::mint_record::repository::MintRecordRepository;
+use crate::dex::interface::PoolDataLoader;
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::pump_amm::misc::address_seed;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
@@ -13,6 +14,7 @@ use crate::global::constant::token_program::{
 use crate::global::enums::direction::TradeDirection;
 use crate::util::alias::AResult;
 use crate::util::solana::pda::ata;
+use crate::util::structs::mint_pair::MintPair;
 use crate::util::traits::account_meta::ToAccountMeta;
 use crate::util::traits::option::OptionExt;
 use crate::util::traits::pubkey::ToPubkey;
@@ -43,8 +45,8 @@ pub struct PumpAmmInputAccounts {
     pub coin_creator_vault_authority: AccountMeta,
     pub global_volume_accumulator: Option<AccountMeta>,
     pub user_volume_accumulator: Option<AccountMeta>,
-    pub pump_fee_config_pda: AccountMeta,
-    pub pump_amm_fee_config_pda: AccountMeta,
+    pub fee_config: AccountMeta,
+    pub fee_program: AccountMeta,
 }
 
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
@@ -77,8 +79,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             coin_creator_vault_authority: ix.account_at(18)?,
             global_volume_accumulator: ix.account_at(19).ok(),
             user_volume_accumulator: ix.account_at(20).ok(),
-            pump_fee_config_pda: ix.account_at(21)?,
-            pump_amm_fee_config_pda: ix.account_at(22)?,
+            fee_config: ix.account_at(21)?,
+            fee_program: ix.account_at(22)?,
         })
     }
 
@@ -99,19 +101,21 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
 
         let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
-        let pump_program = pubkey!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
         let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
-
-        let (pump_fee_config_pda, _) =
-            Pubkey::find_program_address(&[b"fee_config", &pump_program.as_ref()], &fee_program);
 
         let (pump_amm_fee_config_pda, _) = Pubkey::find_program_address(
             &[b"fee_config", &pump_amm_program.as_ref()],
             &fee_program,
         );
 
+        let fee = if pool_data.pair().contains(&Mints::WSOL) {
+            Mints::WSOL
+        } else {
+            Mints::USDC
+        };
+
         Ok(PumpAmmInputAccounts {
-            pool: pool.to_writable(), // fuck, sometimes it is readonly, related to buy/sell
+            pool: pool.to_readonly(), // fuck, sometimes it is readonly, related to buy/sell
             user: payer.to_signer(),
             global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
             base_mint: pool_data.base_mint.to_readonly(),
@@ -127,7 +131,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             protocol_fee_recipient: pump_fee_recipient.to_readonly(),
             protocol_fee_recipient_token_account: ata(
                 &pump_fee_recipient,
-                &Mints::WSOL,
+                &fee,
                 &TokenProgram::SPL_TOKEN,
             )
             .to_writable(),
@@ -150,8 +154,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             user_volume_accumulator: Some(
                 address_seed::get_user_volume_accumulator(payer).to_writable(),
             ),
-            pump_fee_config_pda: pump_fee_config_pda.to_readonly(),
-            pump_amm_fee_config_pda: pump_amm_fee_config_pda.to_readonly(),
+            fee_config: pump_amm_fee_config_pda.to_program(),
+            fee_program: "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ".to_program(),
         })
     }
 
@@ -195,17 +199,17 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         ];
 
         // Add optional volume accumulators if present
-        if let Some(ref global_volume) = self.global_volume_accumulator {
-            accounts.push(global_volume);
-        }
-        if let Some(ref user_volume) = self.user_volume_accumulator {
-            accounts.push(user_volume);
-        }
-        
+        // if let Some(ref global_volume) = self.global_volume_accumulator {
+        //     accounts.push(global_volume);
+        // }
+        // if let Some(ref user_volume) = self.user_volume_accumulator {
+        //     accounts.push(user_volume);
+        // }
+
         // Add fee config PDAs at the end
-        accounts.push(&self.pump_fee_config_pda);
-        accounts.push(&self.pump_amm_fee_config_pda);
-        
+        accounts.push(&self.fee_config);
+        accounts.push(&self.fee_program);
+
         accounts
     }
 }

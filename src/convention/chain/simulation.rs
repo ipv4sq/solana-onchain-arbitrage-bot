@@ -1,12 +1,12 @@
+use crate::global::constant::token_program::TokenProgram;
 use crate::util::alias::AResult;
-use anyhow::anyhow;
 use base64::Engine;
 use solana_account_decoder::UiAccountData;
 use solana_client::rpc_response::{RpcSimulateTransactionResult, Response};
 use solana_program::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use spl_token::state::Account as TokenAccount;
-use std::collections::HashMap;
+use spl_token_2022::extension::StateWithExtensions;
 
 #[derive(Debug, Clone)]
 pub struct SimulationResponse {
@@ -106,12 +106,20 @@ impl SimulationResponse {
     
     pub fn get_token_balance(&self, pubkey: &Pubkey) -> AResult<Option<TokenBalance>> {
         if let Some(account) = self.get_account(pubkey) {
-            if account.data.len() >= TokenAccount::LEN {
+            if account.owner == TokenProgram::SPL_TOKEN && account.data.len() >= TokenAccount::LEN {
                 let token_account = TokenAccount::unpack(&account.data)?;
                 Ok(Some(TokenBalance {
                     mint: token_account.mint,
                     owner: token_account.owner,
                     amount: token_account.amount,
+                    decimals: 0, // Would need to fetch from mint
+                }))
+            } else if account.owner == TokenProgram::TOKEN_2022 && account.data.len() >= TokenAccount::LEN {
+                let state = StateWithExtensions::<spl_token_2022::state::Account>::unpack(&account.data)?;
+                Ok(Some(TokenBalance {
+                    mint: state.base.mint,
+                    owner: state.base.owner,
+                    amount: state.base.amount,
                     decimals: 0, // Would need to fetch from mint
                 }))
             } else {
@@ -125,12 +133,21 @@ impl SimulationResponse {
     pub fn get_token_balances(&self) -> AResult<Vec<TokenBalance>> {
         let mut balances = Vec::new();
         for account in &self.accounts {
-            if account.data.len() >= TokenAccount::LEN {
+            if account.owner == TokenProgram::SPL_TOKEN && account.data.len() >= TokenAccount::LEN {
                 if let Ok(token_account) = TokenAccount::unpack(&account.data) {
                     balances.push(TokenBalance {
                         mint: token_account.mint,
                         owner: token_account.owner,
                         amount: token_account.amount,
+                        decimals: 0, // Would need to fetch from mint
+                    });
+                }
+            } else if account.owner == TokenProgram::TOKEN_2022 && account.data.len() >= TokenAccount::LEN {
+                if let Ok(state) = StateWithExtensions::<spl_token_2022::state::Account>::unpack(&account.data) {
+                    balances.push(TokenBalance {
+                        mint: state.base.mint,
+                        owner: state.base.owner,
+                        amount: state.base.amount,
                         decimals: 0, // Would need to fetch from mint
                     });
                 }
@@ -172,15 +189,41 @@ impl SimulationResponse {
 
 impl SimulatedAccount {
     pub fn as_token_account(&self) -> AResult<Option<TokenAccount>> {
-        if self.data.len() >= TokenAccount::LEN {
+        if self.owner == TokenProgram::SPL_TOKEN && self.data.len() >= TokenAccount::LEN {
             Ok(Some(TokenAccount::unpack(&self.data)?))
+        } else if self.owner == TokenProgram::TOKEN_2022 && self.data.len() >= TokenAccount::LEN {
+            let state = StateWithExtensions::<spl_token_2022::state::Account>::unpack(&self.data)?;
+            Ok(Some(TokenAccount {
+                mint: state.base.mint,
+                owner: state.base.owner,
+                amount: state.base.amount,
+                delegate: state.base.delegate.into(),
+                state: match state.base.state {
+                    spl_token_2022::state::AccountState::Uninitialized => spl_token::state::AccountState::Uninitialized,
+                    spl_token_2022::state::AccountState::Initialized => spl_token::state::AccountState::Initialized,
+                    spl_token_2022::state::AccountState::Frozen => spl_token::state::AccountState::Frozen,
+                },
+                is_native: state.base.is_native.into(),
+                delegated_amount: state.base.delegated_amount,
+                close_authority: state.base.close_authority.into(),
+            }))
         } else {
             Ok(None)
         }
     }
     
     pub fn get_token_balance(&self) -> AResult<Option<u64>> {
-        Ok(self.as_token_account()?.map(|ta| ta.amount))
+        if self.owner == TokenProgram::SPL_TOKEN && self.data.len() >= TokenAccount::LEN {
+            Ok(Some(TokenAccount::unpack(&self.data)?.amount))
+        } else if self.owner == TokenProgram::TOKEN_2022 && self.data.len() >= TokenAccount::LEN {
+            Ok(Some(
+                StateWithExtensions::<spl_token_2022::state::Account>::unpack(&self.data)?
+                    .base
+                    .amount,
+            ))
+        } else {
+            Ok(None)
+        }
     }
 }
 

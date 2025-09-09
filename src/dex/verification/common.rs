@@ -2,14 +2,15 @@ use crate::convention::chain::simulation::SimulationResponse;
 use crate::convention::chain::util::alt::get_alt_by_key;
 use crate::dex::interface::PoolConfig;
 use crate::dex::legacy_interface::InputAccountUtil;
-use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
-use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_damm_v2::config::MeteoraDammV2Config;
 use crate::dex::meteora_damm_v2::misc::input_account::MeteoraDammV2InputAccount;
+use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
+use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_dlmm::misc::input_data::MeteoraDlmmIxData;
 use crate::dex::pump_amm::config::PumpAmmConfig;
 use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::global::constant::pool_program::PoolProgram;
+use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::AResult;
@@ -26,6 +27,19 @@ use solana_sdk::signature::Signature;
 use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
 use spl_token::state::Account as TokenAccount;
+use spl_token_2022::extension::StateWithExtensions;
+
+fn unpack_token_account(account_data: &[u8], owner: &Pubkey) -> AResult<u64> {
+    if owner == &TokenProgram::SPL_TOKEN {
+        Ok(TokenAccount::unpack(account_data)?.amount)
+    } else if owner == &TokenProgram::TOKEN_2022 {
+        Ok(StateWithExtensions::<spl_token_2022::state::Account>::unpack(account_data)?
+            .base
+            .amount)
+    } else {
+        Err(anyhow::anyhow!("Invalid token account owner: {}", owner).into())
+    }
+}
 
 async fn build_test_swap_tx(
     signer: Pubkey,
@@ -114,13 +128,13 @@ pub async fn simulate_swap_and_get_balance_diff(
     let pre_token_out = rpc_client().get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
-        TokenAccount::unpack(&pre_token_in.data)?.amount
+        unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
     } else {
         0
     };
 
     let pre_balance_out = if pre_token_out.lamports > 0 {
-        TokenAccount::unpack(&pre_token_out.data)?.amount
+        unpack_token_account(&pre_token_out.data, &pre_token_out.owner)?
     } else {
         0
     };
@@ -222,9 +236,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     instructions.push(swap_ix);
 
     // Use the same ALT as DLMM for now
-    let alt_keys = vec![
-        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-    ];
+    let alt_keys = vec!["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()];
 
     let mut alts = Vec::new();
     for key in &alt_keys {
@@ -248,13 +260,13 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     let pre_token_out = rpc_client().get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
-        TokenAccount::unpack(&pre_token_in.data)?.amount
+        unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
     } else {
         0
     };
 
     let pre_balance_out = if pre_token_out.lamports > 0 {
-        TokenAccount::unpack(&pre_token_out.data)?.amount
+        unpack_token_account(&pre_token_out.data, &pre_token_out.owner)?
     } else {
         0
     };
@@ -344,7 +356,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
         data.extend_from_slice(&min_amount_out.to_le_bytes()); // min_quote_amount_out
         data
     } else {
-        // Buy base tokens with quote tokens (quote -> base) 
+        // Buy base tokens with quote tokens (quote -> base)
         // Uses the "sell" discriminator for exact out
         let discriminator = [0x66, 0x06, 0x3d, 0x12, 0x01, 0xda, 0xeb, 0xea];
         let mut data = discriminator.to_vec();
@@ -364,9 +376,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     instructions.push(swap_ix);
 
     // Use the same ALT as other DEXs for now
-    let alt_keys = vec![
-        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-    ];
+    let alt_keys = vec!["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()];
 
     let mut alts = Vec::new();
     for key in &alt_keys {
@@ -393,13 +403,13 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     let pre_token_out = rpc_client().get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
-        TokenAccount::unpack(&pre_token_in.data)?.amount
+        unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
     } else {
         0
     };
 
     let pre_balance_out = if pre_token_out.lamports > 0 {
-        TokenAccount::unpack(&pre_token_out.data)?.amount
+        unpack_token_account(&pre_token_out.data, &pre_token_out.owner)?
     } else {
         0
     };
@@ -421,7 +431,15 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
                 inner_instructions: true,
             },
         )
-        .await?;
+        .await;
+
+    let rpc_response = match rpc_response {
+        Ok(rpc_response) => rpc_response,
+        Err(error) => {
+            println!("{}", error);
+            return Err(error.into());
+        }
+    };
 
     let sim_response =
         SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
