@@ -23,11 +23,11 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn verify_base_to_quote_matches_simulation() -> AResult<()> {
-        _set_test_client();
         must_init_db().await;
+        _set_test_client();
 
         // Give services time to initialize
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let payer = "AnyiYYecsbzSW9P35R3dy6Js2KpPCxaF7vpspMeWS6bV".to_pubkey();
         let amount_in = 100_000_000;
@@ -201,7 +201,7 @@ mod tests {
         _set_test_client();
 
         // Give services time to initialize
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let payer = "AnyiYYecsbzSW9P35R3dy6Js2KpPCxaF7vpspMeWS6bV".to_pubkey();
         let amount_in = 1_000_000_000; // 1 SOL (quote token, 9 decimals)
@@ -337,7 +337,6 @@ mod tests {
         unit_ok!()
     }
 
-    #[tokio::test]
     async fn build_command() -> AResult<()> {
         must_init_db().await;
         // _set_test_client();

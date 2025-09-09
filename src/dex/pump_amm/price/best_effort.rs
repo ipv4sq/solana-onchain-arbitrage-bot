@@ -19,24 +19,7 @@ impl PumpAmmPoolData {
     ) -> AResult<u64> {
         self.consists_of(from_mint, to_mint)?;
 
-        let (input_vault, output_vault) = self.get_vault_in_dir(from_mint, to_mint)?;
-
-        let input_balance = get_balance_of_account(&input_vault, from_mint)
-            .await
-            .or_err(f!("Unable to get balance of input vault"))?;
-
-        let output_balance = get_balance_of_account(&output_vault, to_mint)
-            .await
-            .or_err(f!("Unable to get balance of output vault"))?;
-
-        let input_reserve = input_balance.amount;
-        let output_reserve = output_balance.amount;
-
-        let raw_output_amount =
-            swap_base_input_without_fees(input_amount, input_reserve, output_reserve);
-
         let global_config = GlobalConfig::get().await?;
-
         let fees = compute_fees_bps(
             &global_config,
             None,
@@ -44,21 +27,65 @@ impl PumpAmmPoolData {
             0,
         );
 
-        let lp_fee = calculate_fee(raw_output_amount, fees.lp_fee_bps);
-        let protocol_fee = calculate_fee(raw_output_amount, fees.protocol_fee_bps);
+        let is_selling_base = from_mint == &self.base_mint;
+        
+        if is_selling_base {
+            // Selling base tokens for quote (base->quote)
+            // This is like sellBaseInputInternal in the SDK
+            let base_reserve = get_balance_of_account(&self.base_vault(), &self.base_mint)
+                .await
+                .or_err(f!("Unable to get balance of base vault"))?;
+            let quote_reserve = get_balance_of_account(&self.quote_vault(), &self.quote_mint)
+                .await
+                .or_err(f!("Unable to get balance of quote vault"))?;
 
-        let coin_creator_fee = if self.coin_creator == Pubkey::default() {
-            0
+            // Calculate quote amount out before fees
+            let quote_amount_out = swap_base_input_without_fees(
+                input_amount,
+                base_reserve.amount,
+                quote_reserve.amount,
+            );
+
+            // Calculate fees on the output
+            let lp_fee = calculate_fee(quote_amount_out, fees.lp_fee_bps);
+            let protocol_fee = calculate_fee(quote_amount_out, fees.protocol_fee_bps);
+            let coin_creator_fee = if self.coin_creator == Pubkey::default() {
+                0
+            } else {
+                calculate_fee(quote_amount_out, fees.creator_fee_bps)
+            };
+
+            // Subtract fees from output (user receives less)
+            let final_output = quote_amount_out
+                .saturating_sub(lp_fee)
+                .saturating_sub(protocol_fee)
+                .saturating_sub(coin_creator_fee);
+
+            Ok(final_output)
         } else {
-            calculate_fee(raw_output_amount, fees.creator_fee_bps)
-        };
+            // Buying base tokens with quote (quote->base)
+            // This is like buyQuoteInputInternal in the SDK
+            let base_reserve = get_balance_of_account(&self.base_vault(), &self.base_mint)
+                .await
+                .or_err(f!("Unable to get balance of base vault"))?;
+            let quote_reserve = get_balance_of_account(&self.quote_vault(), &self.quote_mint)
+                .await
+                .or_err(f!("Unable to get balance of quote vault"))?;
 
-        let final_output = raw_output_amount
-            .saturating_sub(lp_fee)
-            .saturating_sub(protocol_fee)
-            .saturating_sub(coin_creator_fee);
+            // Calculate effective quote after fees
+            let total_fee_bps = fees.lp_fee_bps + fees.protocol_fee_bps + 
+                if self.coin_creator == Pubkey::default() { 0 } else { fees.creator_fee_bps };
+            
+            // effectiveQuote = quote * 10000 / (10000 + totalFeeBps)
+            let effective_quote = (input_amount as u128 * FEE_RATE_DENOMINATOR as u128) / 
+                (FEE_RATE_DENOMINATOR as u128 + total_fee_bps as u128);
+            
+            // Calculate base amount out using the effective quote
+            let base_amount_out = (base_reserve.amount as u128 * effective_quote) / 
+                (quote_reserve.amount as u128 + effective_quote);
 
-        Ok(final_output)
+            Ok(base_amount_out as u64)
+        }
     }
 }
 
@@ -77,9 +104,15 @@ fn swap_base_input_without_fees(input_amount: u64, input_reserve: u64, output_re
     if input_reserve == 0 || output_reserve == 0 {
         return 0;
     }
-
+    
+    // Standard AMM formula: output = (output_reserve * input) / (input_reserve + input)
     let numerator = (output_reserve as u128) * (input_amount as u128);
     let denominator = (input_reserve as u128) + (input_amount as u128);
+    
+    if denominator == 0 {
+        return 0;
+    }
+    
     (numerator / denominator) as u64
 }
 

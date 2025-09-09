@@ -367,18 +367,18 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
             PumpSwapDirection::Buy,
         )
     } else {
-        // Quote -> Base: There's no exact IN instruction for this direction in Pump AMM
+        // Quote -> Base: Pump AMM only supports exact OUT for this direction
         // The Sell instruction (0x66) expects exact OUT semantics
-        // For testing, we'll calculate the expected output and use that
-
-        // If min_amount_out is 0, we need to calculate a reasonable value
+        // We need to calculate the exact base amount we want
+        
         let base_out = if min_amount_out == 0 {
-            // Calculate expected output for exact IN
+            // Calculate expected output with minimal slippage
+            // Use 0.01% slippage to account for rounding differences
             let calculated = config.get_amount_out(amount_in, from_mint, to_mint).await?;
-            // Apply 1% slippage to avoid errors
-            let with_slippage = calculated * 99 / 100;
-            println!("DEBUG: Quote->Base swap - Calculated base_out: {}, with 1% slippage: {}, amount_in: {}", 
-                     calculated, with_slippage, amount_in);
+            let with_slippage = calculated * 995 / 1000;  // 0.5% slippage
+            // Note: We need 0.5% slippage because Pump AMM uses exact OUT semantics
+            // for quote->base swaps, which requires specifying the exact base amount.
+            // Rounding differences in integer math require this buffer.
             with_slippage
         } else {
             println!(
