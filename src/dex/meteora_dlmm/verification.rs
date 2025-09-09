@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn simulate() -> AResult<()> {
+    async fn verify_get_amount_out_matches_simulation() -> AResult<()> {
         _set_test_client();
         must_init_db().await;
 
@@ -239,7 +239,7 @@ mod tests {
             expected_out
         );
 
-        // Use the new method to simulate swap
+        // Simulate actual swap to get real output
         let result =
             simulate_swap_and_get_balance_diff(&POOL, &payer, amount_in, min_amount_out).await?;
 
@@ -247,53 +247,72 @@ mod tests {
 
         if let Some(err) = &result.error {
             println!("Simulation error: {}", err);
+            assert!(false, "Simulation failed: {}", err);
+        }
+        
+        println!("Simulation successful!");
+        println!("\nBalance changes from simulation:");
+
+        println!(
+            "  {} (in):  {}{}",
+            token_x_symbol,
+            if result.balance_diff_in < 0 { "-" } else { "" },
+            SimulationHelper::format_amount(
+                result.balance_diff_in.unsigned_abs() as u64,
+                token_x_decimals
+            )
+        );
+
+        let actual_out = result.balance_diff_out as u64;
+        println!(
+            "  {} (out): +{} ({})",
+            token_y_symbol,
+            SimulationHelper::format_amount(actual_out, token_y_decimals),
+            actual_out
+        );
+
+        // Verify get_amount_out matches simulation
+        println!("\nVerification:");
+        println!("  Expected (get_amount_out): {}", expected_out);
+        println!("  Actual (simulation):       {}", actual_out);
+        
+        let tolerance = 0.01; // 1% tolerance for fees/slippage
+        let diff_percent = if expected_out > 0 {
+            ((expected_out as f64 - actual_out as f64).abs() / expected_out as f64) * 100.0
         } else {
-            println!("Simulation successful!");
-            println!("\nBalance changes from simulation:");
-
-            println!(
-                "  {} (in):  {}{}",
-                token_x_symbol,
-                if result.balance_diff_in < 0 { "-" } else { "" },
-                SimulationHelper::format_amount(
-                    result.balance_diff_in.unsigned_abs() as u64,
-                    token_x_decimals
-                )
-            );
-
-            let actual_out = result.balance_diff_out as u64;
-            println!(
-                "  {} (out): +{} ({})",
-                token_y_symbol,
-                SimulationHelper::format_amount(actual_out, token_y_decimals),
-                actual_out
-            );
-
-            // Compare the difference
-            println!("\nComparison:");
-            println!("  Expected output: {}", expected_out);
-            println!("  Actual output:   {}", actual_out);
-            
+            0.0
+        };
+        
+        println!("  Difference: {:.4}%", diff_percent);
+        
+        if diff_percent <= tolerance * 100.0 {
+            println!("  ✓ get_amount_out matches simulation within {:.1}% tolerance", tolerance * 100.0);
+        } else {
+            println!("  ✗ get_amount_out differs from simulation by more than {:.1}%", tolerance * 100.0);
             if expected_out > actual_out {
                 let diff = expected_out - actual_out;
-                let diff_percent = (diff as f64 / expected_out as f64) * 100.0;
                 println!(
-                    "  Difference: -{} ({:.4}% less than expected)",
+                    "    get_amount_out overestimated by {} ({})",
                     SimulationHelper::format_amount(diff, token_y_decimals),
-                    diff_percent
-                );
-            } else if actual_out > expected_out {
-                let diff = actual_out - expected_out;
-                let diff_percent = (diff as f64 / expected_out as f64) * 100.0;
-                println!(
-                    "  Difference: +{} ({:.4}% more than expected)",
-                    SimulationHelper::format_amount(diff, token_y_decimals),
-                    diff_percent
+                    diff
                 );
             } else {
-                println!("  Difference: 0 (exact match!)");
+                let diff = actual_out - expected_out;
+                println!(
+                    "    get_amount_out underestimated by {} ({})",
+                    SimulationHelper::format_amount(diff, token_y_decimals),
+                    diff
+                );
             }
         }
+        
+        // Assert within tolerance
+        assert!(
+            diff_percent <= tolerance * 100.0,
+            "get_amount_out differs from simulation by {:.4}% (exceeds {:.1}% tolerance)",
+            diff_percent,
+            tolerance * 100.0
+        );
         
         unit_ok!()
     }

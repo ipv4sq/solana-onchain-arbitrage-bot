@@ -60,7 +60,7 @@ impl MeteoraDlmmPoolData {
         let variable_fee_rate = self.v_parameters.volatility_accumulator as u128 * 10_000;
         let total_fee_rate = (base_fee_rate + variable_fee_rate).min(MAX_FEE_RATE as u128);
 
-        let max_bins_to_traverse = 10;
+        let max_bins_to_traverse = 50;  // Traverse up to 50 bins to capture sufficient liquidity
         let mut bins_traversed = 0;
 
         while amount_in_left > 0 && bins_traversed < max_bins_to_traverse {
@@ -105,39 +105,31 @@ impl MeteoraDlmmPoolData {
 
             // Always calculate price from bin ID, don't trust the stored price
             let calculated_price = self.calculate_price_from_id(current_active_id)?;
-            let stored_price = bin.price;
+            let _stored_price = bin.price;
 
-            let price = calculated_price; // Use calculated price
+            // Use the calculated price directly without decimal adjustments
+            // The price from calculate_price_from_id gives us the Y/X ratio with 18 decimals of precision
+            // The bins store amounts in lamports, and the price calculations work with these directly
+            let price = calculated_price;
 
             // Calculate how much input would consume all output liquidity
             let max_amount_in = if swap_for_y {
                 // X -> Y: How much X is needed to get all the Y in the bin
-                // Need to account for decimal differences
-                let decimal_adj = if from_decimals > to_decimals {
-                    10u128.pow((from_decimals - to_decimals) as u32)
-                } else {
-                    1
-                };
+                // amount_x = amount_y / price
                 reserve_out
                     .saturating_mul(SCALE)
-                    .saturating_mul(decimal_adj)
                     .checked_div(price)
                     .unwrap_or(u64::MAX as u128)
+                    .min(u64::MAX as u128) as u64
             } else {
                 // Y -> X: How much Y is needed to get all the X in the bin
-                let decimal_adj = if to_decimals > from_decimals {
-                    10u128.pow((to_decimals - from_decimals) as u32)
-                } else {
-                    1
-                };
+                // amount_y = amount_x * price
                 reserve_out
                     .saturating_mul(price)
                     .checked_div(SCALE)
                     .unwrap_or(u64::MAX as u128)
-                    .checked_div(decimal_adj)
-                    .unwrap_or(u64::MAX as u128)
-            }
-            .min(u64::MAX as u128) as u64;
+                    .min(u64::MAX as u128) as u64
+            };
 
             let amount_to_swap = amount_in_left.min(max_amount_in);
 
@@ -148,34 +140,20 @@ impl MeteoraDlmmPoolData {
             let actual_amount_in = amount_in_with_fee.min(amount_in_left);
 
             let swap_amount_out = if swap_for_y {
-                let decimal_adj = if from_decimals > to_decimals {
-                    10u128.pow((from_decimals - to_decimals) as u32)
-                } else {
-                    1
-                };
+                // X -> Y swap: amount_out = amount_in * price
+                // The price from calculate_price_from_id already gives us the correct Y/X ratio
                 let amount_out_128 = (actual_amount_in as u128)
                     .saturating_mul(price)
                     .checked_div(SCALE)
-                    .unwrap_or(0)
-                    .checked_div(decimal_adj)
                     .unwrap_or(0);
+                
                 amount_out_128.min(reserve_out) as u64
             } else {
-                // For Y -> X swap: amount_out = amount_in / price
-                let amount_out_base = (actual_amount_in as u128)
+                // Y -> X swap: amount_out = amount_in / price  
+                let amount_out_128 = (actual_amount_in as u128)
                     .saturating_mul(SCALE)
                     .checked_div(price)
                     .unwrap_or(0);
-
-                let amount_out_128 = if to_decimals > from_decimals {
-                    let decimal_adj = 10u128.pow((to_decimals - from_decimals) as u32);
-                    amount_out_base.saturating_mul(decimal_adj)
-                } else if from_decimals > to_decimals {
-                    let decimal_adj = 10u128.pow((from_decimals - to_decimals) as u32);
-                    amount_out_base.checked_div(decimal_adj).unwrap_or(0)
-                } else {
-                    amount_out_base
-                };
 
                 amount_out_128.min(reserve_out) as u64
             };
@@ -190,9 +168,6 @@ impl MeteoraDlmmPoolData {
             }
             bins_traversed += 1;
         }
-
-        // The price in DLMM is stored with 18 decimals of precision
-        // We don't need to adjust for decimals here as the calculation already handles it
 
         Ok(amount_out)
     }
