@@ -1,7 +1,5 @@
 use crate::database::mint_record::repository::MintRecordRepository;
-use crate::dex::meteora_dlmm::misc::bin_array::{
-    bin_id_to_bin_array_index, get_bin_array_pda,
-};
+use crate::dex::meteora_dlmm::misc::bin_array::{bin_id_to_bin_array_index, get_bin_array_pda};
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::global::state::account_data_holder::AccountDataHolder;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
@@ -45,22 +43,17 @@ impl MeteoraDlmmPoolData {
     ) -> AResult<u64> {
         let swap_for_y = *from_mint == self.token_x_mint;
 
-        let _from_decimals = MintRecordRepository::get_decimal(from_mint)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("from mint decimals not found"))?;
-        let _to_decimals = MintRecordRepository::get_decimal(to_mint)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("to mint decimals not found"))?;
-
         let mut amount_in_left = input_amount;
         let mut amount_out = 0u64;
         let mut current_active_id = self.active_id;
 
-        let base_fee_rate = self.parameters.base_factor as u128 * 10_000;
-        let variable_fee_rate = self.v_parameters.volatility_accumulator as u128 * 10_000;
+        // Fee rates are stored in the pool parameters
+        // base_factor and volatility_accumulator represent fee in units of FEE_PRECISION
+        let base_fee_rate = self.parameters.base_factor as u128;
+        let variable_fee_rate = self.v_parameters.volatility_accumulator as u128;
         let total_fee_rate = (base_fee_rate + variable_fee_rate).min(MAX_FEE_RATE as u128);
 
-        let max_bins_to_traverse = 50;  // Traverse up to 50 bins to capture sufficient liquidity
+        let max_bins_to_traverse = 50; // Traverse up to 50 bins to capture sufficient liquidity
         let mut bins_traversed = 0;
 
         while amount_in_left > 0 && bins_traversed < max_bins_to_traverse {
@@ -145,10 +138,10 @@ impl MeteoraDlmmPoolData {
                     .saturating_mul(price)
                     .checked_div(SCALE)
                     .unwrap_or(0);
-                
+
                 amount_out_128.min(reserve_out) as u64
             } else {
-                // Y -> X swap: amount_out = amount_in / price  
+                // Y -> X swap: amount_out = amount_in / price
                 let amount_out_128 = (actual_amount_in as u128)
                     .saturating_mul(SCALE)
                     .checked_div(price)

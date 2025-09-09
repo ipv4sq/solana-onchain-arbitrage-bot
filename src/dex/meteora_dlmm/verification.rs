@@ -234,7 +234,9 @@ mod tests {
         );
 
         // Calculate expected output using get_amount_out
-        let expected_out = config.get_amount_out(amount_in, &token_x_mint, &token_y_mint).await?;
+        let expected_out = config
+            .get_amount_out(amount_in, &token_x_mint, &token_y_mint)
+            .await?;
         println!(
             "\nExpected output (get_amount_out): {} ({})",
             SimulationHelper::format_amount(expected_out, token_y_decimals),
@@ -251,7 +253,7 @@ mod tests {
             println!("Simulation error: {}", err);
             assert!(false, "Simulation failed: {}", err);
         }
-        
+
         println!("Simulation successful!");
         println!("\nBalance changes from simulation:");
 
@@ -277,20 +279,26 @@ mod tests {
         println!("\nVerification:");
         println!("  Expected (get_amount_out): {}", expected_out);
         println!("  Actual (simulation):       {}", actual_out);
-        
+
         let tolerance = 0.01; // 1% tolerance for fees/slippage
         let diff_percent = if expected_out > 0 {
             ((expected_out as f64 - actual_out as f64).abs() / expected_out as f64) * 100.0
         } else {
             0.0
         };
-        
+
         println!("  Difference: {:.4}%", diff_percent);
-        
+
         if diff_percent <= tolerance * 100.0 {
-            println!("  ✓ get_amount_out matches simulation within {:.1}% tolerance", tolerance * 100.0);
+            println!(
+                "  ✓ get_amount_out matches simulation within {:.1}% tolerance",
+                tolerance * 100.0
+            );
         } else {
-            println!("  ✗ get_amount_out differs from simulation by more than {:.1}%", tolerance * 100.0);
+            println!(
+                "  ✗ get_amount_out differs from simulation by more than {:.1}%",
+                tolerance * 100.0
+            );
             if expected_out > actual_out {
                 let diff = expected_out - actual_out;
                 println!(
@@ -307,7 +315,7 @@ mod tests {
                 );
             }
         }
-        
+
         // Assert within tolerance
         assert!(
             diff_percent <= tolerance * 100.0,
@@ -315,7 +323,7 @@ mod tests {
             diff_percent,
             tolerance * 100.0
         );
-        
+
         unit_ok!()
     }
 
@@ -333,7 +341,7 @@ mod tests {
         let config = MeteoraDlmmConfig::from_address(&POOL).await?;
         let token_x_mint = config.pool_data.token_x_mint; // SOL
         let token_y_mint = config.pool_data.token_y_mint; // USDC
-        
+
         // Fetch token symbols and decimals from database
         let token_x_record = MintRecordRepository::get_mint(&token_x_mint).await?;
         let token_x_symbol = token_x_record
@@ -363,27 +371,31 @@ mod tests {
         );
 
         // Calculate expected output using get_amount_out (USDC -> SOL)
-        let sol_out = config.get_amount_out(usdc_amount, &token_y_mint, &token_x_mint).await?;
+        let sol_out = config
+            .get_amount_out(usdc_amount, &token_y_mint, &token_x_mint)
+            .await?;
         println!(
             "Output (get_amount_out): {} SOL ({})",
             SimulationHelper::format_amount(sol_out, token_x_decimals),
             sol_out
         );
-        
+
         // Now test the reverse: use that SOL amount to buy back USDC
         println!("\n=== Testing reverse: SOL -> USDC swap ===");
         println!(
-            "Amount in: {} SOL", 
+            "Amount in: {} SOL",
             SimulationHelper::format_amount(sol_out, token_x_decimals)
         );
-        
-        let usdc_back = config.get_amount_out(sol_out, &token_x_mint, &token_y_mint).await?;
+
+        let usdc_back = config
+            .get_amount_out(sol_out, &token_x_mint, &token_y_mint)
+            .await?;
         println!(
             "Output (get_amount_out): {} USDC ({})",
             SimulationHelper::format_amount(usdc_back, token_y_decimals),
             usdc_back
         );
-        
+
         // Check round-trip efficiency
         let round_trip_loss = if usdc_amount > usdc_back {
             usdc_amount - usdc_back
@@ -391,36 +403,47 @@ mod tests {
             0
         };
         let loss_percent = (round_trip_loss as f64 / usdc_amount as f64) * 100.0;
-        
+
         println!("\n=== Round-trip analysis ===");
-        println!("Started with: {} USDC", SimulationHelper::format_amount(usdc_amount, token_y_decimals));
-        println!("Ended with:   {} USDC", SimulationHelper::format_amount(usdc_back, token_y_decimals));
-        println!("Loss:         {} USDC ({:.2}%)", 
-                SimulationHelper::format_amount(round_trip_loss, token_y_decimals), 
-                loss_percent);
-        
+        println!(
+            "Started with: {} USDC",
+            SimulationHelper::format_amount(usdc_amount, token_y_decimals)
+        );
+        println!(
+            "Ended with:   {} USDC",
+            SimulationHelper::format_amount(usdc_back, token_y_decimals)
+        );
+        println!(
+            "Loss:         {} USDC ({:.2}%)",
+            SimulationHelper::format_amount(round_trip_loss, token_y_decimals),
+            loss_percent
+        );
+
         // Verify the SOL amount is reasonable (should be around 4-5 SOL for 1000 USDC at current prices)
         let sol_amount_float = sol_out as f64 / 10_f64.powi(token_x_decimals as i32);
         let reasonable_range = 2.0..=10.0; // Allow range from 2 to 10 SOL for 1000 USDC
-        
+
         assert!(
             reasonable_range.contains(&sol_amount_float),
             "SOL output {} is outside reasonable range {:?} for 1000 USDC",
             sol_amount_float,
             reasonable_range
         );
-        
-        println!("\n✓ USDC->SOL calculation produces reasonable output: {:.6} SOL for 1000 USDC", sol_amount_float);
-        
+
+        println!(
+            "\n✓ USDC->SOL calculation produces reasonable output: {:.6} SOL for 1000 USDC",
+            sol_amount_float
+        );
+
         // Round-trip loss should be minimal (mainly fees)
         assert!(
             loss_percent < 1.0, // Less than 1% loss on round-trip
             "Round-trip loss {:.2}% exceeds 1% threshold",
             loss_percent
         );
-        
+
         println!("✓ Round-trip loss is acceptable: {:.2}%", loss_percent);
-        
+
         unit_ok!()
     }
 
