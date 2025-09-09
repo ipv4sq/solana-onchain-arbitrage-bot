@@ -45,10 +45,10 @@ impl MeteoraDlmmPoolData {
     ) -> AResult<u64> {
         let swap_for_y = *from_mint == self.token_x_mint;
 
-        let from_decimals = MintRecordRepository::get_decimal(from_mint)
+        let _from_decimals = MintRecordRepository::get_decimal(from_mint)
             .await?
             .ok_or_else(|| anyhow::anyhow!("from mint decimals not found"))?;
-        let to_decimals = MintRecordRepository::get_decimal(to_mint)
+        let _to_decimals = MintRecordRepository::get_decimal(to_mint)
             .await?
             .ok_or_else(|| anyhow::anyhow!("to mint decimals not found"))?;
 
@@ -107,9 +107,8 @@ impl MeteoraDlmmPoolData {
             let calculated_price = self.calculate_price_from_id(current_active_id)?;
             let _stored_price = bin.price;
 
-            // Use the calculated price directly without decimal adjustments
-            // The price from calculate_price_from_id gives us the Y/X ratio with 18 decimals of precision
-            // The bins store amounts in lamports, and the price calculations work with these directly
+            // Use the calculated price directly
+            // The price represents Y/X ratio with proper scaling
             let price = calculated_price;
 
             // Calculate how much input would consume all output liquidity

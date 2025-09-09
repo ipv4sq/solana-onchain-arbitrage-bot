@@ -76,6 +76,8 @@ pub async fn simulate_swap_and_get_balance_diff(
 ) -> AResult<SwapSimulationResult> {
     let config = MeteoraDlmmConfig::from_address(pool_address).await?;
 
+    // For simulation, we always use X->Y direction (SOL->USDC)
+    // The accounts are built assuming this direction
     let accounts = MeteoraDlmmInputAccounts::build_accounts_no_matter_direction_size(
         payer,
         pool_address,
@@ -313,6 +315,111 @@ mod tests {
             diff_percent,
             tolerance * 100.0
         );
+        
+        unit_ok!()
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn verify_usdc_to_sol_calculation() -> AResult<()> {
+        _set_test_client();
+        must_init_db().await;
+
+        // Give services time to initialize
+        sleep(Duration::from_millis(100)).await;
+
+        let usdc_amount = 1000_000_000; // 1000 USDC (6 decimals)
+
+        // Get pool config for token info
+        let config = MeteoraDlmmConfig::from_address(&POOL).await?;
+        let token_x_mint = config.pool_data.token_x_mint; // SOL
+        let token_y_mint = config.pool_data.token_y_mint; // USDC
+        
+        // Fetch token symbols and decimals from database
+        let token_x_record = MintRecordRepository::get_mint(&token_x_mint).await?;
+        let token_x_symbol = token_x_record
+            .as_ref()
+            .map(|m| m.symbol.clone())
+            .unwrap_or_else(|| token_x_mint.to_string()[..6].to_string());
+        let token_x_decimals = token_x_record
+            .as_ref()
+            .and_then(|m| m.decimals.try_into().ok())
+            .unwrap_or(9u32);
+
+        let token_y_record = MintRecordRepository::get_mint(&token_y_mint).await?;
+        let token_y_symbol = token_y_record
+            .as_ref()
+            .map(|m| m.symbol.clone())
+            .unwrap_or_else(|| token_y_mint.to_string()[..6].to_string());
+        let token_y_decimals = token_y_record
+            .as_ref()
+            .and_then(|m| m.decimals.try_into().ok())
+            .unwrap_or(6u32);
+
+        println!("Pool: {}", POOL);
+        println!("\n=== Testing USDC -> SOL swap ===");
+        println!(
+            "Amount in: {} USDC",
+            SimulationHelper::format_amount(usdc_amount, token_y_decimals)
+        );
+
+        // Calculate expected output using get_amount_out (USDC -> SOL)
+        let sol_out = config.get_amount_out(usdc_amount, &token_y_mint, &token_x_mint).await?;
+        println!(
+            "Output (get_amount_out): {} SOL ({})",
+            SimulationHelper::format_amount(sol_out, token_x_decimals),
+            sol_out
+        );
+        
+        // Now test the reverse: use that SOL amount to buy back USDC
+        println!("\n=== Testing reverse: SOL -> USDC swap ===");
+        println!(
+            "Amount in: {} SOL", 
+            SimulationHelper::format_amount(sol_out, token_x_decimals)
+        );
+        
+        let usdc_back = config.get_amount_out(sol_out, &token_x_mint, &token_y_mint).await?;
+        println!(
+            "Output (get_amount_out): {} USDC ({})",
+            SimulationHelper::format_amount(usdc_back, token_y_decimals),
+            usdc_back
+        );
+        
+        // Check round-trip efficiency
+        let round_trip_loss = if usdc_amount > usdc_back {
+            usdc_amount - usdc_back
+        } else {
+            0
+        };
+        let loss_percent = (round_trip_loss as f64 / usdc_amount as f64) * 100.0;
+        
+        println!("\n=== Round-trip analysis ===");
+        println!("Started with: {} USDC", SimulationHelper::format_amount(usdc_amount, token_y_decimals));
+        println!("Ended with:   {} USDC", SimulationHelper::format_amount(usdc_back, token_y_decimals));
+        println!("Loss:         {} USDC ({:.2}%)", 
+                SimulationHelper::format_amount(round_trip_loss, token_y_decimals), 
+                loss_percent);
+        
+        // Verify the SOL amount is reasonable (should be around 4-5 SOL for 1000 USDC at current prices)
+        let sol_amount_float = sol_out as f64 / 10_f64.powi(token_x_decimals as i32);
+        let reasonable_range = 2.0..=10.0; // Allow range from 2 to 10 SOL for 1000 USDC
+        
+        assert!(
+            reasonable_range.contains(&sol_amount_float),
+            "SOL output {} is outside reasonable range {:?} for 1000 USDC",
+            sol_amount_float,
+            reasonable_range
+        );
+        
+        println!("\n✓ USDC->SOL calculation produces reasonable output: {:.6} SOL for 1000 USDC", sol_amount_float);
+        
+        // Round-trip loss should be minimal (mainly fees)
+        assert!(
+            loss_percent < 1.0, // Less than 1% loss on round-trip
+            "Round-trip loss {:.2}% exceeds 1% threshold",
+            loss_percent
+        );
+        
+        println!("✓ Round-trip loss is acceptable: {:.2}%", loss_percent);
         
         unit_ok!()
     }
