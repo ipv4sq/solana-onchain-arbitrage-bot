@@ -19,6 +19,12 @@ pub struct PumpAmmIxData {
     pub max_base_amount_in: Option<u64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PumpSwapDirection {
+    Buy,  // base -> quote (exact in)
+    Sell, // quote -> base (exact out)
+}
+
 impl PumpAmmIxData {
     pub fn load_ix_data(data_hex: &str) -> PumpAmmIxData {
         let decoded = hex::decode(data_hex).expect("Failed to decode hex");
@@ -97,11 +103,62 @@ impl PumpAmmIxData {
             }
         }
     }
+
+    pub fn to_hex(&self, direction: PumpSwapDirection) -> String {
+        let mut data = Vec::new();
+        
+        match direction {
+            PumpSwapDirection::Buy => {
+                // Buy instruction (base -> quote, exact in)
+                let discriminator = [0x33, 0xe6, 0x85, 0xa4, 0x01, 0x7f, 0x83, 0xad];
+                data.extend_from_slice(&discriminator);
+                
+                // Add base_amount_in and min_quote_amount_out
+                let base_amount_in = self.base_amount_in.unwrap_or(0);
+                let min_quote_amount_out = self.min_quote_amount_out.unwrap_or(0);
+                
+                data.extend_from_slice(&base_amount_in.to_le_bytes());
+                data.extend_from_slice(&min_quote_amount_out.to_le_bytes());
+            }
+            PumpSwapDirection::Sell => {
+                // Sell instruction (quote -> base, exact out)
+                let discriminator = [0x66, 0x06, 0x3d, 0x12, 0x01, 0xda, 0xeb, 0xea];
+                data.extend_from_slice(&discriminator);
+                
+                // Add base_amount_out and max_quote_amount_in
+                let base_amount_out = self.base_amount_out.unwrap_or(0);
+                let max_quote_amount_in = self.max_quote_amount_in.unwrap_or(0);
+                
+                data.extend_from_slice(&base_amount_out.to_le_bytes());
+                data.extend_from_slice(&max_quote_amount_in.to_le_bytes());
+            }
+        }
+        
+        hex::encode(data)
+    }
+    
+    pub fn get_discriminator(direction: PumpSwapDirection) -> [u8; 8] {
+        match direction {
+            PumpSwapDirection::Buy => [0x33, 0xe6, 0x85, 0xa4, 0x01, 0x7f, 0x83, 0xad],
+            PumpSwapDirection::Sell => [0x66, 0x06, 0x3d, 0x12, 0x01, 0xda, 0xeb, 0xea],
+        }
+    }
+    
+    pub fn detect_direction(&self) -> Option<PumpSwapDirection> {
+        // Detect direction based on which fields are populated
+        if self.base_amount_in.is_some() && self.min_quote_amount_out.is_some() {
+            Some(PumpSwapDirection::Buy)
+        } else if self.base_amount_out.is_some() && self.max_quote_amount_in.is_some() {
+            Some(PumpSwapDirection::Sell)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dex::pump_amm::misc::input_data::PumpAmmIxData;
+    use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 
     #[test]
     fn test_input_data() {
@@ -152,5 +209,93 @@ mod tests {
         };
         let actual = PumpAmmIxData::load_ix_data(hex);
         assert_eq!(expected, actual);
+    }
+    
+    #[test]
+    fn test_round_trip_sell_direction() {
+        // Test Sell direction (exact out)
+        let original_hex = "66063d1201daebea1f2ad632be01000017d0a0b800000000";
+        
+        // Parse the hex
+        let parsed = PumpAmmIxData::load_ix_data(original_hex);
+        
+        // Verify it's detected as Sell direction
+        assert_eq!(parsed.detect_direction(), Some(PumpSwapDirection::Sell));
+        
+        // Convert back to hex
+        let restored_hex = parsed.to_hex(PumpSwapDirection::Sell);
+        
+        // Should match original
+        assert_eq!(restored_hex, original_hex);
+    }
+    
+    #[test]
+    fn test_round_trip_buy_direction() {
+        // Test Buy direction (exact in)
+        let original_hex = "33e685a4017f83ad81608110420000000000000000000000";
+        
+        // Parse the hex
+        let parsed = PumpAmmIxData::load_ix_data(original_hex);
+        
+        // Verify it's detected as Buy direction
+        assert_eq!(parsed.detect_direction(), Some(PumpSwapDirection::Buy));
+        
+        // Convert back to hex
+        let restored_hex = parsed.to_hex(PumpSwapDirection::Buy);
+        
+        // Should match original
+        assert_eq!(restored_hex, original_hex);
+    }
+    
+    #[test]
+    fn test_create_and_encode_buy() {
+        // Create a new Buy instruction data
+        let ix_data = PumpAmmIxData {
+            base_amount_in: Some(1000000),
+            min_quote_amount_out: Some(500000),
+            quote_amount_in: None,
+            min_base_amount_out: None,
+            base_amount_out: None,
+            max_quote_amount_in: None,
+            quote_amount_out: None,
+            max_base_amount_in: None,
+        };
+        
+        // Encode to hex
+        let hex = ix_data.to_hex(PumpSwapDirection::Buy);
+        
+        // Parse it back
+        let parsed = PumpAmmIxData::load_ix_data(&hex);
+        
+        // Should match original
+        assert_eq!(parsed.base_amount_in, Some(1000000));
+        assert_eq!(parsed.min_quote_amount_out, Some(500000));
+        assert_eq!(parsed.detect_direction(), Some(PumpSwapDirection::Buy));
+    }
+    
+    #[test]
+    fn test_create_and_encode_sell() {
+        // Create a new Sell instruction data
+        let ix_data = PumpAmmIxData {
+            base_amount_in: None,
+            min_quote_amount_out: None,
+            quote_amount_in: None,
+            min_base_amount_out: None,
+            base_amount_out: Some(2000000),
+            max_quote_amount_in: Some(1500000),
+            quote_amount_out: None,
+            max_base_amount_in: None,
+        };
+        
+        // Encode to hex
+        let hex = ix_data.to_hex(PumpSwapDirection::Sell);
+        
+        // Parse it back
+        let parsed = PumpAmmIxData::load_ix_data(&hex);
+        
+        // Should match original
+        assert_eq!(parsed.base_amount_out, Some(2000000));
+        assert_eq!(parsed.max_quote_amount_in, Some(1500000));
+        assert_eq!(parsed.detect_direction(), Some(PumpSwapDirection::Sell));
     }
 }

@@ -14,7 +14,6 @@ use crate::global::constant::token_program::{
 use crate::global::enums::direction::TradeDirection;
 use crate::util::alias::AResult;
 use crate::util::solana::pda::ata;
-use crate::util::structs::mint_pair::MintPair;
 use crate::util::traits::account_meta::ToAccountMeta;
 use crate::util::traits::option::OptionExt;
 use crate::util::traits::pubkey::ToPubkey;
@@ -47,6 +46,92 @@ pub struct PumpAmmInputAccounts {
     pub user_volume_accumulator: Option<AccountMeta>,
     pub fee_config: AccountMeta,
     pub fee_program: AccountMeta,
+}
+
+impl PumpAmmInputAccounts {
+    pub async fn build_accounts_with_direction(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: &PumpAmmPoolData,
+        input_mint: &Pubkey,
+        output_mint: &Pubkey,
+    ) -> AResult<PumpAmmInputAccounts> {
+        let base_mint = MintRecordRepository::get_mint(&pool_data.base_mint)
+            .await?
+            .or_err(f!("Can't retrieve base mint {}", &pool_data.base_mint))?;
+        let quote_mint = MintRecordRepository::get_mint(&pool_data.quote_mint)
+            .await?
+            .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
+        let coin_creator_vault_authority =
+            address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
+
+        let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
+        let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
+        let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
+
+        let (pump_amm_fee_config_pda, _) = Pubkey::find_program_address(
+            &[b"fee_config", &pump_amm_program.as_ref()],
+            &fee_program,
+        );
+
+        let fee = if pool_data.pair().contains(&Mints::WSOL) {
+            Mints::WSOL
+        } else {
+            Mints::USDC
+        };
+
+        // Volume accumulators are required for quote->base (buying pump tokens)
+        // Not required for base->quote (selling pump tokens)
+        let is_quote_to_base = *input_mint == pool_data.quote_mint;
+        let (global_volume_accumulator, user_volume_accumulator) = if is_quote_to_base {
+            (
+                Some(address_seed::get_global_volume_accumulator().to_writable()),
+                Some(address_seed::get_user_volume_accumulator(payer).to_writable()),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(PumpAmmInputAccounts {
+            pool: pool.to_readonly(), // fuck, sometimes it is readonly, related to buy/sell
+            user: payer.to_signer(),
+            global_config: "ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw".to_readonly(),
+            base_mint: pool_data.base_mint.to_readonly(),
+            quote_mint: pool_data.quote_mint.to_readonly(),
+            user_base_token_account: ata(payer, &base_mint.address.0, &base_mint.program.0)
+                .to_writable(),
+            user_quote_token_account: ata(payer, &quote_mint.address.0, &quote_mint.program.0)
+                .to_writable(),
+            pool_base_token_account: ata(pool, &base_mint.address.0, &base_mint.program.0)
+                .to_writable(),
+            pool_quote_token_account: ata(pool, &quote_mint.address.0, &quote_mint.program.0)
+                .to_writable(),
+            protocol_fee_recipient: pump_fee_recipient.to_readonly(),
+            protocol_fee_recipient_token_account: ata(
+                &pump_fee_recipient,
+                &fee,
+                &TokenProgram::SPL_TOKEN,
+            )
+            .to_writable(),
+            base_token_program: base_mint.program.0.to_program(),
+            quote_token_program: quote_mint.program.0.to_program(),
+            system_program: SystemProgram.to_program(),
+            associated_token_program: ASSOCIATED_TOKEN_ACCOUNT_PROGRAM.to_program(),
+            event_authority: "GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR".to_program(),
+            program: PoolProgram::PUMP_AMM.to_program(),
+            coin_creator_vault_ata: ata(
+                &coin_creator_vault_authority,
+                &quote_mint.address.0,
+                &quote_mint.program.0,
+            )
+            .to_writable(),
+            coin_creator_vault_authority: coin_creator_vault_authority.to_readonly(),
+            global_volume_accumulator,
+            user_volume_accumulator,
+            fee_config: pump_amm_fee_config_pda.to_program(),
+            fee_program: "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ".to_program(),
+        })
+    }
 }
 
 impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAccounts {
@@ -95,11 +180,10 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         let quote_mint = MintRecordRepository::get_mint(&pool_data.quote_mint)
             .await?
             .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
-
-        let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
         let coin_creator_vault_authority =
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
 
+        let pump_fee_recipient = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU".to_pubkey();
         let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
         let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
 
@@ -199,12 +283,12 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         ];
 
         // Add optional volume accumulators if present
-        // if let Some(ref global_volume) = self.global_volume_accumulator {
-        //     accounts.push(global_volume);
-        // }
-        // if let Some(ref user_volume) = self.user_volume_accumulator {
-        //     accounts.push(user_volume);
-        // }
+        if let Some(ref global_volume) = self.global_volume_accumulator {
+            accounts.push(global_volume);
+        }
+        if let Some(ref user_volume) = self.user_volume_accumulator {
+            accounts.push(user_volume);
+        }
 
         // Add fee config PDAs at the end
         accounts.push(&self.fee_config);

@@ -9,6 +9,7 @@ use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_dlmm::misc::input_data::MeteoraDlmmIxData;
 use crate::dex::pump_amm::config::PumpAmmConfig;
 use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
+use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
@@ -33,9 +34,11 @@ fn unpack_token_account(account_data: &[u8], owner: &Pubkey) -> AResult<u64> {
     if owner == &TokenProgram::SPL_TOKEN {
         Ok(TokenAccount::unpack(account_data)?.amount)
     } else if owner == &TokenProgram::TOKEN_2022 {
-        Ok(StateWithExtensions::<spl_token_2022::state::Account>::unpack(account_data)?
-            .base
-            .amount)
+        Ok(
+            StateWithExtensions::<spl_token_2022::state::Account>::unpack(account_data)?
+                .base
+                .amount,
+        )
     } else {
         Err(anyhow::anyhow!("Invalid token account owner: {}", owner).into())
     }
@@ -330,41 +333,79 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     amount_in: u64,
     min_amount_out: u64,
     swap_base_to_quote: bool,
+    from_mint: &Pubkey,
+    to_mint: &Pubkey,
 ) -> AResult<SwapSimulationResult> {
     let config = PumpAmmConfig::from_address(pool_address).await?;
 
     // Build accounts (Pump AMM always has base mint and quote mint)
-    let accounts = PumpAmmInputAccounts::build_accounts_no_matter_direction_size(
+    let accounts = PumpAmmInputAccounts::build_accounts_with_direction(
         payer,
         pool_address,
         &config.pool_data,
+        from_mint,
+        to_mint,
     )
     .await?
     .to_list_cloned();
 
-    // Build the swap instruction data for Pump AMM
-    // Pump AMM uses different discriminators for buy and sell
-    // The discriminators are swapped compared to what you might expect:
-    // - "Buy" discriminator [0x33...] is for selling base tokens (base->quote)
-    // - "Sell" discriminator [0x66...] is for buying base tokens (quote->base)
-    let data = if swap_base_to_quote {
-        // Sell base tokens for quote tokens (base -> quote)
-        // Uses the "buy" discriminator which handles base_amount_in
-        let discriminator = [0x33, 0xe6, 0x85, 0xa4, 0x01, 0x7f, 0x83, 0xad];
-        let mut data = discriminator.to_vec();
-        data.extend_from_slice(&amount_in.to_le_bytes()); // base_amount_in
-        data.extend_from_slice(&min_amount_out.to_le_bytes()); // min_quote_amount_out
-        data
+    // Build the swap instruction data using PumpAmmIxData
+    let (ix_data, direction) = if swap_base_to_quote {
+        // Base -> Quote: exact in swap (selling base tokens)
+        (
+            PumpAmmIxData {
+                base_amount_in: Some(amount_in),
+                min_quote_amount_out: Some(min_amount_out),
+                quote_amount_in: None,
+                min_base_amount_out: None,
+                base_amount_out: None,
+                max_quote_amount_in: None,
+                quote_amount_out: None,
+                max_base_amount_in: None,
+            },
+            PumpSwapDirection::Buy,
+        )
     } else {
-        // Buy base tokens with quote tokens (quote -> base)
-        // Uses the "sell" discriminator for exact out
-        let discriminator = [0x66, 0x06, 0x3d, 0x12, 0x01, 0xda, 0xeb, 0xea];
-        let mut data = discriminator.to_vec();
-        // For exact out, we specify the output amount first, then max input
-        data.extend_from_slice(&min_amount_out.to_le_bytes()); // base_amount_out (what we want)
-        data.extend_from_slice(&amount_in.to_le_bytes()); // max_quote_amount_in
-        data
+        // Quote -> Base: There's no exact IN instruction for this direction in Pump AMM
+        // The Sell instruction (0x66) expects exact OUT semantics
+        // For testing, we'll calculate the expected output and use that
+
+        // If min_amount_out is 0, we need to calculate a reasonable value
+        let base_out = if min_amount_out == 0 {
+            // Calculate expected output for exact IN
+            let calculated = config.get_amount_out(amount_in, from_mint, to_mint).await?;
+            // Apply 1% slippage to avoid errors
+            let with_slippage = calculated * 99 / 100;
+            println!("DEBUG: Quote->Base swap - Calculated base_out: {}, with 1% slippage: {}, amount_in: {}", 
+                     calculated, with_slippage, amount_in);
+            with_slippage
+        } else {
+            println!(
+                "DEBUG: Quote->Base swap - Using provided min_amount_out: {}, amount_in: {}",
+                min_amount_out, amount_in
+            );
+            min_amount_out
+        };
+
+        (
+            PumpAmmIxData {
+                base_amount_in: None,
+                min_quote_amount_out: None,
+                quote_amount_in: None,
+                min_base_amount_out: None,
+                base_amount_out: Some(base_out), // exact base amount we want
+                max_quote_amount_in: Some(amount_in), // max quote we're willing to spend
+                quote_amount_out: None,
+                max_base_amount_in: None,
+            },
+            PumpSwapDirection::Sell,
+        )
     };
+
+    // Convert to hex and then to bytes
+    let data_hex = ix_data.to_hex(direction);
+    println!("DEBUG: Instruction data hex: {}", data_hex);
+    let data = hex::decode(data_hex)?;
 
     // Build the swap instruction
     let (mut instructions, _limit) = gas_instructions(100_000, 0);
