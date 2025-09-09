@@ -6,10 +6,14 @@ use mpsc::{channel, Receiver};
 use solana_sdk::account::Account;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
+use tokio::runtime::Runtime;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, OnceCell};
 use tokio::{select, time};
+use tracing::info;
 
 struct Request {
     address: Pubkey,
@@ -22,7 +26,16 @@ async fn get_sender() -> &'static Sender<Request> {
     CHANNEL
         .get_or_init(|| async {
             let (tx, rx) = channel::<Request>(1000);
-            tokio::spawn(loop_forever(rx));
+            
+            // Spawn a dedicated thread with its own runtime for the buffered get account loop
+            thread::spawn(move || {
+                let runtime = Runtime::new().expect("Failed to create dedicated runtime for buffered_get_account");
+                runtime.block_on(async {
+                    info!("Started dedicated buffered_get_account worker thread");
+                    loop_forever(rx).await;
+                });
+            });
+            
             tx
         })
         .await
@@ -46,7 +59,7 @@ async fn loop_forever(mut pipeline: Receiver<Request>) {
 
 async fn every_batch(pipeline: &mut Receiver<Request>) {
     let mut ticker = time::interval(Duration::from_millis(400));
-    let mut current_batch: HashMap<Pubkey, Request> = HashMap::new();
+    let mut current_batch: HashMap<Pubkey, Vec<Request>> = HashMap::new();
 
     loop {
         if current_batch.len() >= 100 {
@@ -54,7 +67,7 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
         }
         select! {
             Some(req) = pipeline.recv() => {
-                current_batch.insert(req.address, req);
+                current_batch.entry(req.address).or_insert_with(Vec::new).push(req);
             }
             _ = ticker.tick() => {
                 break
@@ -72,21 +85,28 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
     match response {
         Ok(accounts) => {
             for (pubkey, account_option) in public_keys.iter().zip(accounts.iter()) {
-                if let Some(request) = current_batch.remove(pubkey) {
-                    let result = match account_option {
-                        Some(account) => Ok(account.clone()),
-                        None => Err(anyhow!("{} Not found", pubkey)),
-                    };
-                    let _ = request.on_response.send(result).await;
+                if let Some(requests) = current_batch.remove(pubkey) {
+                    for request in requests {
+                        let result = match account_option {
+                            Some(account) => Ok(account.clone()),
+                            None => Err(anyhow!("{} Not found", pubkey)),
+                        };
+                        
+                        if let Err(e) = request.on_response.send(result).await {
+                            info!("on_response dropped before send: {} ({})", e, pubkey)
+                        }
+                    }
                 }
             }
         }
         Err(e) => {
-            for (_, request) in current_batch {
-                let _ = request
-                    .on_response
-                    .send(Err(anyhow::anyhow!("RPC error: {}", e)))
-                    .await;
+            for (_, requests) in current_batch {
+                for request in requests {
+                    let _ = request
+                        .on_response
+                        .send(Err(anyhow::anyhow!("RPC error: {}", e)))
+                        .await;
+                }
             }
         }
     }

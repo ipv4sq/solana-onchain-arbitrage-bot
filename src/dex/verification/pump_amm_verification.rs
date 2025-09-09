@@ -21,7 +21,7 @@ mod tests {
 
     static POOL: Pubkey = pubkey!("2uF4Xh61rDwxnG9woyxsVQP7zuA6kLFpb3NvnRQeoiSd");
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn verify_base_to_quote_matches_simulation() -> AResult<()> {
         must_init_db().await;
         _set_test_client();
@@ -195,7 +195,7 @@ mod tests {
         unit_ok!()
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn verify_quote_to_base_matches_simulation() -> AResult<()> {
         must_init_db().await;
         _set_test_client();
