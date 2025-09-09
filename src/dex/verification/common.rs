@@ -24,6 +24,7 @@ use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::message::v0::Message;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
+use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
@@ -462,7 +463,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
             RpcSimulateTransactionConfig {
                 sig_verify: false,
                 replace_recent_blockhash: true,
-                commitment: None,
+                commitment: Some(CommitmentConfig::confirmed()),
                 encoding: Some(UiTransactionEncoding::Base64),
                 accounts: Some(RpcSimulateTransactionAccountsConfig {
                     encoding: Some(UiAccountEncoding::Base64),
