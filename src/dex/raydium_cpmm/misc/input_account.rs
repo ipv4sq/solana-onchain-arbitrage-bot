@@ -45,9 +45,9 @@ impl RaydiumCpmmInputAccount {
         let output_token_account = ata(payer, to_mint, &to_mint_record.program.0);
 
         let (input_vault, output_vault) = if *from_mint == pool_data.token_0_mint {
-            (input_token_account, output_token_account)
+            (pool_data.token_0_vault, pool_data.token_1_vault)
         } else {
-            (output_token_account, input_token_account)
+            (pool_data.token_1_vault, pool_data.token_0_vault)
         };
         Ok(RaydiumCpmmInputAccount {
             payer: payer.to_signer(),
