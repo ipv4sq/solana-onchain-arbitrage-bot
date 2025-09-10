@@ -65,4 +65,22 @@ impl RaydiumCpmmInputAccount {
             observation_state: pool_data.observation_key.to_writable(),
         })
     }
+
+    pub fn to_list_cloned(&self) -> Vec<AccountMeta> {
+        vec![
+            self.payer.clone(),
+            self.authority.clone(),
+            self.amm_config.clone(),
+            self.pool_state.clone(),
+            self.input_token_account.clone(),
+            self.output_token_account.clone(),
+            self.input_vault.clone(),
+            self.output_vault.clone(),
+            self.input_token_program.clone(),
+            self.output_token_program.clone(),
+            self.input_token_mint.clone(),
+            self.output_token_mint.clone(),
+            self.observation_state.clone(),
+        ]
+    }
 }
