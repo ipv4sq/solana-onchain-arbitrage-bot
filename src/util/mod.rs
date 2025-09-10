@@ -1,4 +1,5 @@
 pub mod alias;
+pub mod cache;
 pub mod cron;
 pub mod debug;
 pub mod env;
