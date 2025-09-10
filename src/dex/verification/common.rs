@@ -385,9 +385,10 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
         message: solana_sdk::message::VersionedMessage::V0(message),
     };
     
-    // User token accounts are at indices 5 and 6 for Raydium CPMM
-    let user_token_in = accounts[5].pubkey;
-    let user_token_out = accounts[6].pubkey;
+    // User token accounts are at indices 4 and 5 for Raydium CPMM
+    // Index 4: input_token_account, Index 5: output_token_account
+    let user_token_in = accounts[4].pubkey;
+    let user_token_out = accounts[5].pubkey;
     
     // Get pre-simulation balances
     let pre_token_in = rpc_client().get_account(&user_token_in).await?;

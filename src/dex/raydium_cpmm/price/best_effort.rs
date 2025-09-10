@@ -63,6 +63,7 @@ impl RaydiumCpmmPoolData {
                 - self.creator_fees_token_0
         };
 
+        // The creator_fee_on field: 0 means fee on input, 1 means fee on output  
         let is_creator_fee_on_input = self.creator_fee_on == 0;
 
         let trade_fee = calculate_trade_fee(input_amount, amm_config.trade_fee_rate);
@@ -89,22 +90,16 @@ impl RaydiumCpmmPoolData {
     }
 }
 
-fn ceil_div(numerator: u128, denominator: u128) -> u128 {
-    (numerator + denominator - 1) / denominator
-}
-
 fn calculate_trade_fee(amount: u64, trade_fee_rate: u64) -> u64 {
-    ceil_div(
-        amount as u128 * trade_fee_rate as u128,
-        FEE_RATE_DENOMINATOR as u128,
-    ) as u64
+    let numerator = (amount as u128) * (trade_fee_rate as u128);
+    let denominator = FEE_RATE_DENOMINATOR as u128;
+    ((numerator + denominator - 1) / denominator) as u64
 }
 
 fn calculate_creator_fee(amount: u64, creator_fee_rate: u64) -> u64 {
-    ceil_div(
-        amount as u128 * creator_fee_rate as u128,
-        FEE_RATE_DENOMINATOR as u128,
-    ) as u64
+    let numerator = (amount as u128) * (creator_fee_rate as u128);
+    let denominator = FEE_RATE_DENOMINATOR as u128;
+    ((numerator + denominator - 1) / denominator) as u64
 }
 
 fn swap_base_input_without_fees(
@@ -112,7 +107,15 @@ fn swap_base_input_without_fees(
     input_vault_amount: u64,
     output_vault_amount: u64,
 ) -> u64 {
-    let numerator = (input_amount as u128) * (output_vault_amount as u128);
-    let denominator = (input_vault_amount as u128) + (input_amount as u128);
+    // Using u128 to prevent overflow
+    let input_amount_u128 = input_amount as u128;
+    let input_vault_u128 = input_vault_amount as u128;
+    let output_vault_u128 = output_vault_amount as u128;
+    
+    // Standard constant product formula: output = (input * output_reserve) / (input_reserve + input)
+    let numerator = input_amount_u128.checked_mul(output_vault_u128).expect("Overflow in numerator");
+    let denominator = input_vault_u128.checked_add(input_amount_u128).expect("Overflow in denominator");
+    
+    // Floor division (matching Solana's behavior)
     (numerator / denominator) as u64
 }

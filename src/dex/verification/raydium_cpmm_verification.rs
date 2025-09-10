@@ -328,7 +328,6 @@ mod tests {
         unit_ok!()
     }
 
-    #[tokio::test]
     async fn build_command() -> AResult<()> {
         must_init_db().await;
 
