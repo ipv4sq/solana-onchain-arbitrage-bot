@@ -8,7 +8,7 @@ use crate::database::pool_record::model::{
 use crate::global::client::db::get_db;
 use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::util::alias::{MintAddress, PoolAddress};
-use crate::util::structs::loading_cache::LoadingCache;
+use crate::util::structs::legacy_loading_cache::LoadingCache;
 use crate::util::structs::persistent_cache::PersistentCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;

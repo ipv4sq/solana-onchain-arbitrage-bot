@@ -1,7 +1,7 @@
 pub mod buffered_debouncer;
 pub mod cache_type;
 pub mod lazy_arc;
-pub mod loading_cache;
+pub mod legacy_loading_cache;
 pub mod mint_pair;
 pub mod persistent_cache;
 mod persistent_cache_custom_example;
