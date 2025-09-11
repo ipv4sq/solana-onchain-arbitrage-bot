@@ -1,6 +1,8 @@
 use crate::convention::chain::mapper::traits::ToUnified;
 use crate::convention::chain::Transaction;
+use crate::lined_err;
 use crate::sdk::rpc::client;
+use crate::util::alias::AResult;
 use crate::util::traits::signature::ToSignature;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::signature::Signature;
@@ -26,13 +28,13 @@ pub async fn send_tx_with_retry(
             },
         )
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to send transaction: {}", e))
+        .map_err(|e| lined_err!("Failed to send transaction: {}", e))
 }
 
-pub async fn fetch_tx(signature: &str) -> anyhow::Result<Transaction> {
+pub async fn fetch_tx(signature: &str) -> AResult<Transaction> {
     client::rpc_client()
         .get_transaction_with_config(&signature.to_sig(), client::json_config())
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to fetch transaction: {}", e))?
+        .map_err(|e| lined_err!("Failed to fetch transaction: {}", e))?
         .to_unified()
 }

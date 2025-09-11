@@ -19,6 +19,7 @@ use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
+use simulation::simulate_transaction_with_config;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
@@ -215,7 +216,7 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
 
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
-    let response = simulation::simulate_transaction_with_config(
+    let response = simulate_transaction_with_config(
         tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,
