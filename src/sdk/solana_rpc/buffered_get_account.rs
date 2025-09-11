@@ -1,3 +1,4 @@
+use crate::lined_err;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::AResult;
 use crate::util::traits::option::OptionExt;
@@ -48,7 +49,9 @@ pub async fn buffered_get_account(address: &Pubkey) -> AResult<Account> {
         on_response: tx,
     };
     let _ = get_sender().await.send(request).await?;
-    rx.recv().await.or_err("channel closed unexpectedly")?
+    rx.recv()
+        .await
+        .or_else_err(lined_err!("channel closed unexpectedly"))?
 }
 
 pub async fn buffered_get_account_batch(addresses: &[Pubkey]) -> AResult<Vec<Option<Account>>> {

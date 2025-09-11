@@ -3,6 +3,7 @@ pub mod cache;
 pub mod cron;
 pub mod debug;
 pub mod env;
+pub mod error_handle;
 pub mod logging;
 pub mod macros;
 pub mod random;
