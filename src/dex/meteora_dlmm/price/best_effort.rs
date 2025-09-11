@@ -182,7 +182,7 @@ mod tests {
     use super::*;
     use crate::dex::interface::PoolDataLoader;
     use crate::global::client::db::must_init_db;
-    use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

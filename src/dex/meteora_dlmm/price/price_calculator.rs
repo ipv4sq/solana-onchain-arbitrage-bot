@@ -64,7 +64,7 @@ mod tests {
     use crate::database::mint_record::repository::MintRecordRepository;
     use crate::dex::interface::PoolDataLoader;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

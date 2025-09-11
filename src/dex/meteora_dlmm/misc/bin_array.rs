@@ -1,6 +1,6 @@
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::global::constant::pool_program::PoolProgram;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use solana_program::pubkey::Pubkey;
 
 const BINS_PER_ARRAY: i32 = 70;

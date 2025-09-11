@@ -1,11 +1,11 @@
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::dex::pump_amm::price::global_config::{compute_fees_bps, GlobalConfig};
+use crate::f;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::state::token_balance_holder::get_balance_of_account;
 use crate::util::alias::{AResult, MintAddress};
 use crate::util::traits::option::OptionExt;
-use crate::f;
 use solana_program::pubkey::Pubkey;
 
 pub const FEE_RATE_DENOMINATOR: u64 = 10_000;
@@ -28,7 +28,7 @@ impl PumpAmmPoolData {
         );
 
         let is_selling_base = from_mint == &self.base_mint;
-        
+
         if is_selling_base {
             // Selling base tokens for quote (base->quote)
             // This is like sellBaseInputInternal in the SDK
@@ -73,16 +73,21 @@ impl PumpAmmPoolData {
                 .or_err(f!("Unable to get balance of quote vault"))?;
 
             // Calculate effective quote after fees
-            let total_fee_bps = fees.lp_fee_bps + fees.protocol_fee_bps + 
-                if self.coin_creator == Pubkey::default() { 0 } else { fees.creator_fee_bps };
-            
+            let total_fee_bps = fees.lp_fee_bps
+                + fees.protocol_fee_bps
+                + if self.coin_creator == Pubkey::default() {
+                    0
+                } else {
+                    fees.creator_fee_bps
+                };
+
             // effectiveQuote = quote * 10000 / (10000 + totalFeeBps)
-            let effective_quote = (input_amount as u128 * FEE_RATE_DENOMINATOR as u128) / 
-                (FEE_RATE_DENOMINATOR as u128 + total_fee_bps as u128);
-            
+            let effective_quote = (input_amount as u128 * FEE_RATE_DENOMINATOR as u128)
+                / (FEE_RATE_DENOMINATOR as u128 + total_fee_bps as u128);
+
             // Calculate base amount out using the effective quote
-            let base_amount_out = (base_reserve.amount as u128 * effective_quote) / 
-                (quote_reserve.amount as u128 + effective_quote);
+            let base_amount_out = (base_reserve.amount as u128 * effective_quote)
+                / (quote_reserve.amount as u128 + effective_quote);
 
             Ok(base_amount_out as u64)
         }
@@ -104,15 +109,15 @@ fn swap_base_input_without_fees(input_amount: u64, input_reserve: u64, output_re
     if input_reserve == 0 || output_reserve == 0 {
         return 0;
     }
-    
+
     // Standard AMM formula: output = (output_reserve * input) / (input_reserve + input)
     let numerator = (output_reserve as u128) * (input_amount as u128);
     let denominator = (input_reserve as u128) + (input_amount as u128);
-    
+
     if denominator == 0 {
         return 0;
     }
-    
+
     (numerator / denominator) as u64
 }
 
@@ -129,7 +134,7 @@ mod tests {
     use super::*;
     use crate::global::client::db::must_init_db;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::proxy;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
@@ -140,8 +145,7 @@ mod tests {
         let cope: Pubkey = "DMwbVy48dWVKGe9z1pcVnwF3HLMLrqWdDLfbvx8RchhK".to_pubkey();
         let wsol: Pubkey = Mints::WSOL;
 
-        let account = proxy
-            .get_account(&pool_address)
+        let account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
 

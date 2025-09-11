@@ -1,5 +1,5 @@
 use crate::global::constant::duration::Interval;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;

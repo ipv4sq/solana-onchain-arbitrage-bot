@@ -13,8 +13,8 @@ use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
-use crate::sdk::solana_rpc::utils;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::{block, simulation};
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use solana_account_decoder::UiAccountEncoding;
@@ -72,7 +72,7 @@ async fn build_test_swap_tx(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = utils::get_latest_blockhash().await?;
+    let blockhash = block::get_latest_blockhash().await?;
 
     let message = Message::try_compile(&signer, &instructions, &alts, blockhash)?;
 
@@ -145,7 +145,7 @@ pub async fn simulate_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = utils::simulate_transaction_with_config(
+    let rpc_response = simulation::simulate_transaction_with_config(
         &tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,
@@ -246,7 +246,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = utils::get_latest_blockhash().await?;
+    let blockhash = block::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -276,7 +276,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = utils::simulate_transaction_with_config(
+    let rpc_response = simulation::simulate_transaction_with_config(
         &tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,
@@ -338,6 +338,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
 ) -> AResult<SwapSimulationResult> {
     use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
     use crate::dex::raydium_cpmm::misc::input_account::RaydiumCpmmInputAccount;
+    use crate::sdk::solana_rpc::methods::{block, simulation};
     use crate::sdk::solana_rpc::utils;
 
     let config = RaydiumCpmmConfig::from_address(pool_address).await?;
@@ -376,7 +377,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = utils::get_latest_blockhash().await?;
+    let blockhash = block::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -407,7 +408,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = utils::simulate_transaction_with_config(
+    let rpc_response = simulation::simulate_transaction_with_config(
         &tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,
@@ -562,7 +563,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = utils::get_latest_blockhash().await?;
+    let blockhash = block::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -595,7 +596,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = utils::simulate_transaction_with_config(
+    let rpc_response = simulation::simulate_transaction_with_config(
         &tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,

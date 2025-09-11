@@ -1,7 +1,7 @@
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::dex_type::DexType;
 use crate::global::state::token_balance_holder::QueryRateLimiter;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use crate::util::alias::{AResult, PoolAddress};
 use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::traits::option::OptionExt;

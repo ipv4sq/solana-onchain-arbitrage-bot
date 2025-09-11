@@ -1,6 +1,6 @@
 use crate::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::f;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use crate::util::alias::AResult;
 use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::serde_helpers;

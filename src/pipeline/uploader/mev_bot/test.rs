@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
     use crate::program::mev_bot::ix::extract_mev_instruction;
-    use crate::sdk::solana_rpc::legacy::ensure_mint_account_exists;
+    use crate::sdk::solana_rpc::legacy::ata::ensure_mint_account_exists;
     use crate::util::traits::pubkey::ToPubkey;
 
-    use crate::sdk::solana_rpc::utils::fetch_tx;
+    use crate::sdk::solana_rpc::methods::transaction::fetch_tx;
     use crate::util::debug::log_account_metas;
     use solana_program::pubkey::Pubkey;
     use solana_sdk::signature::{read_keypair_file, Keypair};

@@ -1,4 +1,4 @@
-pub mod buffered_get_account;
+pub mod client;
 pub mod legacy;
-pub mod rpc;
+pub mod methods;
 pub mod utils;

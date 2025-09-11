@@ -1,11 +1,11 @@
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
+use crate::f;
 use crate::global::enums::direction::Direction;
 use crate::global::state::token_balance_holder::get_balance_of_account;
 use crate::util::alias::{AResult, MintAddress};
 use crate::util::traits::option::OptionExt;
-use crate::f;
 use rust_decimal::Decimal;
 
 impl RaydiumCpmmPoolData {
@@ -58,7 +58,7 @@ mod test {
     use crate::dex::interface::PoolDataLoader;
     use crate::global::client::db::must_init_db;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::proxy;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
@@ -69,8 +69,7 @@ mod test {
         let wsol = Mints::WSOL;
         let eagle = "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk".to_pubkey();
 
-        let account = proxy
-            .get_account(&pool_address)
+        let account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
 
@@ -106,8 +105,7 @@ mod test {
         let wsol = Mints::WSOL;
         let eagle = "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk".to_pubkey();
 
-        let pool_account = proxy
-            .get_account(&pool_address)
+        let pool_account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
 

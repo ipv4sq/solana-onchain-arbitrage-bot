@@ -259,10 +259,10 @@ mod tests {
     use crate::global::constant::pool_program::PoolProgram;
     use crate::global::constant::token_program::TokenProgram;
     use crate::program::mev_bot::ix::extract_mev_instruction;
-    use crate::sdk::solana_rpc::utils::fetch_tx_sync;
+    use crate::sdk::solana_rpc::methods::transaction::fetch_tx_sync;
+    use crate::test::test_utils::get_test_rpc_client;
     use crate::util::traits::account_meta::ToAccountMeta;
     use crate::util::traits::pubkey::ToPubkey;
-    use crate::test::test_utils::get_test_rpc_client;
     use anyhow::Result;
     use base64::engine::general_purpose;
     use base64::Engine;

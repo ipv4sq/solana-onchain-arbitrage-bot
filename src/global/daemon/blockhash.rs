@@ -1,4 +1,4 @@
-use crate::sdk::solana_rpc::utils::get_latest_blockhash;
+use crate::sdk::solana_rpc::methods::block::get_latest_blockhash;
 use anyhow::Result;
 use parking_lot::RwLock;
 use solana_sdk::hash::Hash;

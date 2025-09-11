@@ -12,6 +12,7 @@ use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
 use crate::return_error;
+use crate::sdk::solana_rpc::methods::simulation;
 use crate::sdk::solana_rpc::utils;
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
@@ -33,6 +34,7 @@ use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 use tracing::{error, info};
+
 const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
     "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
@@ -213,7 +215,7 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
 
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
-    let response = utils::simulate_transaction_with_config(
+    let response = simulation::simulate_transaction_with_config(
         tx,
         RpcSimulateTransactionConfig {
             sig_verify: false,

@@ -192,10 +192,10 @@ mod tests {
     use crate::global::constant::pool_program::PoolProgram;
     use crate::global::constant::token_program::TokenProgram;
     use crate::program::mev_bot::ix::extract_mev_instruction;
-    use crate::sdk::solana_rpc::utils::fetch_tx_sync;
+    use crate::sdk::solana_rpc::methods::transaction::fetch_tx_sync;
+    use crate::test::test_utils::get_test_rpc_client;
     use crate::util::traits::account_meta::ToAccountMeta;
     use crate::util::traits::pubkey::ToPubkey;
-    use crate::test::test_utils::get_test_rpc_client;
 
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =

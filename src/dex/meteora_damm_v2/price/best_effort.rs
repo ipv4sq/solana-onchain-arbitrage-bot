@@ -185,7 +185,7 @@ mod tests {
     use crate::dex::interface::PoolDataLoader;
     use crate::dex::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::proxy;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
     use std::str::FromStr;
@@ -267,8 +267,7 @@ mod tests {
         let wsol: Pubkey = Mints::WSOL;
         let usdc: Pubkey = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
 
-        let account = proxy
-            .get_account(&pool_address)
+        let account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
 

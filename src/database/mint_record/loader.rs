@@ -2,7 +2,7 @@ use crate::database::mint_record::model::Model as MintRecord;
 #[allow(unused_imports)]
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::TokenProgram;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account_batch;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account_batch;
 use crate::util::traits::orm::ToOrmString;
 use anyhow::Result;
 use mpl_token_metadata::accounts::Metadata;

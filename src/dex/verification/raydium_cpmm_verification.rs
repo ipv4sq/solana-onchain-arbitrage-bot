@@ -9,7 +9,7 @@ mod tests {
     use crate::dex::verification::common::simulate_raydium_cpmm_swap_and_get_balance_diff;
     use crate::global::client::db::must_init_db;
     use crate::global::enums::dex_type::DexType;
-    use crate::sdk::solana_rpc::rpc::_set_test_client;
+    use crate::sdk::solana_rpc::client::_set_test_client;
     use crate::unit_ok;
     use crate::util::alias::AResult;
     use crate::util::traits::account_meta::ToAccountMeta;

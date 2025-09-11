@@ -1,6 +1,6 @@
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use crate::util::traits::pubkey::ToPubkey;
 
 #[tokio::test]

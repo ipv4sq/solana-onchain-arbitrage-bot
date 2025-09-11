@@ -1,11 +1,11 @@
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
+use crate::f;
 use crate::global::enums::direction::Direction;
 use crate::global::state::token_balance_holder::get_balance_of_account;
 use crate::util::alias::{AResult, MintAddress};
 use crate::util::traits::option::OptionExt;
-use crate::f;
 use rust_decimal::Decimal;
 
 impl PumpAmmPoolData {
@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use crate::dex::interface::PoolDataLoader;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::proxy;
+    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
 
@@ -66,8 +66,7 @@ mod tests {
         let cope: Pubkey = "DMwbVy48dWVKGe9z1pcVnwF3HLMLrqWdDLfbvx8RchhK".to_pubkey();
         let wsol: Pubkey = Mints::WSOL;
 
-        let account = proxy
-            .get_account(&pool_address)
+        let account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
 

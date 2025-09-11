@@ -1,5 +1,5 @@
 use crate::global::constant::token_program::TokenProgram;
-use crate::sdk::solana_rpc::rpc;
+use crate::sdk::solana_rpc::client;
 use crate::util::solana::pda::ata;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
@@ -9,7 +9,7 @@ use tracing::info;
 
 pub async fn ensure_mint_account_exists(mint: &Pubkey, wallet: &Keypair) -> anyhow::Result<bool> {
     let owner = &wallet.pubkey();
-    let mint_owner = rpc::rpc_client().get_account(mint).await?.owner;
+    let mint_owner = client::rpc_client().get_account(mint).await?.owner;
     if mint_owner != TokenProgram::TOKEN_2022 && mint_owner != TokenProgram::SPL_TOKEN {
         return Err(anyhow::anyhow!(
             "mint owner should be Token2022 or SPL Token program but instead it's: {}",
@@ -18,7 +18,10 @@ pub async fn ensure_mint_account_exists(mint: &Pubkey, wallet: &Keypair) -> anyh
     }
 
     let mint_account = ata(owner, mint, &mint_owner);
-    let mint_account_exists = rpc::rpc_client().get_account(&mint_account).await.is_ok();
+    let mint_account_exists = client::rpc_client()
+        .get_account(&mint_account)
+        .await
+        .is_ok();
     if !mint_account_exists {
         let tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
             &[
@@ -28,9 +31,9 @@ pub async fn ensure_mint_account_exists(mint: &Pubkey, wallet: &Keypair) -> anyh
             ],
             Some(owner),
             &[wallet],
-            rpc::rpc_client().get_latest_blockhash().await?,
+            client::rpc_client().get_latest_blockhash().await?,
         );
-        let signature = rpc::rpc_client()
+        let signature = client::rpc_client()
             .send_and_confirm_transaction_with_spinner(&tx)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to send transaction: {}", e))?;

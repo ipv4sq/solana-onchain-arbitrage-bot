@@ -3,7 +3,7 @@ use crate::lazy_arc;
 use crate::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
-use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::methods::account::buffered_get_account;
 use crate::util::alias::MintAddress;
 use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::structs::rate_limiter::RateLimiter;
