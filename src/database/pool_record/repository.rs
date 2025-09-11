@@ -8,8 +8,9 @@ use crate::database::pool_record::model::{
 use crate::global::client::db::get_db;
 use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::util::alias::{MintAddress, PoolAddress};
-use crate::util::structs::legacy_loading_cache::LoadingCache;
-use crate::util::structs::persistent_cache::PersistentCache;
+use crate::util::cache::loading_cache::LoadingCache;
+use crate::util::cache::persistent_cache::PersistentCache;
+use crate::util::structs::cache_type::CacheType;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use sea_orm::sea_query::OnConflict;
@@ -19,54 +20,57 @@ use sea_orm::{
 };
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
-use std::time::Duration;
 use tracing::error;
 
 pub struct PoolRecordRepository;
 
 static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
+        CacheType::Custom("mint_to_pools".to_string()),
         1_000_000,
-        Duration::MAX,
-        |_mint: &MintAddress| async move { None },
-        |_mint: MintAddress, _pools: HashSet<PoolRecord>, _duration: Duration| async move {},
-        |mint: &MintAddress| {
-            let mint = *mint;
-            async move {
+        i64::MAX,
+        |_mint: MintAddress| async move { None },
+        Some(|mint_str: String| async move {
+            if let Ok(mint) = mint_str.parse::<Pubkey>() {
                 PoolRecordRepository::find_by_any_mint(&mint)
                     .await
                     .ok()
                     .map(|pools| pools.into_iter().collect())
+            } else {
+                None
             }
-        },
+        }),
+        Some(|_mint_str: String, _pools: HashSet<PoolRecord>, _ttl: i64| async move {}),
     )
 });
 
 static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
+        CacheType::Custom("pool_cache".to_string()),
         1_000_000,
-        Duration::MAX,
-        |addr| {
-            let addr = *addr;
+        i64::MAX,
+        |addr: PoolAddress| {
+            let addr = addr;
             async move {
                 let config = AnyPoolHolder::get(&addr).await?;
                 build_model(config).await.ok()
             }
         },
-        |_mint, record, _duration| async move {
-            let _ = PoolRecordRepository::upsert_pool(record).await;
-        },
-        |addr| {
-            let addr = *addr;
-            async move {
+        Some(|addr_str: String| async move {
+            if let Ok(addr) = addr_str.parse::<Pubkey>() {
                 PoolRecordEntity::find()
                     .filter(model::Column::Address.eq(PubkeyTypeString::from(addr)))
                     .one(get_db().await)
                     .await
                     .ok()
                     .flatten()
+            } else {
+                None
             }
-        },
+        }),
+        Some(|_addr_str: String, record: PoolRecord, _ttl: i64| async move {
+            let _ = PoolRecordRepository::upsert_pool(record).await;
+        }),
     )
 });
 
@@ -94,7 +98,7 @@ impl PoolRecordRepository {
     }
 
     pub async fn ensure_exists(pool: &PoolAddress) -> Option<Model> {
-        POOL_CACHE.ensure_exists(pool).await
+        POOL_CACHE.get(pool).await
     }
 
     pub async fn is_pool_recorded(pool: &PoolAddress) -> bool {

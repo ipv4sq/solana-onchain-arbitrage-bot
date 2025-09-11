@@ -1,5 +1,5 @@
 use crate::database::columns::PubkeyTypeString;
-use crate::database::mint_record::cache::MintCache;
+use crate::database::mint_record::cache::MintCachePrimary;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
 use crate::global::client::db::get_db;
 use crate::lined_err;
@@ -17,7 +17,7 @@ pub struct MintRecordRepository;
 // cache related stuff
 impl MintRecordRepository {
     pub async fn get(mint: &Pubkey) -> Option<MintRecord> {
-        MintCache.get(mint).await
+        MintCachePrimary.get(mint).await
     }
 
     pub async fn get_mint_or_err(mint: &Pubkey) -> Result<MintRecord> {
@@ -28,7 +28,7 @@ impl MintRecordRepository {
     }
 
     pub async fn get_repr_if_present(mint: &Pubkey) -> String {
-        MintCache
+        MintCachePrimary
             .get_if_present(mint)
             .await
             .map(|record| record.repr)

@@ -7,7 +7,7 @@ use crate::util::structs::cache_type::CacheType;
 use once_cell::sync::Lazy;
 
 #[allow(non_upper_case_globals)]
-pub static MintCache: Lazy<PersistentCache<MintAddress, MintRecord>> = Lazy::new(|| {
+pub static MintCachePrimary: Lazy<PersistentCache<MintAddress, MintRecord>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
         CacheType::MintRecord,
         100000,
