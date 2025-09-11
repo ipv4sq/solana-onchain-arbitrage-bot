@@ -9,15 +9,15 @@ use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
 
-type LoadFromDbFn<V> = Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync>;
-type SaveToDbFn<V> = Arc<dyn Fn(String, V, i64) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
+type LoadFromDbFn<K, V> = Arc<dyn Fn(K) -> Pin<Box<dyn Future<Output = Option<V>> + Send>> + Send + Sync>;
+type SaveToDbFn<K, V> = Arc<dyn Fn(K, V, i64) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
 
 pub struct PersistentCache<K, V> {
     cache_type: CacheType,
     loading_cache: LoadingCache<K, Arc<Option<V>>>,
     ttl_seconds: i64,
-    load_from_db_fn: Option<LoadFromDbFn<V>>,
-    save_to_db_fn: Option<SaveToDbFn<V>>,
+    load_from_db_fn: Option<LoadFromDbFn<K, V>>,
+    save_to_db_fn: Option<SaveToDbFn<K, V>>,
 }
 
 impl<K, V> PersistentCache<K, V>
@@ -52,8 +52,8 @@ where
         max_capacity: u64,
         ttl_seconds: i64,
         loader: F,
-        load_from_db_fn: Option<LoadFromDbFn<V>>,
-        save_to_db_fn: Option<SaveToDbFn<V>>,
+        load_from_db_fn: Option<LoadFromDbFn<K, V>>,
+        save_to_db_fn: Option<SaveToDbFn<K, V>>,
     ) -> Self
     where
         F: Fn(K) -> Fut + Send + Sync + 'static + Clone,
@@ -74,7 +74,7 @@ where
             async move {
                 // Try to load from database first
                 let db_value = if let Some(ref load_fn) = load_fn {
-                    load_fn(key_str.clone()).await
+                    load_fn(key_clone.clone()).await
                 } else {
                     Self::kv_cache_load(&cache_type, &key_str).await
                 };
@@ -84,12 +84,12 @@ where
                 }
                 
                 // If not in database, call the loader
-                let loaded_value = loader(key_clone).await;
+                let loaded_value = loader(key_clone.clone()).await;
                 
                 // Save to database if we got a value
                 if let Some(ref value) = loaded_value {
                     if let Some(ref save_fn) = save_fn {
-                        save_fn(key_str, value.clone(), ttl_seconds).await;
+                        save_fn(key_clone, value.clone(), ttl_seconds).await;
                     } else if load_fn.is_none() {
                         // Only use kv_cache if neither custom function is provided
                         Self::kv_cache_save(&cache_type, &key_str, value, ttl_seconds).await;
@@ -133,19 +133,19 @@ where
     where
         F: Fn(K) -> Fut + Send + Sync + 'static + Clone,
         Fut: Future<Output = Option<V>> + Send + 'static,
-        LF: Fn(String) -> LFut + Send + Sync + 'static,
+        LF: Fn(K) -> LFut + Send + Sync + 'static,
         LFut: Future<Output = Option<V>> + Send + 'static,
-        SF: Fn(String, V, i64) -> SFut + Send + Sync + 'static,
+        SF: Fn(K, V, i64) -> SFut + Send + Sync + 'static,
         SFut: Future<Output = ()> + Send + 'static,
     {
-        let load_from_db_fn: Option<LoadFromDbFn<V>> = load_from_db.map(|f| {
+        let load_from_db_fn: Option<LoadFromDbFn<K, V>> = load_from_db.map(|f| {
             Arc::new(move |key| Box::pin(f(key)) as Pin<Box<dyn Future<Output = Option<V>> + Send>>)
-                as LoadFromDbFn<V>
+                as LoadFromDbFn<K, V>
         });
 
-        let save_to_db_fn: Option<SaveToDbFn<V>> = save_to_db.map(|f| {
+        let save_to_db_fn: Option<SaveToDbFn<K, V>> = save_to_db.map(|f| {
             Arc::new(move |key, value, ttl| Box::pin(f(key, value, ttl)) as Pin<Box<dyn Future<Output = ()> + Send>>)
-                as SaveToDbFn<V>
+                as SaveToDbFn<K, V>
         });
 
         Self::new_internal(cache_type, max_capacity, ttl_seconds, loader, load_from_db_fn, save_to_db_fn)
@@ -166,13 +166,12 @@ where
     }
 
     pub async fn put(&self, key: K, value: V) {
-        let key_str = key.to_string();
-        
         // Save to database
         if let Some(ref save_fn) = self.save_to_db_fn {
-            save_fn(key_str, value.clone(), self.ttl_seconds).await;
+            save_fn(key.clone(), value.clone(), self.ttl_seconds).await;
         } else if self.load_from_db_fn.is_none() {
             // Only use kv_cache if neither custom function is provided
+            let key_str = key.to_string();
             Self::kv_cache_save(&self.cache_type, &key_str, &value, self.ttl_seconds).await;
         }
         

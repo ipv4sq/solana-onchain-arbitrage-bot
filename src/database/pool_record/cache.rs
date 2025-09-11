@@ -8,7 +8,6 @@ use crate::util::alias::{MintAddress, PoolAddress};
 use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::structs::cache_type::CacheType;
-use crate::util::traits::pubkey::ToPubkey;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
@@ -19,14 +18,13 @@ pub static PoolsContainMintSecondary: Lazy<PersistentCache<MintAddress, HashSet<
             1_000_000,
             i64::MAX,
             |_mint: MintAddress| async move { None },
-            Some(|mint_str: String| async move {
-                let mint = mint_str.to_pubkey();
+            Some(|mint: MintAddress| async move {
                 PoolRecordRepository::find_by_any_mint(&mint)
                     .await
                     .ok()
                     .map(|pools| pools.into_iter().collect())
             }),
-            Some(|_mint_str: String, _pools: HashSet<PoolRecord>, _ttl: i64| async move {}),
+            Some(|_mint: MintAddress, _pools: HashSet<PoolRecord>, _ttl: i64| async move {}),
         )
     });
 
@@ -42,15 +40,14 @@ pub static PoolCachePrimary: Lazy<PersistentCache<PoolAddress, PoolRecord>> = La
                 build_model(config).await.ok()
             }
         },
-        Some(|addr_str: String| async move {
-            let addr = addr_str.to_pubkey();
+        Some(|addr: PoolAddress| async move {
             PoolRecordRepository::find_by_address(&addr)
                 .await
                 .ok()
                 .flatten()
         }),
         Some(
-            |_addr_str: String, record: PoolRecord, _ttl: i64| async move {
+            |_addr: PoolAddress, record: PoolRecord, _ttl: i64| async move {
                 let _ = PoolRecordRepository::upsert_pool(record).await;
             },
         ),
