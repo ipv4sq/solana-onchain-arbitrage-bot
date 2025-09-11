@@ -93,10 +93,6 @@ impl PoolRecordRepository {
         MINT_TO_POOLS.get(mint).await
     }
 
-    pub async fn get_pool_by_address(pool: &PoolAddress) -> Option<PoolRecord> {
-        POOL_CACHE.get(pool).await
-    }
-
     pub async fn ensure_exists(pool: &PoolAddress) -> Option<Model> {
         POOL_CACHE.ensure_exists(pool).await
     }
@@ -150,37 +146,6 @@ impl PoolRecordRepository {
         }
     }
 
-    pub async fn find_by_mints(mint1: &Pubkey, mint2: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db().await;
-        Ok(PoolRecordEntity::find()
-            .filter(
-                model::Column::BaseMint
-                    .eq(PubkeyTypeString::from(*mint1))
-                    .and(model::Column::QuoteMint.eq(PubkeyTypeString::from(*mint2)))
-                    .or(model::Column::BaseMint
-                        .eq(PubkeyTypeString::from(*mint2))
-                        .and(model::Column::QuoteMint.eq(PubkeyTypeString::from(*mint1)))),
-            )
-            .all(db)
-            .await?)
-    }
-
-    pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db().await;
-        Ok(PoolRecordEntity::find()
-            .filter(model::Column::BaseMint.eq(PubkeyTypeString::from(*base_mint)))
-            .all(db)
-            .await?)
-    }
-
-    pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
-        let db = get_db().await;
-        Ok(PoolRecordEntity::find()
-            .filter(model::Column::QuoteMint.eq(PubkeyTypeString::from(*quote_mint)))
-            .all(db)
-            .await?)
-    }
-
     pub async fn find_by_any_mint(mint: &Pubkey) -> Result<Vec<PoolRecord>> {
         let db = get_db().await;
         Ok(PoolRecordEntity::find()
@@ -195,8 +160,10 @@ impl PoolRecordRepository {
 
     pub async fn find_by_address(address: &Pubkey) -> Result<Option<PoolRecord>> {
         let db = get_db().await;
-        Ok(PoolRecordEntity::find_by_id(PubkeyTypeString::from(*address))
-            .one(db)
-            .await?)
+        Ok(
+            PoolRecordEntity::find_by_id(PubkeyTypeString::from(*address))
+                .one(db)
+                .await?,
+        )
     }
 }
