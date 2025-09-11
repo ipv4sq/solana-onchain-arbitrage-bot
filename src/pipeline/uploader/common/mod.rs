@@ -1,2 +1,2 @@
 pub mod debug;
-pub mod wallet;
+pub mod simulation_log;
