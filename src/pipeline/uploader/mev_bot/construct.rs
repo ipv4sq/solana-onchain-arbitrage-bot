@@ -60,7 +60,8 @@ pub async fn build_tx(
     let (mut instructions, _limit) = gas_instructions(compute_unit_limit, unit_price);
 
     let wallet_pub = wallet.pubkey();
-    let mint_token_program = MintRecordRepository::get_mint_or_err(minor_mint).await?
+    let mint_token_program = MintRecordRepository::get_mint_or_err(minor_mint)
+        .await?
         .program
         .0;
     let jito_tip_account = get_random_tip_account();
@@ -291,7 +292,7 @@ pub async fn log_mev_simulation(
         None
     };
 
-    let pool_addresses: Vec<String> = pools.iter().map(|p| p.pool().to_string()).collect();
+    let pool_addresses: Vec<String> = pools.iter().map(|p| p.pool_address().to_string()).collect();
 
     let pool_types: Vec<String> = pools.iter().map(|p| p.dex_type().to_string()).collect();
 

@@ -22,7 +22,7 @@ impl AnyPoolHolder {
     }
 
     pub async fn upsert(config: AnyPoolConfig) {
-        cache.put(config.pool(), config).await
+        cache.put(config.pool_address(), config).await
     }
 
     pub async fn update_config(
@@ -31,7 +31,9 @@ impl AnyPoolHolder {
         data: &[u8],
     ) -> AResult<AnyPoolConfig> {
         let updated_config = AnyPoolConfig::from_owner_and_data(pool_address, owner, data)?;
-        cache.put(updated_config.pool(), updated_config).await;
+        cache
+            .put(updated_config.pool_address(), updated_config)
+            .await;
         Ok(cache.get(pool_address).await.or_err("")?)
     }
 }
