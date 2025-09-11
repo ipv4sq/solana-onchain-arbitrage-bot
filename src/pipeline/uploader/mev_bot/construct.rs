@@ -1,43 +1,25 @@
-use crate::convention::chain::util::simulation::SimulationResult;
-use crate::database::mev_simulation_log::model::{
-    MevSimulationLogDetails, MevSimulationLogParams, SimulationAccount,
-};
-use crate::database::mev_simulation_log::repository::MevSimulationLogRepository;
 use crate::database::mint_record::repository::MintRecordRepository;
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::constant::mev_bot::MevBot;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::{SystemProgram, TokenProgram};
-use crate::global::enums::step_type::StepType;
-use crate::global::trace::types::Trace;
-use crate::pipeline::uploader::common::simulation_log;
-use crate::pipeline::uploader::provider::jito::{
-    get_jito_tips, get_random_tip_account, send_bundle,
-};
-use crate::return_error;
-use crate::sdk::rpc::methods::simulation;
+use crate::pipeline::uploader::provider::jito::{get_jito_tips, get_random_tip_account};
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
-use simulation::simulate_transaction_with_config;
-use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
-use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::hash::Hash;
 use solana_sdk::message::v0::Message;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::system_instruction::transfer;
 use solana_sdk::transaction::VersionedTransaction;
-use solana_transaction_status::UiTransactionEncoding;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
-use tracing::{error, info};
-
 const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
     "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
@@ -204,93 +186,4 @@ fn ensure_token_account_exists(
     mint_program: &Pubkey,
 ) -> Instruction {
     create_associated_token_account_idempotent(belong_to, belong_to, mint, &mint_program)
-}
-
-pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<SimulationResult> {
-    if trace.since_begin() > 300 {
-        info!(
-            "Gave up on simulation tx because it takes {} milliseconds from trigger to now",
-            trace.since_begin()
-        );
-        return_error!("Gave up");
-    }
-    trace.step(StepType::MevSimulationTxRpcCall);
-
-    // Use the simpler simulate_transaction for better performance
-    // Note: This won't return metadata for failed simulations
-    let response = simulate_transaction_with_config(
-        tx,
-        RpcSimulateTransactionConfig {
-            sig_verify: false,
-            replace_recent_blockhash: false,
-            commitment: Some(CommitmentConfig::processed()),
-            encoding: Some(UiTransactionEncoding::Base64),
-            accounts: None,
-            min_context_slot: Some(trace.slot),
-            inner_instructions: false,
-        },
-    )
-    .await?;
-    let result = SimulationResult::from(&response.value);
-    trace.step(StepType::MevSimulationTxRpcReturned);
-
-    Ok(result)
-}
-
-pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result<String> {
-    if trace.since_begin() > 400 {
-        info!(
-            "Gave up on landing tx because it takes {} milliseconds from trigger to now",
-            trace.since_begin()
-        );
-        return_error!("Gave up");
-    }
-    trace.step(StepType::MevRealTxRpcCall);
-    // let response = rpc_client().send_transaction(tx).await?;
-    // sender(tx).await;
-    let response = send_bundle(tx).await;
-    match response {
-        Ok(bundle_id) => {
-            trace.step_with(
-                StepType::MevRealTxRpcReturned,
-                "jito_bundle_id",
-                bundle_id.clone(),
-            );
-            info!("MEV transaction sent successfully: jito id: {}", bundle_id);
-            Ok(bundle_id)
-        }
-        Err(e) => {
-            trace.step_with(StepType::MevRealTxRpcReturned, "error", e.to_string());
-            error!("Failed to send MEV transaction: {}", e);
-            Err(e)
-        }
-    }
-}
-
-pub async fn simulate_and_log_mev(
-    owner: Pubkey,
-    tx: &VersionedTransaction,
-    minor_mint: &Pubkey,
-    desired_mint: &Pubkey,
-    pools: &[AnyPoolConfig],
-    _minimum_profit: u64,
-    trace: Trace,
-) -> Result<(SimulationResult, Trace)> {
-    let result = simulate_mev_tx(tx, &trace).await?;
-
-    if let Err(e) = simulation_log::log_mev_simulation(
-        &result,
-        &trace,
-        &owner,
-        tx,
-        minor_mint,
-        desired_mint,
-        pools,
-    )
-    .await
-    {
-        error!("Failed to log MEV simulation: {}", e);
-    }
-
-    Ok((result, trace))
 }
