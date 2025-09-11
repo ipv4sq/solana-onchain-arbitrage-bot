@@ -1,4 +1,4 @@
-use crate::database::columns::PubkeyType;
+use crate::database::columns::PubkeyTypeString;
 use crate::database::mint_record::cache::MintCache;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
 use crate::global::client::db::get_db;
@@ -78,7 +78,7 @@ impl MintRecordRepository {
     pub async fn find_by_address(address: Pubkey) -> Result<Option<MintRecord>> {
         let db = get_db().await;
         Ok(MintRecordTable::find()
-            .filter(model::Column::Address.eq(PubkeyType::from(address)))
+            .filter(model::Column::Address.eq(PubkeyTypeString::from(address)))
             .one(db)
             .await?)
     }

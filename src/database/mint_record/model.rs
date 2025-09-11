@@ -1,4 +1,4 @@
-use crate::database::columns::PubkeyType;
+use crate::database::columns::PubkeyTypeString;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 #[sea_orm(table_name = "mints")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub address: PubkeyType,
+    pub address: PubkeyTypeString,
     pub symbol: String,
     pub decimals: i16,
-    pub program: PubkeyType,
+    pub program: PubkeyTypeString,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

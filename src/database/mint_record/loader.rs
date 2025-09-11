@@ -3,7 +3,7 @@ use crate::database::mint_record::model::Model as MintRecord;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::TokenProgram;
 use crate::sdk::solana_rpc::rpc::rpc_client;
-use crate::util::traits::orm::ToOrm;
+use crate::util::traits::orm::ToOrmString;
 use anyhow::Result;
 use mpl_token_metadata::accounts::Metadata;
 use mpl_token_metadata::programs::MPL_TOKEN_METADATA_ID as METADATA_PROGRAM_ID;
@@ -104,8 +104,8 @@ async fn test_load_token_2022_mint() {
 
     if let Ok(mint_record) = result {
         assert_eq!(mint_record.decimals, 9);
-        assert_eq!(mint_record.program, TokenProgram::TOKEN_2022.to_orm());
-        assert_eq!(mint_record.address, token_2022_mint.to_orm());
+        assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
+        assert_eq!(mint_record.address.0, token_2022_mint);
         assert!(mint_record.symbol == "Unknown" || mint_record.symbol == "LLM");
     }
 }

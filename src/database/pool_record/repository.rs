@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use crate::database::columns::PubkeyType;
+use crate::database::columns::PubkeyTypeString;
 use crate::database::pool_record::converter::build_model;
 use crate::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
@@ -60,7 +60,7 @@ static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(||
             let addr = *addr;
             async move {
                 PoolRecordEntity::find()
-                    .filter(model::Column::Address.eq(PubkeyType::from(addr)))
+                    .filter(model::Column::Address.eq(PubkeyTypeString::from(addr)))
                     .one(get_db().await)
                     .await
                     .ok()
@@ -76,7 +76,7 @@ static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
         async move {
             Some(
                 PoolRecordEntity::find()
-                    .filter(model::Column::Address.eq(PubkeyType::from(addr)))
+                    .filter(model::Column::Address.eq(PubkeyTypeString::from(addr)))
                     .one(get_db().await)
                     .await
                     .ok()
@@ -156,11 +156,11 @@ impl PoolRecordRepository {
         Ok(PoolRecordEntity::find()
             .filter(
                 model::Column::BaseMint
-                    .eq(PubkeyType::from(*mint1))
-                    .and(model::Column::QuoteMint.eq(PubkeyType::from(*mint2)))
+                    .eq(PubkeyTypeString::from(*mint1))
+                    .and(model::Column::QuoteMint.eq(PubkeyTypeString::from(*mint2)))
                     .or(model::Column::BaseMint
-                        .eq(PubkeyType::from(*mint2))
-                        .and(model::Column::QuoteMint.eq(PubkeyType::from(*mint1)))),
+                        .eq(PubkeyTypeString::from(*mint2))
+                        .and(model::Column::QuoteMint.eq(PubkeyTypeString::from(*mint1)))),
             )
             .all(db)
             .await?)
@@ -169,7 +169,7 @@ impl PoolRecordRepository {
     pub async fn find_by_base_mint(base_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
         let db = get_db().await;
         Ok(PoolRecordEntity::find()
-            .filter(model::Column::BaseMint.eq(PubkeyType::from(*base_mint)))
+            .filter(model::Column::BaseMint.eq(PubkeyTypeString::from(*base_mint)))
             .all(db)
             .await?)
     }
@@ -177,7 +177,7 @@ impl PoolRecordRepository {
     pub async fn find_by_quote_mint(quote_mint: &Pubkey) -> Result<Vec<PoolRecord>> {
         let db = get_db().await;
         Ok(PoolRecordEntity::find()
-            .filter(model::Column::QuoteMint.eq(PubkeyType::from(*quote_mint)))
+            .filter(model::Column::QuoteMint.eq(PubkeyTypeString::from(*quote_mint)))
             .all(db)
             .await?)
     }
@@ -187,8 +187,8 @@ impl PoolRecordRepository {
         Ok(PoolRecordEntity::find()
             .filter(
                 model::Column::BaseMint
-                    .eq(PubkeyType::from(*mint))
-                    .or(model::Column::QuoteMint.eq(PubkeyType::from(*mint))),
+                    .eq(PubkeyTypeString::from(*mint))
+                    .or(model::Column::QuoteMint.eq(PubkeyTypeString::from(*mint))),
             )
             .all(db)
             .await?)
@@ -196,7 +196,7 @@ impl PoolRecordRepository {
 
     pub async fn find_by_address(address: &Pubkey) -> Result<Option<PoolRecord>> {
         let db = get_db().await;
-        Ok(PoolRecordEntity::find_by_id(PubkeyType::from(*address))
+        Ok(PoolRecordEntity::find_by_id(PubkeyTypeString::from(*address))
             .one(db)
             .await?)
     }

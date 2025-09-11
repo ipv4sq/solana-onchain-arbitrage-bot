@@ -1,4 +1,4 @@
-use crate::database::columns::PubkeyType;
+use crate::database::columns::PubkeyTypeString;
 use crate::global::enums::dex_type::DexType;
 use chrono::{DateTime, Utc};
 use sea_orm::entity::prelude::*;
@@ -9,11 +9,11 @@ use std::hash::{Hash, Hasher};
 #[sea_orm(table_name = "pools")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub address: PubkeyType,
+    pub address: PubkeyTypeString,
     pub name: String,
     pub dex_type: DexType,
-    pub base_mint: PubkeyType,
-    pub quote_mint: PubkeyType,
+    pub base_mint: PubkeyTypeString,
+    pub quote_mint: PubkeyTypeString,
     #[sea_orm(column_type = "JsonBinary")]
     pub description: PoolRecordDescriptor,
     #[sea_orm(column_type = "JsonBinary")]

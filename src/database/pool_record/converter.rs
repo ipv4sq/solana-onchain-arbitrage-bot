@@ -1,7 +1,7 @@
 use crate::database::mint_record::repository::MintRecordRepository;
 use crate::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::dex::any_pool_config::AnyPoolConfig;
-use crate::util::traits::orm::ToOrm;
+use crate::util::traits::orm::ToOrmString;
 use crate::f;
 
 pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
