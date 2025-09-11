@@ -1,9 +1,9 @@
 use crate::database::columns::PubkeyTypeString;
 use crate::database::mint_record::cache::MintCache;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
-use crate::f;
 use crate::global::client::db::get_db;
 use crate::util::traits::option::OptionExt;
+use crate::{f, lined_err};
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
@@ -21,8 +21,8 @@ impl MintRecordRepository {
     }
 
     pub async fn get_mint_or_err(mint: &Pubkey) -> Result<MintRecord> {
-        (*MintCache).get(mint).await.or_err(f!(
-            "Fail to get mint from cache and db and loader: {}",
+        (*MintCache).get(mint).await.or_else_err(lined_err!(
+            "Cannot get mint from cache and db and loader: {}",
             mint
         ))
     }
