@@ -17,7 +17,7 @@ use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
@@ -60,9 +60,7 @@ pub async fn build_tx(
     let (mut instructions, _limit) = gas_instructions(compute_unit_limit, unit_price);
 
     let wallet_pub = wallet.pubkey();
-    let mint_token_program = MintRecordRepository::get_mint(minor_mint)
-        .await?
-        .ok_or_else(|| anyhow!("Mint not found in cache: {}", minor_mint))?
+    let mint_token_program = MintRecordRepository::get_mint_or_err(minor_mint).await?
         .program
         .0;
     let jito_tip_account = get_random_tip_account();
@@ -297,12 +295,8 @@ pub async fn log_mev_simulation(
 
     let pool_types: Vec<String> = pools.iter().map(|p| p.dex_type().to_string()).collect();
 
-    let minor_mint_record = MintRecordRepository::get_mint(minor_mint)
-        .await?
-        .ok_or_else(|| anyhow!("Minor mint not found"))?;
-    let desired_mint_record = MintRecordRepository::get_mint(desired_mint)
-        .await?
-        .ok_or_else(|| anyhow!("Desired mint not found"))?;
+    let minor_mint_record = MintRecordRepository::get_mint_or_err(minor_mint).await?;
+    let desired_mint_record = MintRecordRepository::get_mint_or_err(desired_mint).await?;
 
     // Calculate actual profit from simulation results
     // Find the user's token account for the desired mint

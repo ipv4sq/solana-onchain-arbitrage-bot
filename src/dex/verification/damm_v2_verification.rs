@@ -38,7 +38,7 @@ mod tests {
         let token_b_mint = config.pool_data.token_b_mint;
 
         // Fetch token symbols and decimals from database
-        let token_a_record = MintRecordRepository::get_mint(&token_a_mint).await?;
+        let token_a_record = MintRecordRepository::get(&token_a_mint).await;
         let token_a_symbol = token_a_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -48,7 +48,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(9u32);
 
-        let token_b_record = MintRecordRepository::get_mint(&token_b_mint).await?;
+        let token_b_record = MintRecordRepository::get(&token_b_mint).await;
         let token_b_symbol = token_b_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -176,7 +176,7 @@ mod tests {
         let token_b_mint = config.pool_data.token_b_mint;
 
         // Fetch token symbols and decimals from database
-        let token_a_record = MintRecordRepository::get_mint(&token_a_mint).await?;
+        let token_a_record = MintRecordRepository::get(&token_a_mint).await;
         let token_a_symbol = token_a_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -186,7 +186,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(9u32);
 
-        let token_b_record = MintRecordRepository::get_mint(&token_b_mint).await?;
+        let token_b_record = MintRecordRepository::get(&token_b_mint).await;
         let token_b_symbol = token_b_record
             .as_ref()
             .map(|m| m.repr.clone())

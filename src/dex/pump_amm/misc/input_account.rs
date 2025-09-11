@@ -5,7 +5,6 @@ use crate::dex::interface::PoolDataLoader;
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::pump_amm::misc::address_seed;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
-use crate::f;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::{
@@ -15,7 +14,6 @@ use crate::global::enums::direction::TradeDirection;
 use crate::util::alias::AResult;
 use crate::util::solana::pda::ata;
 use crate::util::traits::account_meta::ToAccountMeta;
-use crate::util::traits::option::OptionExt;
 use crate::util::traits::pubkey::ToPubkey;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey;
@@ -56,12 +54,8 @@ impl PumpAmmInputAccounts {
         input_mint: &Pubkey,
         output_mint: &Pubkey,
     ) -> AResult<PumpAmmInputAccounts> {
-        let base_mint = MintRecordRepository::get_mint(&pool_data.base_mint)
-            .await?
-            .or_err(f!("Can't retrieve base mint {}", &pool_data.base_mint))?;
-        let quote_mint = MintRecordRepository::get_mint(&pool_data.quote_mint)
-            .await?
-            .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
+        let base_mint = MintRecordRepository::get_mint_or_err(&pool_data.base_mint).await?;
+        let quote_mint = MintRecordRepository::get_mint_or_err(&pool_data.quote_mint).await?;
         let coin_creator_vault_authority =
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
 
@@ -174,12 +168,8 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
         pool: &Pubkey,
         pool_data: &PumpAmmPoolData,
     ) -> AResult<PumpAmmInputAccounts> {
-        let base_mint = MintRecordRepository::get_mint(&pool_data.base_mint)
-            .await?
-            .or_err(f!("Can't retrieve base mint {}", &pool_data.base_mint))?;
-        let quote_mint = MintRecordRepository::get_mint(&pool_data.quote_mint)
-            .await?
-            .or_err(f!("Can't retrieve base mint  {}", &pool_data.quote_mint))?;
+        let base_mint = MintRecordRepository::get_mint_or_err(&pool_data.base_mint).await?;
+        let quote_mint = MintRecordRepository::get_mint_or_err(&pool_data.quote_mint).await?;
         let coin_creator_vault_authority =
             address_seed::get_coin_creator_vault_authority(&pool_data.coin_creator);
 

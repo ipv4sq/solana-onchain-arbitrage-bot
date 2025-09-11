@@ -43,7 +43,7 @@ mod tests {
         let token_y_mint = config.pool_data.token_y_mint; // USDC
 
         // Fetch token symbols and decimals from database
-        let token_x_record = MintRecordRepository::get_mint(&token_x_mint).await?;
+        let token_x_record = MintRecordRepository::get(&token_x_mint).await;
         let token_x_symbol = token_x_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -53,7 +53,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(9u32);
 
-        let token_y_record = MintRecordRepository::get_mint(&token_y_mint).await?;
+        let token_y_record = MintRecordRepository::get(&token_y_mint).await;
         let token_y_symbol = token_y_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -181,7 +181,7 @@ mod tests {
         let token_y_mint = config.pool_data.token_y_mint; // USDC
 
         // Fetch token symbols and decimals from database
-        let token_x_record = MintRecordRepository::get_mint(&token_x_mint).await?;
+        let token_x_record = MintRecordRepository::get(&token_x_mint).await;
         let token_x_symbol = token_x_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -191,7 +191,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(9u32);
 
-        let token_y_record = MintRecordRepository::get_mint(&token_y_mint).await?;
+        let token_y_record = MintRecordRepository::get(&token_y_mint).await;
         let token_y_symbol = token_y_record
             .as_ref()
             .map(|m| m.repr.clone())

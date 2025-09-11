@@ -2,11 +2,9 @@ use crate::database::mint_record::repository::MintRecordRepository;
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
 use crate::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
-use crate::f;
 use crate::util::alias::AResult;
 use crate::util::solana::pda::ata;
 use crate::util::traits::account_meta::ToAccountMeta;
-use crate::util::traits::option::OptionExt;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -35,12 +33,8 @@ impl RaydiumCpmmInputAccount {
         to_mint: &Pubkey,
     ) -> AResult<RaydiumCpmmInputAccount> {
         pool_data.pair().consists_of(from_mint, to_mint)?;
-        let from_mint_record = MintRecordRepository::get_mint(from_mint)
-            .await?
-            .or_err(f!("cannot find mint {}", from_mint))?;
-        let to_mint_record = MintRecordRepository::get_mint(to_mint)
-            .await?
-            .or_err(f!("cannot find mint {}", to_mint))?;
+        let from_mint_record = MintRecordRepository::get_mint_or_err(from_mint).await?;
+        let to_mint_record = MintRecordRepository::get_mint_or_err(to_mint).await?;
         let input_token_account = ata(payer, from_mint, &from_mint_record.program.0);
         let output_token_account = ata(payer, to_mint, &to_mint_record.program.0);
 

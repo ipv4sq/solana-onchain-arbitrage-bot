@@ -39,7 +39,7 @@ mod tests {
         let quote_mint = config.quote_mint;
 
         // Fetch token symbols and decimals from database
-        let base_record = MintRecordRepository::get_mint(&base_mint).await?;
+        let base_record = MintRecordRepository::get(&base_mint).await;
         let base_symbol = base_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -49,7 +49,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(6u32);
 
-        let quote_record = MintRecordRepository::get_mint(&quote_mint).await?;
+        let quote_record = MintRecordRepository::get(&quote_mint).await;
         let quote_symbol = quote_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -206,7 +206,7 @@ mod tests {
         let quote_mint = config.quote_mint;
 
         // Fetch token symbols and decimals from database
-        let base_record = MintRecordRepository::get_mint(&base_mint).await?;
+        let base_record = MintRecordRepository::get(&base_mint).await;
         let base_symbol = base_record
             .as_ref()
             .map(|m| m.repr.clone())
@@ -216,7 +216,7 @@ mod tests {
             .and_then(|m| m.decimals.try_into().ok())
             .unwrap_or(6u32);
 
-        let quote_record = MintRecordRepository::get_mint(&quote_mint).await?;
+        let quote_record = MintRecordRepository::get(&quote_mint).await;
         let quote_symbol = quote_record
             .as_ref()
             .map(|m| m.repr.clone())

@@ -3,7 +3,7 @@ use crate::database::mint_record::cache::MintCache;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
 use crate::global::client::db::get_db;
 use crate::util::traits::option::OptionExt;
-use crate::{f, lined_err};
+use crate::lined_err;
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
@@ -16,10 +16,6 @@ pub struct MintRecordRepository;
 
 // cache related stuff
 impl MintRecordRepository {
-    pub async fn get_mint(mint: &Pubkey) -> Result<Option<MintRecord>> {
-        Ok(MintCache.get(mint).await)
-    }
-
     pub async fn get(mint: &Pubkey) -> Option<MintRecord> {
         MintCache.get(mint).await
     }
