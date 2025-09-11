@@ -1,9 +1,9 @@
 use crate::database::columns::PubkeyTypeString;
 use crate::database::mint_record::cache::MintCache;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
+use crate::f;
 use crate::global::client::db::get_db;
 use crate::util::traits::option::OptionExt;
-use crate::f;
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
