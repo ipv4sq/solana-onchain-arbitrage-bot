@@ -37,8 +37,7 @@ impl MintRecordRepository {
 
     pub fn get_repr_if_present(mint: &Pubkey) -> String {
         tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(Self::get_repr_if_present_async(mint))
+            tokio::runtime::Handle::current().block_on(Self::get_repr_if_present_async(mint))
         })
     }
 
