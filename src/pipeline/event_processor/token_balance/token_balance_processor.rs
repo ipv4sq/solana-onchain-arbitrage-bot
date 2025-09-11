@@ -1,7 +1,7 @@
 use crate::convention::chain::Transaction;
 use crate::global::trace::types::Trace;
 use crate::util::alias::{AResult, MintAddress};
-use crate::util::structs::ttl_loading_cache::TtlLoadingCache;
+use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::traits::option::OptionExt;
 use crate::util::traits::pubkey::ToPubkey;
 use crate::{f, unit_ok};
@@ -15,12 +15,11 @@ pub struct TokenAmount {
     pub decimals: u8,
 }
 #[allow(non_upper_case_globals)]
-pub static TokenBalanceShortLivingCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> =
+pub static TokenBalanceShortLivingCache: Lazy<LoadingCache<(Pubkey, MintAddress), TokenAmount>> =
     Lazy::new(|| {
-        TtlLoadingCache::new(
+        LoadingCache::with_ttl(
             10_000_000,
-            //
-            Duration::from_secs(3600 * 3),
+            Duration::from_secs(3600 * 3), // 3 hours TTL
             |_| async move { None },
         )
     });

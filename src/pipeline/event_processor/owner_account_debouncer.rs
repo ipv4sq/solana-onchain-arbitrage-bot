@@ -11,8 +11,8 @@ use crate::pipeline::event_processor::structs::pool_update::AccountComparison;
 use crate::pipeline::event_processor::structs::trigger::Trigger;
 use crate::sdk::yellowstone::GrpcAccountUpdate;
 use crate::util::alias::AResult;
+use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::structs::buffered_debouncer::BufferedDebouncer;
-use crate::util::structs::ttl_loading_cache::TtlLoadingCache;
 use crate::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::lazy_arc;
 use once_cell::sync::Lazy;
@@ -47,7 +47,7 @@ pub static AccountUpdateRouteProcessor: Lazy<Arc<PubSubProcessor<WithTrace<GrpcA
 
 async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) -> AResult<()> {
     let WithTrace(update, trace) = update;
-    let previous = LastAccountUpdateCache.get_sync(&update.account);
+    let previous = LastAccountUpdateCache.get_if_present(&update.account).await;
     let updated = AccountState::from_grpc_update(&update);
     LastAccountUpdateCache
         .put(update.account, updated.clone())
@@ -87,5 +87,5 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) -> AResult<()> 
 }
 
 #[allow(non_upper_case_globals)]
-static LastAccountUpdateCache: Lazy<TtlLoadingCache<Pubkey, AccountState>> =
-    Lazy::new(|| TtlLoadingCache::new(10_000_000, Interval::HOUR, |_| async move { None }));
+static LastAccountUpdateCache: Lazy<LoadingCache<Pubkey, AccountState>> =
+    Lazy::new(|| LoadingCache::with_ttl(10_000_000, Interval::HOUR, |_| async move { None }));
