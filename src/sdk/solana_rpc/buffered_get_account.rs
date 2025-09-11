@@ -6,7 +6,6 @@ use mpsc::{channel, Receiver};
 use solana_sdk::account::Account;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tokio::runtime::Runtime;
@@ -26,16 +25,17 @@ async fn get_sender() -> &'static Sender<Request> {
     CHANNEL
         .get_or_init(|| async {
             let (tx, rx) = channel::<Request>(1000);
-            
+
             // Spawn a dedicated thread with its own runtime for the buffered get account loop
             thread::spawn(move || {
-                let runtime = Runtime::new().expect("Failed to create dedicated runtime for buffered_get_account");
+                let runtime = Runtime::new()
+                    .expect("Failed to create dedicated runtime for buffered_get_account");
                 runtime.block_on(async {
                     info!("Started dedicated buffered_get_account worker thread");
                     loop_forever(rx).await;
                 });
             });
-            
+
             tx
         })
         .await
@@ -54,7 +54,7 @@ pub async fn buffered_get_account(address: &Pubkey) -> AResult<Account> {
 pub async fn buffered_get_account_batch(addresses: &[Pubkey]) -> AResult<Vec<Option<Account>>> {
     let mut receivers = Vec::with_capacity(addresses.len());
     let sender = get_sender().await;
-    
+
     for address in addresses {
         let (tx, rx) = channel::<AResult<Account>>(1);
         let request = Request {
@@ -64,26 +64,28 @@ pub async fn buffered_get_account_batch(addresses: &[Pubkey]) -> AResult<Vec<Opt
         sender.send(request).await?;
         receivers.push(rx);
     }
-    
+
     let mut results = Vec::with_capacity(addresses.len());
     for mut rx in receivers {
         let result = rx.recv().await.or_err("channel closed unexpectedly")?;
         results.push(result.ok());
     }
-    
+
     Ok(results)
 }
 
-pub async fn buffered_get_account_batch_map(addresses: &[Pubkey]) -> AResult<HashMap<Pubkey, Account>> {
+pub async fn buffered_get_account_batch_map(
+    addresses: &[Pubkey],
+) -> AResult<HashMap<Pubkey, Account>> {
     let batch_results = buffered_get_account_batch(addresses).await?;
-    
+
     let mut map = HashMap::with_capacity(addresses.len());
     for (address, account_opt) in addresses.iter().zip(batch_results.into_iter()) {
         if let Some(account) = account_opt {
             map.insert(*address, account);
         }
     }
-    
+
     Ok(map)
 }
 
@@ -127,7 +129,7 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
                             Some(account) => Ok(account.clone()),
                             None => Err(anyhow!("{} Not found", pubkey)),
                         };
-                        
+
                         if let Err(e) = request.on_response.send(result).await {
                             info!("on_response dropped before send: {} ({})", e, pubkey)
                         }
