@@ -1,16 +1,16 @@
 use crate::dex::pump_amm::PUMP_GLOBAL_CONFIG;
+use crate::f;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::AResult;
+use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::serde_helpers;
 use crate::util::structs::cache_type::CacheType;
-use crate::util::structs::persistent_cache::PersistentCache;
 use crate::util::traits::option::OptionExt;
-use crate::f;
 use borsh::{BorshDeserialize, BorshSerialize};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
-use std::time::Duration;
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct GlobalConfig {
@@ -73,7 +73,7 @@ impl GlobalConfig {
 
 impl FeeConfig {
     pub async fn fetch(address: &Pubkey) -> AResult<Self> {
-        let account = rpc_client().get_account(address).await?;
+        let account = buffered_get_account(address).await?;
 
         if account.data.len() < 8 {
             return Err(anyhow::anyhow!(
@@ -90,11 +90,8 @@ static GLOBAL_CONFIG_CACHE: Lazy<PersistentCache<Pubkey, GlobalConfig>> = Lazy::
     PersistentCache::new(
         CacheType::Custom("PumpGlobalConfig".to_string()),
         100,
-        Duration::from_secs(60 * 60 * 24 * 7), // 7 days TTL
-        |address: &Pubkey| {
-            let address = *address;
-            async move { GlobalConfig::fetch(&address).await.ok() }
-        },
+        60 * 60 * 24 * 7, // 7 days TTL in seconds
+        |address: Pubkey| async move { GlobalConfig::fetch(&address).await.ok() },
     )
 });
 
