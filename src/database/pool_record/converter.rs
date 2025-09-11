@@ -10,7 +10,7 @@ pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
 
     let name = f!("{} - {}", base.repr, quote.repr);
     Ok(PoolRecord {
-        address: config.pool().to_orm(),
+        address: config.pool_address().to_orm(),
         name,
         dex_type: config.dex_type(),
         base_mint: config.base_mint().to_orm(),

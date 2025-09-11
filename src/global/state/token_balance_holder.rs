@@ -1,4 +1,5 @@
 use crate::database::mint_record::repository::MintRecordRepository;
+use crate::lazy_arc;
 use crate::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
@@ -7,7 +8,6 @@ use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::MintAddress;
 use crate::util::structs::rate_limiter::RateLimiter;
 use crate::util::structs::ttl_loading_cache::TtlLoadingCache;
-use crate::lazy_arc;
 use once_cell::sync::Lazy;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
