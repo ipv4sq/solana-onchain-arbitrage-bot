@@ -1,24 +1,20 @@
-use crate::sdk::solana_rpc::rpc::rpc_client;
-use crate::util::alias::AResult;
-use crate::util::structs::cache_type::CacheType;
-use crate::util::structs::persistent_cache::PersistentCache;
 use crate::return_error;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::util::alias::AResult;
+use crate::util::cache::persistent_cache::PersistentCache;
+use crate::util::structs::cache_type::CacheType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
-use std::time::Duration;
 
 #[allow(non_upper_case_globals)]
 static AmmConfigCache: Lazy<PersistentCache<Pubkey, CpmmAmmConfig>> = Lazy::new(|| {
     PersistentCache::new(
         CacheType::Custom("RaydiumAMMConfig".to_string()),
-        200,
-        Duration::from_secs(60 * 24 * 30),
-        |x: &Pubkey| {
-            let x = x.clone();
-            async move { fetch_amm_config(&x).await }
-        },
+        100,
+        60 * 60 * 24 * 30, // 30 days TTL in seconds
+        |x: Pubkey| async move { fetch_amm_config(&x).await },
     )
 });
 
@@ -54,8 +50,7 @@ impl CpmmAmmConfig {
 }
 
 async fn fetch_amm_config(config_address: &Pubkey) -> Option<CpmmAmmConfig> {
-    let account = rpc_client()
-        .get_account(config_address)
+    let account = buffered_get_account(config_address)
         .await
         .map_err(|e| {
             anyhow::anyhow!(

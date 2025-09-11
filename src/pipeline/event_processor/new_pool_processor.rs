@@ -4,8 +4,8 @@ use crate::global::enums::step_type::StepType;
 use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::global::trace::types::WithTrace;
 use crate::pipeline::event_processor::structs::trigger::Trigger;
+use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::structs::cache_type::CacheType;
-use crate::util::structs::persistent_cache::PersistentCache;
 use crate::util::structs::rate_limiter::RateLimitError;
 use crate::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
 use crate::{lazy_arc, unit_ok};
@@ -14,7 +14,6 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 use std::sync::Arc;
-use std::time::Duration;
 
 #[allow(non_upper_case_globals)]
 pub static NewPoolProcessor: Lazy<Arc<PubSubProcessor<WithTrace<Trigger>>>> = lazy_arc!({
@@ -61,11 +60,7 @@ async fn record_if_real_pool(addr: &Pubkey) {
             // if it's not rate limit error, we block it.
             if e.is::<RateLimitError>() {
                 NonPoolBlocklist
-                    .put_with_ttl(
-                        *addr,
-                        BlocklistEntry::new(BlocklistReason::QueryFailed),
-                        Duration::from_secs(60),
-                    )
+                    .put(*addr, BlocklistEntry::new(BlocklistReason::QueryFailed))
                     .await;
             } else {
                 NonPoolBlocklist
@@ -102,8 +97,8 @@ impl BlocklistEntry {
 pub static NonPoolBlocklist: Lazy<PersistentCache<Pubkey, BlocklistEntry>> = Lazy::new(|| {
     PersistentCache::new(
         CacheType::Custom("non_pool_blocklist".to_string()),
-        10000,
-        Duration::from_secs(86400 * 7),
-        |_addr: &Pubkey| async move { None },
+        1_000_000,
+        86400 * 7, // 7 days TTL in seconds
+        |_addr: Pubkey| async move { None },
     )
 });

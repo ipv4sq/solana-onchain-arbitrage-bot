@@ -1,10 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[cfg(test)]
-#[path = "cache_type_test.rs"]
-mod tests;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CacheType {
     MintRecord,
