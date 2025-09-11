@@ -17,6 +17,8 @@ pub struct PoolBase<Data: PoolDataLoader> {
     pub pool_address: PoolAddress,
     pub base_mint: MintAddress,
     pub quote_mint: MintAddress,
+    pub base_reserve: Pubkey,
+    pub quote_reserve: Pubkey,
     pub dex_type: DexType,
     pub pool_data: Data,
 }

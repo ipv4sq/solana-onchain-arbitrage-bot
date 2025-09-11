@@ -18,7 +18,9 @@ impl PoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmConfig {
         Ok(MeteoraDlmmConfig {
             pool_address: address,
             base_mint: pool_data.token_x_mint,
+            base_reserve: pool_data.reserve_x,
             quote_mint: pool_data.token_y_mint,
+            quote_reserve: pool_data.reserve_y,
             dex_type,
             pool_data,
         })

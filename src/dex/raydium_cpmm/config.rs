@@ -6,11 +6,11 @@ use crate::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::enums::dex_type::DexType;
+use crate::return_error;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::structs::mint_pair::MintPair;
 use crate::util::traits::account_meta::ToAccountMeta;
 use crate::util::traits::option::OptionExt;
-use crate::return_error;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 
@@ -22,7 +22,9 @@ impl PoolConfig<RaydiumCpmmPoolData> for RaydiumCpmmConfig {
         Ok(RaydiumCpmmConfig {
             pool_address: address,
             base_mint: pool_data.token_0_mint,
+            base_reserve: pool_data.token_0_vault,
             quote_mint: pool_data.token_1_mint,
+            quote_reserve: pool_data.token_1_vault,
             dex_type,
             pool_data,
         })

@@ -19,7 +19,9 @@ impl PoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2Config {
         Ok(MeteoraDammV2Config {
             pool_address: address,
             base_mint: pool_data.token_a_mint,
+            base_reserve: pool_data.token_a_vault,
             quote_mint: pool_data.token_b_mint,
+            quote_reserve: pool_data.token_b_vault,
             dex_type,
             pool_data,
         })

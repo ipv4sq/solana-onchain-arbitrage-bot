@@ -24,7 +24,9 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
         Ok(PumpAmmConfig {
             pool_address: address,
             base_mint: pool_data.base_mint,
+            base_reserve: pool_data.pool_base_token_account,
             quote_mint: pool_data.quote_mint,
+            quote_reserve: pool_data.pool_quote_token_account,
             dex_type,
             pool_data,
         })
