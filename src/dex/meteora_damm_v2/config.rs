@@ -42,7 +42,7 @@ impl PoolConfig<MeteoraDammV2PoolData> for MeteoraDammV2Config {
         .await?;
         let accounts: Vec<AccountMeta> = vec![
             built.meteora_program,
-            self.pool_data.pair().desired_mint()?.to_readonly(),
+            self.pool_data.mint_pair().desired_mint()?.to_readonly(),
             built.event_authority,
             built.pool_authority,
             self.pool_address.to_writable(),

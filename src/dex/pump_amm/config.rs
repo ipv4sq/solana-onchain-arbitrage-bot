@@ -59,7 +59,7 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
 
         let mut accounts: Vec<AccountMeta> = vec![
             built.program,
-            self.pool_data.pair().desired_mint()?.to_readonly(),
+            self.pool_data.mint_pair().desired_mint()?.to_readonly(),
             built.global_config,
             built.event_authority,
             built.protocol_fee_recipient,

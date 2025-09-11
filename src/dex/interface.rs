@@ -70,28 +70,32 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
         Self::from_data(x.pool_address, x.dex_type, data)
     }
 
-    fn pool(&self) -> PoolAddress {
+    // proxy fields for enum
+    fn pool_address(&self) -> PoolAddress {
         self.as_ref().pool_address
     }
-
     fn base_mint(&self) -> MintAddress {
         self.as_ref().base_mint
     }
-
     fn quote_mint(&self) -> MintAddress {
         self.as_ref().quote_mint
     }
-
     fn dex_type(&self) -> DexType {
         self.as_ref().dex_type
     }
-
-    fn pool_data_json(&self) -> Value {
-        json!(self.as_ref().pool_data)
+    fn base_reserve(&self) -> Pubkey {
+        self.as_ref().base_reserve
+    }
+    fn quote_reserve(&self) -> Pubkey {
+        self.as_ref().quote_reserve
     }
 
+    // derived
     fn mint_pair(&self) -> MintPair {
-        self.as_ref().pool_data.pair()
+        self.as_ref().pool_data.mint_pair()
+    }
+    fn pool_data_json(&self) -> Value {
+        json!(self.as_ref().pool_data)
     }
 }
 
@@ -115,7 +119,7 @@ pub trait PoolDataLoader: Sized + Serialize + for<'de> Deserialize<'de> {
         MintPair(self.base_mint(), self.quote_mint()).shall_contain(mint)
     }
 
-    fn pair(&self) -> MintPair {
+    fn mint_pair(&self) -> MintPair {
         MintPair(self.base_mint(), self.quote_mint())
     }
 

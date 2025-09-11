@@ -66,7 +66,7 @@ impl PoolConfig<RaydiumCpmmPoolData> for RaydiumCpmmConfig {
 
     async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>> {
         let desired_mint = Mints::WSOL;
-        self.pool_data.pair().shall_contain(&desired_mint)?;
+        self.pool_data.mint_pair().shall_contain(&desired_mint)?;
 
         let (minor_mint_vault, desired_mint_vault) = if self.base_mint != desired_mint {
             (self.pool_data.base_vault(), self.pool_data.quote_vault())
@@ -76,7 +76,7 @@ impl PoolConfig<RaydiumCpmmPoolData> for RaydiumCpmmConfig {
 
         let accounts: Vec<AccountMeta> = vec![
             PoolProgram::RAYDIUM_CPMM.to_program(),
-            self.pool_data.pair().desired_mint()?.to_readonly(),
+            self.pool_data.mint_pair().desired_mint()?.to_readonly(),
             RAYDIUM_CPMM_AUTHORITY.to_readonly(),
             self.pool_address.to_writable(),
             self.pool_data.amm_config.to_readonly(),

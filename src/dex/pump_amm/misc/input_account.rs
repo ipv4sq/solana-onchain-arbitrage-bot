@@ -68,7 +68,7 @@ impl PumpAmmInputAccounts {
             &fee_program,
         );
 
-        let fee = if pool_data.pair().contains(&Mints::WSOL) {
+        let fee = if pool_data.mint_pair().contains(&Mints::WSOL) {
             Mints::WSOL
         } else {
             Mints::USDC
@@ -182,7 +182,7 @@ impl InputAccountUtil<PumpAmmInputAccounts, PumpAmmPoolData> for PumpAmmInputAcc
             &fee_program,
         );
 
-        let fee = if pool_data.pair().contains(&Mints::WSOL) {
+        let fee = if pool_data.mint_pair().contains(&Mints::WSOL) {
             Mints::WSOL
         } else {
             Mints::USDC

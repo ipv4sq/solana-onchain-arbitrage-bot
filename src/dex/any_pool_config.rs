@@ -10,9 +10,9 @@ use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::pump_amm::config::PumpAmmConfig;
 use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
 use crate::global::enums::dex_type::DexType;
+use crate::return_error;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::structs::mint_pair::MintPair;
-use crate::return_error;
 use anyhow::Result;
 use delegate::delegate;
 use serde_json::Value;
@@ -78,7 +78,7 @@ impl AnyPoolConfig {
             RaydiumCpmm(d) => d,
         } {
             pub async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
-            pub fn pool(&self) -> PoolAddress;
+            pub fn pool_address(&self) -> PoolAddress;
             pub fn base_mint(&self) -> MintAddress;
             pub fn quote_mint(&self) -> MintAddress;
             pub fn dex_type(&self) -> DexType;

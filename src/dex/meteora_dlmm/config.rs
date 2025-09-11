@@ -42,7 +42,7 @@ impl PoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmConfig {
         let accounts: Vec<AccountMeta> = [
             vec![
                 built.program,
-                self.pool_data.pair().desired_mint()?.to_readonly(),
+                self.pool_data.mint_pair().desired_mint()?.to_readonly(),
                 built.event_authority,
                 built.lb_pair,
                 built.reverse_x,

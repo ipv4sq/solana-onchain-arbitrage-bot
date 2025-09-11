@@ -32,7 +32,7 @@ impl RaydiumCpmmInputAccount {
         from_mint: &Pubkey,
         to_mint: &Pubkey,
     ) -> AResult<RaydiumCpmmInputAccount> {
-        pool_data.pair().consists_of(from_mint, to_mint)?;
+        pool_data.mint_pair().consists_of(from_mint, to_mint)?;
         let from_mint_record = MintRecordRepository::get_mint_or_err(from_mint).await?;
         let to_mint_record = MintRecordRepository::get_mint_or_err(to_mint).await?;
         let input_token_account = ata(payer, from_mint, &from_mint_record.program.0);
