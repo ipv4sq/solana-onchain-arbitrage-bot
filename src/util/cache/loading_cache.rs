@@ -92,15 +92,8 @@ where
             .map(|arc| (*arc).clone())
     }
 
-    pub fn get_if_present(&self, key: &K) -> Option<V> {
-        use std::future::IntoFuture;
-        let future = self.cache.get(key);
-        
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(future.into_future())
-                .map(|arc| (*arc).clone())
-        })
+    pub async fn get_if_present(&self, key: &K) -> Option<V> {
+        self.cache.get(key).await.map(|arc| (*arc).clone())
     }
 
     pub async fn put(&self, key: K, value: V) {
@@ -190,6 +183,7 @@ mod tests {
 
         let val = cache.get(&"key1".to_string()).await;
         assert_eq!(val, Some("value_key1".to_string()));
+        cache.run_pending_tasks().await;
         assert_eq!(cache.entry_count(), 1);
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
 
@@ -197,7 +191,7 @@ mod tests {
         assert_eq!(val, Some("value_key1".to_string()));
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
 
-        let val = cache.get_if_present(&"key2".to_string());
+        let val = cache.get_if_present(&"key2".to_string()).await;
         assert_eq!(val, None);
         assert_eq!(load_count.load(Ordering::SeqCst), 1);
     }
@@ -232,12 +226,12 @@ mod tests {
         });
 
         cache.get(&1).await;
-        assert_eq!(cache.get_if_present(&1), Some("value_1".to_string()));
+        assert_eq!(cache.get_if_present(&1).await, Some("value_1".to_string()));
 
         sleep(Duration::from_millis(150)).await;
         cache.run_pending_tasks().await;
 
-        assert_eq!(cache.get_if_present(&1), None);
+        assert_eq!(cache.get_if_present(&1).await, None);
     }
 
     #[tokio::test]
@@ -273,11 +267,12 @@ mod tests {
         cache.get(&1).await;
         cache.get(&2).await;
         cache.get(&3).await;
+        cache.run_pending_tasks().await;
         assert_eq!(cache.entry_count(), 3);
 
         cache.invalidate(&2).await;
         cache.run_pending_tasks().await;
-        assert_eq!(cache.get_if_present(&2), None);
+        assert_eq!(cache.get_if_present(&2).await, None);
 
         cache.invalidate_all();
         cache.run_pending_tasks().await;
@@ -355,15 +350,15 @@ mod tests {
         ];
         cache.put_multiple(entries).await;
 
-        assert_eq!(cache.get_if_present(&10), Some("ten".to_string()));
-        assert_eq!(cache.get_if_present(&11), Some("eleven".to_string()));
-        assert_eq!(cache.get_if_present(&12), Some("twelve".to_string()));
+        assert_eq!(cache.get_if_present(&10).await, Some("ten".to_string()));
+        assert_eq!(cache.get_if_present(&11).await, Some("eleven".to_string()));
+        assert_eq!(cache.get_if_present(&12).await, Some("twelve".to_string()));
 
         cache.invalidate_multiple(vec![10, 11]).await;
         cache.run_pending_tasks().await;
         
-        assert_eq!(cache.get_if_present(&10), None);
-        assert_eq!(cache.get_if_present(&11), None);
-        assert_eq!(cache.get_if_present(&12), Some("twelve".to_string()));
+        assert_eq!(cache.get_if_present(&10).await, None);
+        assert_eq!(cache.get_if_present(&11).await, None);
+        assert_eq!(cache.get_if_present(&12).await, Some("twelve".to_string()));
     }
 }

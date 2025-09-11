@@ -27,11 +27,19 @@ impl MintRecordRepository {
         ))
     }
 
-    pub fn get_repr_if_present(mint: &Pubkey) -> String {
+    pub async fn get_repr_if_present_async(mint: &Pubkey) -> String {
         (*MintCache)
             .get_if_present(mint)
+            .await
             .map(|record| record.repr)
-            .unwrap_or("Unknown".parse().unwrap())
+            .unwrap_or_else(|| "Unknown".to_string())
+    }
+
+    pub fn get_repr_if_present(mint: &Pubkey) -> String {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(Self::get_repr_if_present_async(mint))
+        })
     }
 
     pub async fn get_decimal(mint: &Pubkey) -> Result<Option<u8>> {

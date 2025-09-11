@@ -158,6 +158,13 @@ where
             .and_then(|arc| (*arc).clone())
     }
 
+    pub async fn get_if_present(&self, key: &K) -> Option<V> {
+        self.loading_cache
+            .get_if_present(key)
+            .await
+            .and_then(|arc| (*arc).clone())
+    }
+
     pub async fn put(&self, key: K, value: V) {
         let key_str = key.to_string();
         
