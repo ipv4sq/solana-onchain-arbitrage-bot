@@ -1,7 +1,7 @@
 use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::utils::get_latest_blockhash;
 use anyhow::Result;
 use parking_lot::RwLock;
-use proxy::get_latest_blockhash;
 use solana_sdk::hash::Hash;
 use std::sync::Arc;
 use std::thread;

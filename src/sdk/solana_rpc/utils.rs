@@ -2,8 +2,12 @@ use crate::convention::chain::mapper::traits::ToUnified;
 use crate::convention::chain::util::simulation::SimulationResult;
 use crate::convention::chain::Transaction;
 use crate::sdk::solana_rpc::rpc;
+use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::traits::signature::ToSignature;
 use solana_client::rpc_client::RpcClient;
+use solana_client::rpc_config::RpcSimulateTransactionConfig;
+use solana_client::rpc_response::{Response, RpcSimulateTransactionResult};
+use solana_program::hash::Hash;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::VersionedTransaction;
@@ -56,4 +60,17 @@ pub fn fetch_tx_sync(client: &RpcClient, signature: &str) -> anyhow::Result<Tran
         .get_transaction_with_config(&signature.to_sig(), rpc::json_config())
         .map_err(|e| anyhow::anyhow!("Failed to fetch transaction: {}", e))?
         .to_unified()
+}
+
+pub async fn get_latest_blockhash() -> Result<Hash, solana_client::client_error::ClientError> {
+    rpc_client().get_latest_blockhash().await
+}
+
+pub async fn simulate_transaction_with_config(
+    transaction: &VersionedTransaction,
+    config: RpcSimulateTransactionConfig,
+) -> Result<Response<RpcSimulateTransactionResult>, solana_client::client_error::ClientError> {
+    rpc_client()
+        .simulate_transaction_with_config(transaction, config)
+        .await
 }

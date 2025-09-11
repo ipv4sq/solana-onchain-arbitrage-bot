@@ -12,7 +12,7 @@ use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
 use crate::return_error;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::utils;
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
@@ -213,19 +213,19 @@ pub async fn simulate_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> Result
 
     // Use the simpler simulate_transaction for better performance
     // Note: This won't return metadata for failed simulations
-    let response = proxy::simulate_transaction_with_config(
-            tx,
-            RpcSimulateTransactionConfig {
-                sig_verify: false,
-                replace_recent_blockhash: false,
-                commitment: Some(CommitmentConfig::processed()),
-                encoding: Some(UiTransactionEncoding::Base64),
-                accounts: None,
-                min_context_slot: Some(trace.slot),
-                inner_instructions: false,
-            },
-        )
-        .await?;
+    let response = utils::simulate_transaction_with_config(
+        tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: false,
+            commitment: Some(CommitmentConfig::processed()),
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: None,
+            min_context_slot: Some(trace.slot),
+            inner_instructions: false,
+        },
+    )
+    .await?;
     let result = SimulationResult::from(&response.value);
     trace.step(StepType::MevSimulationTxRpcReturned);
 

@@ -1,7 +1,6 @@
 use crate::dex::pump_amm::PUMP_GLOBAL_CONFIG;
 use crate::f;
 use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
-use crate::sdk::solana_rpc::proxy;
 use crate::util::alias::AResult;
 use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::serde_helpers;
@@ -51,7 +50,7 @@ pub struct Fees {
 
 impl GlobalConfig {
     async fn fetch(address: &Pubkey) -> AResult<Self> {
-        let account = proxy::get_account(address).await?;
+        let account = buffered_get_account(address).await?;
 
         if account.data.len() < 8 {
             return Err(anyhow::anyhow!(

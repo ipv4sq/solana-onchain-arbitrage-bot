@@ -69,7 +69,7 @@ impl PumpAmmPoolData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sdk::solana_rpc::proxy;
+    use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
     use serde_json::Value;
 
@@ -81,7 +81,7 @@ mod tests {
     #[tokio::test]
     async fn test_pool_data_matches_solscan() {
         let pool_address = PoolAddress.to_pubkey();
-        let account = proxy::get_account(&pool_address)
+        let account = buffered_get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account from RPC");
 

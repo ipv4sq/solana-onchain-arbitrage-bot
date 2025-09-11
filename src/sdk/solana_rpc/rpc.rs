@@ -13,7 +13,7 @@ static RPC_HOLDER: Lazy<RwLock<Arc<rpc_client::RpcClient>>> = Lazy::new(|| {
     )))
 });
 
-pub(super) fn rpc_client() -> Arc<rpc_client::RpcClient> {
+pub fn rpc_client() -> Arc<rpc_client::RpcClient> {
     RPC_HOLDER.read().clone()
 }
 

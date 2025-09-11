@@ -1,7 +1,7 @@
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::dex_type::DexType;
 use crate::global::state::token_balance_holder::QueryRateLimiter;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
 use crate::util::alias::{AResult, PoolAddress};
 use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::traits::option::OptionExt;
@@ -58,7 +58,7 @@ impl AnyPoolConfig {
 
     async fn from(pool_address: &Pubkey) -> AResult<AnyPoolConfig> {
         QueryRateLimiter.try_acquire_err()?;
-        let account = proxy::get_account(pool_address).await?;
+        let account = buffered_get_account(pool_address).await?;
         let dex_type = DexType::determine_from(&account.owner);
         Self::new(*pool_address, dex_type, &account.data)
     }

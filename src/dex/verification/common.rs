@@ -13,7 +13,8 @@ use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
+use crate::sdk::solana_rpc::utils;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use solana_account_decoder::UiAccountEncoding;
@@ -71,7 +72,7 @@ async fn build_test_swap_tx(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = proxy::get_latest_blockhash().await?;
+    let blockhash = utils::get_latest_blockhash().await?;
 
     let message = Message::try_compile(&signer, &instructions, &alts, blockhash)?;
 
@@ -128,8 +129,8 @@ pub async fn simulate_swap_and_get_balance_diff(
     let user_token_out = accounts[5].pubkey;
 
     // Get pre-simulation balances
-    let pre_token_in = proxy::get_account(&user_token_in).await?;
-    let pre_token_out = proxy::get_account(&user_token_out).await?;
+    let pre_token_in = buffered_get_account(&user_token_in).await?;
+    let pre_token_out = buffered_get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -144,22 +145,22 @@ pub async fn simulate_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = proxy::simulate_transaction_with_config(
-            &tx,
-            RpcSimulateTransactionConfig {
-                sig_verify: false,
-                replace_recent_blockhash: true,
-                commitment: None,
-                encoding: Some(UiTransactionEncoding::Base64),
-                accounts: Some(RpcSimulateTransactionAccountsConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
-                }),
-                min_context_slot: None,
-                inner_instructions: true,
-            },
-        )
-        .await?;
+    let rpc_response = utils::simulate_transaction_with_config(
+        &tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: true,
+            commitment: None,
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: Some(RpcSimulateTransactionAccountsConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+            }),
+            min_context_slot: None,
+            inner_instructions: true,
+        },
+    )
+    .await?;
 
     let sim_response =
         SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
@@ -245,7 +246,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = proxy::get_latest_blockhash().await?;
+    let blockhash = utils::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -259,8 +260,8 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     let user_token_out = accounts[3].pubkey;
 
     // Get pre-simulation balances
-    let pre_token_in = proxy::get_account(&user_token_in).await?;
-    let pre_token_out = proxy::get_account(&user_token_out).await?;
+    let pre_token_in = buffered_get_account(&user_token_in).await?;
+    let pre_token_out = buffered_get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -275,22 +276,22 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = proxy::simulate_transaction_with_config(
-            &tx,
-            RpcSimulateTransactionConfig {
-                sig_verify: false,
-                replace_recent_blockhash: true,
-                commitment: None,
-                encoding: Some(UiTransactionEncoding::Base64),
-                accounts: Some(RpcSimulateTransactionAccountsConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
-                }),
-                min_context_slot: None,
-                inner_instructions: true,
-            },
-        )
-        .await?;
+    let rpc_response = utils::simulate_transaction_with_config(
+        &tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: true,
+            commitment: None,
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: Some(RpcSimulateTransactionAccountsConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+            }),
+            min_context_slot: None,
+            inner_instructions: true,
+        },
+    )
+    .await?;
 
     let sim_response =
         SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
@@ -337,9 +338,10 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
 ) -> AResult<SwapSimulationResult> {
     use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
     use crate::dex::raydium_cpmm::misc::input_account::RaydiumCpmmInputAccount;
-    
+    use crate::sdk::solana_rpc::utils;
+
     let config = RaydiumCpmmConfig::from_address(pool_address).await?;
-    
+
     // Build accounts based on swap direction
     let accounts = RaydiumCpmmInputAccount::build_accounts(
         payer,
@@ -350,14 +352,14 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     )
     .await?
     .to_list_cloned();
-    
+
     // Build the swap instruction data for Raydium CPMM
     // Discriminator for swap_base_in instruction
     let discriminator = [143, 190, 90, 218, 196, 30, 51, 222]; // swap_base_in discriminator
     let mut data = discriminator.to_vec();
     data.extend_from_slice(&amount_in.to_le_bytes());
     data.extend_from_slice(&min_amount_out.to_le_bytes());
-    
+
     // Build the swap instruction
     let (mut instructions, _limit) = gas_instructions(100_000, 0);
     let swap_ix = Instruction {
@@ -366,62 +368,62 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
         data,
     };
     instructions.push(swap_ix);
-    
+
     // Use the same ALT as other DEXs
     let alt_keys = vec!["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()];
-    
+
     let mut alts = Vec::new();
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = proxy::get_latest_blockhash().await?;
-    
+    let blockhash = utils::get_latest_blockhash().await?;
+
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
-    
+
     let tx = VersionedTransaction {
         signatures: vec![Signature::default(); 1],
         message: solana_sdk::message::VersionedMessage::V0(message),
     };
-    
+
     // User token accounts are at indices 4 and 5 for Raydium CPMM
     // Index 4: input_token_account, Index 5: output_token_account
     let user_token_in = accounts[4].pubkey;
     let user_token_out = accounts[5].pubkey;
-    
+
     // Get pre-simulation balances
-    let pre_token_in = proxy::get_account(&user_token_in).await?;
-    let pre_token_out = proxy::get_account(&user_token_out).await?;
-    
+    let pre_token_in = buffered_get_account(&user_token_in).await?;
+    let pre_token_out = buffered_get_account(&user_token_out).await?;
+
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
     } else {
         0
     };
-    
+
     let pre_balance_out = if pre_token_out.lamports > 0 {
         unpack_token_account(&pre_token_out.data, &pre_token_out.owner)?
     } else {
         0
     };
-    
+
     // Simulate the transaction
-    let rpc_response = proxy::simulate_transaction_with_config(
-            &tx,
-            RpcSimulateTransactionConfig {
-                sig_verify: false,
-                replace_recent_blockhash: true,
-                commitment: Some(CommitmentConfig::confirmed()),
-                encoding: Some(UiTransactionEncoding::Base64),
-                accounts: Some(RpcSimulateTransactionAccountsConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
-                }),
-                min_context_slot: None,
-                inner_instructions: true,
-            },
-        )
-        .await;
-    
+    let rpc_response = utils::simulate_transaction_with_config(
+        &tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: true,
+            commitment: Some(CommitmentConfig::confirmed()),
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: Some(RpcSimulateTransactionAccountsConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+            }),
+            min_context_slot: None,
+            inner_instructions: true,
+        },
+    )
+    .await;
+
     let rpc_response = match rpc_response {
         Ok(rpc_response) => rpc_response,
         Err(error) => {
@@ -429,10 +431,10 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
             return Err(error.into());
         }
     };
-    
+
     let sim_response =
         SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
-    
+
     if let Some(err) = &sim_response.error {
         return Ok(SwapSimulationResult {
             balance_diff_in: 0,
@@ -441,21 +443,21 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
             error: Some(err.clone()),
         });
     }
-    
+
     // Get post-simulation balances
     let post_balance_in = sim_response
         .get_account(&user_token_in)
         .and_then(|acc| acc.get_token_balance().ok().flatten())
         .unwrap_or(0);
-    
+
     let post_balance_out = sim_response
         .get_account(&user_token_out)
         .and_then(|acc| acc.get_token_balance().ok().flatten())
         .unwrap_or(0);
-    
+
     let balance_diff_in = post_balance_in as i128 - pre_balance_in as i128;
     let balance_diff_out = post_balance_out as i128 - pre_balance_out as i128;
-    
+
     Ok(SwapSimulationResult {
         balance_diff_in,
         balance_diff_out,
@@ -506,15 +508,15 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
         // Quote -> Base: Pump AMM only supports exact OUT for this direction
         // The Sell instruction (0x66) expects exact OUT semantics
         // We need to calculate the exact base amount we want
-        
+
         let base_out = if min_amount_out == 0 {
             // Calculate expected output with minimal slippage
             // Use 0.01% slippage to account for rounding differences
             let calculated = config.get_amount_out(amount_in, from_mint, to_mint).await?;
-            let with_slippage = calculated * 995 / 1000;  // 0.5% slippage
-            // Note: We need 0.5% slippage because Pump AMM uses exact OUT semantics
-            // for quote->base swaps, which requires specifying the exact base amount.
-            // Rounding differences in integer math require this buffer.
+            let with_slippage = calculated * 995 / 1000; // 0.5% slippage
+                                                         // Note: We need 0.5% slippage because Pump AMM uses exact OUT semantics
+                                                         // for quote->base swaps, which requires specifying the exact base amount.
+                                                         // Rounding differences in integer math require this buffer.
             with_slippage
         } else {
             println!(
@@ -560,7 +562,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = proxy::get_latest_blockhash().await?;
+    let blockhash = utils::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -577,8 +579,8 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     };
 
     // Get pre-simulation balances
-    let pre_token_in = proxy::get_account(&user_token_in).await?;
-    let pre_token_out = proxy::get_account(&user_token_out).await?;
+    let pre_token_in = buffered_get_account(&user_token_in).await?;
+    let pre_token_out = buffered_get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -593,22 +595,22 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = proxy::simulate_transaction_with_config(
-            &tx,
-            RpcSimulateTransactionConfig {
-                sig_verify: false,
-                replace_recent_blockhash: true,
-                commitment: Some(CommitmentConfig::confirmed()),
-                encoding: Some(UiTransactionEncoding::Base64),
-                accounts: Some(RpcSimulateTransactionAccountsConfig {
-                    encoding: Some(UiAccountEncoding::Base64),
-                    addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
-                }),
-                min_context_slot: None,
-                inner_instructions: true,
-            },
-        )
-        .await;
+    let rpc_response = utils::simulate_transaction_with_config(
+        &tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: true,
+            commitment: Some(CommitmentConfig::confirmed()),
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: Some(RpcSimulateTransactionAccountsConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+            }),
+            min_context_slot: None,
+            inner_instructions: true,
+        },
+    )
+    .await;
 
     let rpc_response = match rpc_response {
         Ok(rpc_response) => rpc_response,

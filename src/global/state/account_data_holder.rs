@@ -1,6 +1,6 @@
 use crate::global::constant::duration::Interval;
 use crate::global::state::token_balance_holder::QueryRateLimiter;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
@@ -22,7 +22,8 @@ impl AccountDataHolder {
             warn!("Rpc client query limited");
         }
 
-        if let Some(data) = proxy::get_account_data(addr).await.ok() {
+        if let Some(account) = buffered_get_account(addr).await.ok() {
+            let data = account.data;
             AccountDataCache.put(*addr, data.clone()).await;
             return Some(data);
         }

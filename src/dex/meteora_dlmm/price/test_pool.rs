@@ -1,6 +1,6 @@
 use crate::dex::interface::PoolDataLoader;
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
 use crate::util::traits::pubkey::ToPubkey;
 
 #[tokio::test]
@@ -9,7 +9,8 @@ async fn inspect_trump_pool() {
     let trump_mint = "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN".to_pubkey();
     let usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey();
 
-    let account_data = proxy::get_account_data(&pool_address).await.unwrap();
+    let account = buffered_get_account(&pool_address).await.unwrap();
+    let account_data = account.data;
     let pool_data = MeteoraDlmmPoolData::load_data(&account_data).unwrap();
 
     println!("\n=== TRUMP/USDC Pool Analysis ===");

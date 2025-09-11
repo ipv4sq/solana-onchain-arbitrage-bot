@@ -1,5 +1,5 @@
 use crate::global::constant::duration::Interval;
-use crate::sdk::solana_rpc::proxy;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -71,7 +71,7 @@ async fn fetch_single_alt(key: &Pubkey) -> Result<AddressLookupTableAccount> {
 }
 
 async fn fetch_single_alt_internal(key: &Pubkey) -> Result<AddressLookupTableAccount> {
-    let account = proxy::get_account(key)
+    let account = buffered_get_account(key)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to fetch ALT {}: {}", key, e))?;
 
