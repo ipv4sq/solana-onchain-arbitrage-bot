@@ -51,6 +51,42 @@ pub async fn buffered_get_account(address: &Pubkey) -> AResult<Account> {
     rx.recv().await.or_err("channel closed unexpectedly")?
 }
 
+pub async fn buffered_get_account_batch(addresses: &[Pubkey]) -> AResult<Vec<Option<Account>>> {
+    let mut receivers = Vec::with_capacity(addresses.len());
+    let sender = get_sender().await;
+    
+    for address in addresses {
+        let (tx, rx) = channel::<AResult<Account>>(1);
+        let request = Request {
+            address: *address,
+            on_response: tx,
+        };
+        sender.send(request).await?;
+        receivers.push(rx);
+    }
+    
+    let mut results = Vec::with_capacity(addresses.len());
+    for mut rx in receivers {
+        let result = rx.recv().await.or_err("channel closed unexpectedly")?;
+        results.push(result.ok());
+    }
+    
+    Ok(results)
+}
+
+pub async fn buffered_get_account_batch_map(addresses: &[Pubkey]) -> AResult<HashMap<Pubkey, Account>> {
+    let batch_results = buffered_get_account_batch(addresses).await?;
+    
+    let mut map = HashMap::with_capacity(addresses.len());
+    for (address, account_opt) in addresses.iter().zip(batch_results.into_iter()) {
+        if let Some(account) = account_opt {
+            map.insert(*address, account);
+        }
+    }
+    
+    Ok(map)
+}
+
 async fn loop_forever(mut pipeline: Receiver<Request>) {
     loop {
         every_batch(&mut pipeline).await;

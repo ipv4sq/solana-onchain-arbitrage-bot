@@ -2,7 +2,7 @@ use crate::database::mint_record::model::Model as MintRecord;
 #[allow(unused_imports)]
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::TokenProgram;
-use crate::sdk::solana_rpc::rpc::rpc_client;
+use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account_batch;
 use crate::util::traits::orm::ToOrmString;
 use anyhow::Result;
 use mpl_token_metadata::accounts::Metadata;
@@ -13,11 +13,20 @@ use spl_token::state::Mint;
 use spl_token_2022::extension::StateWithExtensions;
 
 pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
-    let client = rpc_client();
-    let account = client
-        .get_account(mint)
+    let metadata_seeds = &[b"metadata", METADATA_PROGRAM_ID.as_ref(), mint.as_ref()];
+    let (metadata_pda, _) = Pubkey::find_program_address(metadata_seeds, &METADATA_PROGRAM_ID);
+
+    let addresses = vec![*mint, metadata_pda];
+    let accounts = buffered_get_account_batch(&addresses)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to fetch mint account {}: {}", mint, e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to fetch accounts: {}", e))?;
+
+    let (mint_account, metadata_account) = match accounts.as_slice() {
+        [mint_opt, metadata_opt] => (mint_opt.as_ref(), metadata_opt.as_ref()),
+        _ => return Err(anyhow::anyhow!("Unexpected number of accounts returned")),
+    };
+
+    let account = mint_account.ok_or_else(|| anyhow::anyhow!("Mint account {} not found", mint))?;
 
     let (decimals, owner) = if account.owner == TokenProgram::SPL_TOKEN {
         let mint_state = Mint::unpack(&account.data)
@@ -37,17 +46,22 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
         ));
     };
 
-    let repr = match fetch_token_metadata(mint).await {
-        Ok((symbol, name)) => {
-            if !symbol.is_empty() {
-                symbol
-            } else if !name.is_empty() {
-                name
-            } else {
-                "Unknown".to_string()
+    let repr = match metadata_account {
+        Some(metadata_account) => match deserialize_metadata(&metadata_account.data) {
+            Ok(metadata) => {
+                let symbol = metadata.symbol.trim_matches('\0').to_string();
+                let name = metadata.name.trim_matches('\0').to_string();
+                if !symbol.is_empty() {
+                    symbol
+                } else if !name.is_empty() {
+                    name
+                } else {
+                    "Unknown".to_string()
+                }
             }
-        }
-        Err(_) => "Unknown".to_string(),
+            Err(_) => "Unknown".to_string(),
+        },
+        None => "Unknown".to_string(),
     };
 
     Ok(MintRecord {
@@ -58,24 +72,6 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
         created_at: None,
         updated_at: None,
     })
-}
-
-async fn fetch_token_metadata(mint: &Pubkey) -> Result<(String, String)> {
-    let metadata_seeds = &[b"metadata", METADATA_PROGRAM_ID.as_ref(), mint.as_ref()];
-    let (metadata_pda, _) = Pubkey::find_program_address(metadata_seeds, &METADATA_PROGRAM_ID);
-    let client = rpc_client();
-
-    match client.get_account(&metadata_pda).await {
-        Ok(account) => match deserialize_metadata(&account.data) {
-            Ok(metadata) => {
-                let symbol = metadata.symbol.trim_matches('\0').to_string();
-                let name = metadata.name.trim_matches('\0').to_string();
-                Ok((symbol, name))
-            }
-            Err(e) => Err(anyhow::anyhow!("Failed to deserialize metadata: {}", e)),
-        },
-        Err(_) => Err(anyhow::anyhow!("No metadata account found")),
-    }
 }
 
 fn deserialize_metadata(data: &[u8]) -> Result<Metadata> {
