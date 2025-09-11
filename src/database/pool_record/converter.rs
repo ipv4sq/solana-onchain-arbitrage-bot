@@ -16,10 +16,9 @@ pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
         base_mint: config.base_mint().to_orm(),
         quote_mint: config.quote_mint().to_orm(),
         description: PoolRecordDescriptor {
-            base_symbol: base.repr,
-            quote_symbol: quote.repr,
+            base_repr: base.repr,
+            quote_repr: quote.repr,
         },
-        data_snapshot: config.pool_data_json(),
         created_at: None,
         updated_at: None,
     })

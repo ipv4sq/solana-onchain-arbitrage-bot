@@ -116,7 +116,6 @@ impl PoolRecordRepository {
             base_mint: Set(pool.base_mint.clone()),
             quote_mint: Set(pool.quote_mint.clone()),
             description: Set(pool.description.clone()),
-            data_snapshot: Set(pool.data_snapshot.clone()),
             created_at: NotSet,
             updated_at: NotSet,
         };
