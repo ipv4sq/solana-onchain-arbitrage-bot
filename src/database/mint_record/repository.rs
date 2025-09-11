@@ -2,8 +2,8 @@ use crate::database::columns::PubkeyTypeString;
 use crate::database::mint_record::cache::MintCache;
 use crate::database::mint_record::{model, MintRecord, MintRecordTable};
 use crate::global::client::db::get_db;
-use crate::util::traits::option::OptionExt;
 use crate::lined_err;
+use crate::util::traits::option::OptionExt;
 use anyhow::Result;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{
@@ -27,18 +27,12 @@ impl MintRecordRepository {
         ))
     }
 
-    pub async fn get_repr_if_present_async(mint: &Pubkey) -> String {
+    pub async fn get_repr_if_present(mint: &Pubkey) -> String {
         (*MintCache)
             .get_if_present(mint)
             .await
             .map(|record| record.repr)
             .unwrap_or_else(|| "Unknown".to_string())
-    }
-
-    pub fn get_repr_if_present(mint: &Pubkey) -> String {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(Self::get_repr_if_present_async(mint))
-        })
     }
 
     pub async fn get_decimal(mint: &Pubkey) -> Result<Option<u8>> {
