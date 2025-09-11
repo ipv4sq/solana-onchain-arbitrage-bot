@@ -1,37 +1,38 @@
+use crate::global::constant::duration::Interval;
 use crate::sdk::solana_rpc::rpc::rpc_client;
-use crate::util::structs::ttl_loading_cache::TtlLoadingCache;
+use crate::util::cache::loading_cache::LoadingCache;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use solana_sdk::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::pubkey::Pubkey;
-use std::time::Duration;
 use tracing::{debug, warn};
 
-pub static ALT_CACHE: Lazy<TtlLoadingCache<Pubkey, AddressLookupTableAccount>> = Lazy::new(|| {
-    TtlLoadingCache::new(1000, Duration::from_secs(300), |key: &Pubkey| {
+#[allow(non_upper_case_globals)]
+pub static LutCache: Lazy<LoadingCache<Pubkey, AddressLookupTableAccount>> = Lazy::new(|| {
+    LoadingCache::with_ttl(200, Interval::DAY, |key: &Pubkey| {
         let key = *key;
         async move { fetch_single_alt_internal(&key).await.ok() }
     })
 });
 
 pub async fn get_alt_by_key(key: &Pubkey) -> Result<AddressLookupTableAccount> {
-    ALT_CACHE
+    LutCache
         .get(key)
         .await
         .ok_or_else(|| anyhow::anyhow!("Failed to fetch ALT {}", key))
 }
 
-pub fn get_alt_by_key_cached(key: &Pubkey) -> Option<AddressLookupTableAccount> {
-    ALT_CACHE.get_if_present(key)
+pub async fn get_alt_by_key_cached(key: &Pubkey) -> Option<AddressLookupTableAccount> {
+    LutCache.get_if_present(key).await
 }
 
 pub async fn invalidate_alt_cache(key: &Pubkey) {
-    ALT_CACHE.invalidate(key).await;
+    LutCache.invalidate(key).await;
 }
 
-pub async fn invalidate_all_alt_cache() {
-    ALT_CACHE.invalidate_all().await;
+pub fn invalidate_all_alt_cache() {
+    LutCache.invalidate_all();
 }
 
 pub async fn fetch_address_lookup_tables(
@@ -235,7 +236,7 @@ mod tests {
                 assert_eq!(alt.key, alt_key);
                 assert!(!alt.addresses.is_empty(), "ALT should have addresses");
 
-                let cached = get_alt_by_key_cached(&alt_key);
+                let cached = get_alt_by_key_cached(&alt_key).await;
                 assert!(cached.is_some(), "Should be cached after first fetch");
                 assert_eq!(cached.unwrap().key, alt_key);
             }
@@ -253,18 +254,18 @@ mod tests {
             Ok(alt) => {
                 assert_eq!(alt.key, alt_key);
 
-                let cached = get_alt_by_key_cached(&alt_key);
+                let cached = get_alt_by_key_cached(&alt_key).await;
                 assert!(cached.is_some(), "Should be cached");
 
                 invalidate_alt_cache(&alt_key).await;
 
-                let cached_after = get_alt_by_key_cached(&alt_key);
+                let cached_after = get_alt_by_key_cached(&alt_key).await;
                 assert!(cached_after.is_none(), "Should be invalidated");
 
                 let refetched = get_alt_by_key(&alt_key).await.unwrap();
                 assert_eq!(refetched.key, alt_key);
 
-                let cached_again = get_alt_by_key_cached(&alt_key);
+                let cached_again = get_alt_by_key_cached(&alt_key).await;
                 assert!(cached_again.is_some(), "Should be cached again");
             }
             Err(e) => {
@@ -288,16 +289,16 @@ mod tests {
         }
 
         for key in &alt_keys {
-            let cached = get_alt_by_key_cached(key);
+            let cached = get_alt_by_key_cached(key).await;
             if cached.is_some() {
                 assert_eq!(cached.unwrap().key, *key);
             }
         }
 
-        invalidate_all_alt_cache().await;
+        invalidate_all_alt_cache();
 
         for key in &alt_keys {
-            let cached = get_alt_by_key_cached(key);
+            let cached = get_alt_by_key_cached(key).await;
             assert!(cached.is_none(), "All entries should be invalidated");
         }
     }
