@@ -13,7 +13,6 @@ use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation;
-use crate::sdk::rpc::utils;
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
