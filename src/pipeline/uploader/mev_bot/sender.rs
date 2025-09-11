@@ -47,7 +47,7 @@ pub async fn simulate_mev_tx(
     Ok(result)
 }
 
-pub async fn real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> anyhow::Result<String> {
+pub async fn send_real_mev_tx(tx: &VersionedTransaction, trace: &Trace) -> anyhow::Result<String> {
     if trace.since_begin() > 400 {
         info!(
             "Gave up on landing tx because it takes {} milliseconds from trigger to now",
