@@ -10,7 +10,9 @@ use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
-use crate::pipeline::uploader::jito::{get_jito_tips, get_random_tip_account, send_bundle};
+use crate::pipeline::uploader::provider::jito::{
+    get_jito_tips, get_random_tip_account, send_bundle,
+};
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation;
 use crate::util::alias::{MintAddress, TokenProgramAddress};
@@ -357,61 +359,34 @@ pub async fn log_mev_simulation(
     };
 
     // Extract accounts from the transaction
-    let accounts: Vec<SimulationAccount> = match &tx.message {
-        solana_sdk::message::VersionedMessage::Legacy(msg) => {
-            msg.account_keys
-                .iter()
-                .enumerate()
-                .map(|(idx, pubkey)| {
-                    let is_signer = idx < msg.header.num_required_signatures as usize;
-                    let is_writable = if is_signer {
-                        // For signers, writable if index is before readonly signed accounts
-                        idx < (msg.header.num_required_signatures
-                            - msg.header.num_readonly_signed_accounts)
-                            as usize
-                    } else {
-                        // For non-signers, writable if before the readonly unsigned section
-                        let non_signer_idx = idx - msg.header.num_required_signatures as usize;
-                        let num_writable_unsigned = msg.account_keys.len()
-                            - msg.header.num_required_signatures as usize
-                            - msg.header.num_readonly_unsigned_accounts as usize;
-                        non_signer_idx < num_writable_unsigned
-                    };
-                    SimulationAccount {
-                        pubkey: *pubkey,
-                        is_signer,
-                        is_writable,
-                    }
-                })
-                .collect()
-        }
-        solana_sdk::message::VersionedMessage::V0(msg) => {
-            msg.account_keys
-                .iter()
-                .enumerate()
-                .map(|(idx, pubkey)| {
-                    let is_signer = idx < msg.header.num_required_signatures as usize;
-                    let is_writable = if is_signer {
-                        // For signers, writable if index is before readonly signed accounts
-                        idx < (msg.header.num_required_signatures
-                            - msg.header.num_readonly_signed_accounts)
-                            as usize
-                    } else {
-                        // For non-signers, writable if before the readonly unsigned section
-                        let non_signer_idx = idx - msg.header.num_required_signatures as usize;
-                        let num_writable_unsigned = msg.account_keys.len()
-                            - msg.header.num_required_signatures as usize
-                            - msg.header.num_readonly_unsigned_accounts as usize;
-                        non_signer_idx < num_writable_unsigned
-                    };
-                    SimulationAccount {
-                        pubkey: *pubkey,
-                        is_signer,
-                        is_writable,
-                    }
-                })
-                .collect()
-        }
+    let accounts: Vec<SimulationAccount> = {
+        let (account_keys, header) = match &tx.message {
+            solana_sdk::message::VersionedMessage::Legacy(msg) => (&msg.account_keys, &msg.header),
+            solana_sdk::message::VersionedMessage::V0(msg) => (&msg.account_keys, &msg.header),
+        };
+
+        account_keys
+            .iter()
+            .enumerate()
+            .map(|(idx, pubkey)| {
+                let is_signer = idx < header.num_required_signatures as usize;
+                let is_writable = if is_signer {
+                    idx < (header.num_required_signatures - header.num_readonly_signed_accounts)
+                        as usize
+                } else {
+                    let non_signer_idx = idx - header.num_required_signatures as usize;
+                    let num_writable_unsigned = account_keys.len()
+                        - header.num_required_signatures as usize
+                        - header.num_readonly_unsigned_accounts as usize;
+                    non_signer_idx < num_writable_unsigned
+                };
+                SimulationAccount {
+                    pubkey: *pubkey,
+                    is_signer,
+                    is_writable,
+                }
+            })
+            .collect()
     };
 
     let params = MevSimulationLogParams {

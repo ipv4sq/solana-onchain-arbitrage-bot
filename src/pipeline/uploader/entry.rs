@@ -6,19 +6,17 @@ use crate::global::daemon::blockhash::get_blockhash;
 use crate::global::enums::step_type::StepType;
 use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::global::trace::types::Trace;
-use crate::pipeline::uploader::debug;
-use crate::pipeline::uploader::jito::get_jito_tips;
+use crate::pipeline::uploader::common::debug;
+use crate::pipeline::uploader::common::wallet::get_wallet;
 use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::construct::{
     log_mev_simulation, real_mev_tx, simulate_mev_tx,
 };
-use crate::pipeline::uploader::variables::{
-    MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX,
-};
-use crate::pipeline::uploader::wallet::get_wallet;
+use crate::pipeline::uploader::provider::jito::get_jito_tips;
+use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
+use crate::unit_ok;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
-use crate::unit_ok;
 use construct::build_tx;
 use futures::future::join_all;
 use solana_program::pubkey::Pubkey;

@@ -1,7 +1,5 @@
-pub mod debug;
+pub mod common;
 pub mod entry;
-pub mod helius;
-pub mod jito;
 pub mod mev_bot;
+pub mod provider;
 pub mod variables;
-pub mod wallet;

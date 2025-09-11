@@ -339,7 +339,6 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
     use crate::dex::raydium_cpmm::misc::input_account::RaydiumCpmmInputAccount;
     use crate::sdk::rpc::methods::{block, simulation};
-    use crate::sdk::rpc::utils;
 
     let config = RaydiumCpmmConfig::from_address(pool_address).await?;
 
