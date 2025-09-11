@@ -41,11 +41,11 @@ impl MeteoraDammV2PoolData {
         };
 
         let from_dec: u8 = MintRecordRepository::get_decimal(from)
-            .await?
+            .await
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", from))?;
 
         let to_dec: u8 = MintRecordRepository::get_decimal(to)
-            .await?
+            .await
             .ok_or_else(|| anyhow!("mint decimals not found in cache for {}", to))?;
 
         let exp = to_dec as i32 - from_dec as i32;

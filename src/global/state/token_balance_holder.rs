@@ -67,7 +67,7 @@ async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmo
     if *mint != vault.mint {
         error!("Fucked up here mint={:?}, vault={:?}", mint, vault);
     }
-    let decimals = MintRecordRepository::get_decimal(mint).await.ok()??;
+    let decimals = MintRecordRepository::get_decimal(mint).await?;
     Some(TokenAmount {
         amount: vault.amount,
         decimals,

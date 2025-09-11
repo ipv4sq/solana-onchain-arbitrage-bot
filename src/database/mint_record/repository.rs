@@ -21,25 +21,24 @@ impl MintRecordRepository {
     }
 
     pub async fn get_mint_or_err(mint: &Pubkey) -> Result<MintRecord> {
-        (*MintCache).get(mint).await.or_else_err(lined_err!(
+        Self::get(mint).await.or_else_err(lined_err!(
             "Cannot get mint from cache and db and loader: {}",
             mint
         ))
     }
 
     pub async fn get_repr_if_present(mint: &Pubkey) -> String {
-        (*MintCache)
+        MintCache
             .get_if_present(mint)
             .await
             .map(|record| record.repr)
             .unwrap_or_else(|| "Unknown".to_string())
     }
 
-    pub async fn get_decimal(mint: &Pubkey) -> Result<Option<u8>> {
-        Ok(MintCache
-            .get(mint)
+    pub async fn get_decimal(mint: &Pubkey) -> Option<u8> {
+        Self::get(mint)
             .await
-            .and_then(|record| record.decimals.try_into().ok()))
+            .and_then(|record| record.decimals.try_into().ok())
     }
 }
 

@@ -33,11 +33,11 @@ impl MeteoraDlmmPoolData {
         let px = base.powi(self.active_id as i64);
 
         let x_dec: u8 = MintRecordRepository::get_decimal(&self.token_x_mint)
-            .await?
+            .await
             .ok_or_else(|| anyhow!("mint decimals not found in cache for token_x"))?;
 
         let y_dec: u8 = MintRecordRepository::get_decimal(&self.token_y_mint)
-            .await?
+            .await
             .ok_or_else(|| anyhow!("mint decimals not found in cache for token_y"))?;
 
         let dir = self.dir(from, to);
