@@ -59,20 +59,17 @@ where
         F: Fn(K) -> Fut + Send + Sync + 'static + Clone,
         Fut: Future<Output = Option<V>> + Send + 'static,
     {
-        let cache_type_clone = cache_type.clone();
-        let ttl_seconds_clone = ttl_seconds;
-        let loader_clone = loader.clone();
-        let load_fn_clone = load_from_db_fn.clone();
-        let save_fn_clone = save_to_db_fn.clone();
+        let cache_type_for_closure = cache_type.clone();
+        let load_from_db_fn_clone = load_from_db_fn.clone();
+        let save_to_db_fn_clone = save_to_db_fn.clone();
 
         let loading_cache = LoadingCache::new(max_capacity, move |key: &K| {
-            let cache_type = cache_type_clone.clone();
+            let cache_type = cache_type_for_closure.clone();
             let key_str = key.to_string();
             let key_clone = key.clone();
-            let loader = loader_clone.clone();
-            let ttl = ttl_seconds_clone;
-            let load_fn = load_fn_clone.clone();
-            let save_fn = save_fn_clone.clone();
+            let loader = loader.clone();
+            let load_fn = load_from_db_fn_clone.clone();
+            let save_fn = save_to_db_fn_clone.clone();
             
             async move {
                 // Try to load from database first
@@ -92,10 +89,10 @@ where
                 // Save to database if we got a value
                 if let Some(ref value) = loaded_value {
                     if let Some(ref save_fn) = save_fn {
-                        save_fn(key_str, value.clone(), ttl).await;
+                        save_fn(key_str, value.clone(), ttl_seconds).await;
                     } else if load_fn.is_none() {
                         // Only use kv_cache if neither custom function is provided
-                        Self::kv_cache_save(&cache_type, &key_str, value, ttl).await;
+                        Self::kv_cache_save(&cache_type, &key_str, value, ttl_seconds).await;
                     }
                 }
                 
