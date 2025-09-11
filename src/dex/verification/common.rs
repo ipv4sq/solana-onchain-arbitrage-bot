@@ -13,7 +13,7 @@ use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
-use crate::sdk::solana_rpc::rpc::rpc_client;
+use crate::sdk::solana_rpc::proxy;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use solana_account_decoder::UiAccountEncoding;
@@ -71,7 +71,7 @@ async fn build_test_swap_tx(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = rpc_client().get_latest_blockhash().await?;
+    let blockhash = proxy::get_latest_blockhash().await?;
 
     let message = Message::try_compile(&signer, &instructions, &alts, blockhash)?;
 
@@ -128,8 +128,8 @@ pub async fn simulate_swap_and_get_balance_diff(
     let user_token_out = accounts[5].pubkey;
 
     // Get pre-simulation balances
-    let pre_token_in = rpc_client().get_account(&user_token_in).await?;
-    let pre_token_out = rpc_client().get_account(&user_token_out).await?;
+    let pre_token_in = proxy::get_account(&user_token_in).await?;
+    let pre_token_out = proxy::get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -144,8 +144,7 @@ pub async fn simulate_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = rpc_client()
-        .simulate_transaction_with_config(
+    let rpc_response = proxy::simulate_transaction_with_config(
             &tx,
             RpcSimulateTransactionConfig {
                 sig_verify: false,
@@ -246,7 +245,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = rpc_client().get_latest_blockhash().await?;
+    let blockhash = proxy::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -260,8 +259,8 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     let user_token_out = accounts[3].pubkey;
 
     // Get pre-simulation balances
-    let pre_token_in = rpc_client().get_account(&user_token_in).await?;
-    let pre_token_out = rpc_client().get_account(&user_token_out).await?;
+    let pre_token_in = proxy::get_account(&user_token_in).await?;
+    let pre_token_out = proxy::get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -276,8 +275,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = rpc_client()
-        .simulate_transaction_with_config(
+    let rpc_response = proxy::simulate_transaction_with_config(
             &tx,
             RpcSimulateTransactionConfig {
                 sig_verify: false,
@@ -376,7 +374,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = rpc_client().get_latest_blockhash().await?;
+    let blockhash = proxy::get_latest_blockhash().await?;
     
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
     
@@ -391,8 +389,8 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     let user_token_out = accounts[5].pubkey;
     
     // Get pre-simulation balances
-    let pre_token_in = rpc_client().get_account(&user_token_in).await?;
-    let pre_token_out = rpc_client().get_account(&user_token_out).await?;
+    let pre_token_in = proxy::get_account(&user_token_in).await?;
+    let pre_token_out = proxy::get_account(&user_token_out).await?;
     
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -407,8 +405,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     };
     
     // Simulate the transaction
-    let rpc_response = rpc_client()
-        .simulate_transaction_with_config(
+    let rpc_response = proxy::simulate_transaction_with_config(
             &tx,
             RpcSimulateTransactionConfig {
                 sig_verify: false,
@@ -563,7 +560,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     for key in &alt_keys {
         alts.push(get_alt_by_key(key).await?);
     }
-    let blockhash = rpc_client().get_latest_blockhash().await?;
+    let blockhash = proxy::get_latest_blockhash().await?;
 
     let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
 
@@ -580,8 +577,8 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     };
 
     // Get pre-simulation balances
-    let pre_token_in = rpc_client().get_account(&user_token_in).await?;
-    let pre_token_out = rpc_client().get_account(&user_token_out).await?;
+    let pre_token_in = proxy::get_account(&user_token_in).await?;
+    let pre_token_out = proxy::get_account(&user_token_out).await?;
 
     let pre_balance_in = if pre_token_in.lamports > 0 {
         unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
@@ -596,8 +593,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     };
 
     // Simulate the transaction
-    let rpc_response = rpc_client()
-        .simulate_transaction_with_config(
+    let rpc_response = proxy::simulate_transaction_with_config(
             &tx,
             RpcSimulateTransactionConfig {
                 sig_verify: false,

@@ -1,7 +1,7 @@
-use crate::sdk::solana_rpc::rpc;
+use crate::sdk::solana_rpc::proxy;
 use anyhow::Result;
 use parking_lot::RwLock;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use proxy::get_latest_blockhash;
 use solana_sdk::hash::Hash;
 use std::sync::Arc;
 use std::thread;
@@ -12,14 +12,12 @@ use tokio::time::interval;
 
 struct BlockhashHolder {
     blockhash: RwLock<Hash>,
-    rpc_client: Arc<RpcClient>,
 }
 
 impl BlockhashHolder {
-    fn new(rpc_client: Arc<RpcClient>) -> Self {
+    fn new() -> Self {
         Self {
             blockhash: RwLock::new(Hash::default()),
-            rpc_client,
         }
     }
 
@@ -50,7 +48,7 @@ impl BlockhashHolder {
                     loop {
                         interval.tick().await;
 
-                        match holder.rpc_client.get_latest_blockhash().await {
+                        match get_latest_blockhash().await {
                             Ok(new_blockhash) => {
                                 *holder.blockhash.write() = new_blockhash;
                                 tracing::trace!("Blockhash updated: {}", new_blockhash);
@@ -71,11 +69,10 @@ static GLOBAL_BLOCKHASH: OnceCell<Arc<BlockhashHolder>> = OnceCell::const_new();
 async fn ensure_initialized() -> Result<()> {
     GLOBAL_BLOCKHASH
         .get_or_init(|| async {
-            let rpc_client = rpc::rpc_client();
-            let holder = Arc::new(BlockhashHolder::new(rpc_client));
+            let holder = Arc::new(BlockhashHolder::new());
 
             // Fetch initial blockhash
-            if let Ok(initial_hash) = holder.rpc_client.get_latest_blockhash().await {
+            if let Ok(initial_hash) = get_latest_blockhash().await {
                 *holder.blockhash.write() = initial_hash;
             }
 

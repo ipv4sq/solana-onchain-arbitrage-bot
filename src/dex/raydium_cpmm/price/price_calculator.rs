@@ -58,7 +58,7 @@ mod test {
     use crate::dex::interface::PoolDataLoader;
     use crate::global::client::db::must_init_db;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::rpc::rpc_client;
+    use crate::sdk::solana_rpc::proxy;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]
@@ -69,7 +69,7 @@ mod test {
         let wsol = Mints::WSOL;
         let eagle = "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk".to_pubkey();
 
-        let account = rpc_client()
+        let account = proxy
             .get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
@@ -106,7 +106,7 @@ mod test {
         let wsol = Mints::WSOL;
         let eagle = "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk".to_pubkey();
 
-        let pool_account = rpc_client()
+        let pool_account = proxy
             .get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");

@@ -1,6 +1,6 @@
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
 use crate::global::constant::pool_program::PoolProgram;
-use crate::sdk::solana_rpc::rpc::rpc_client;
+use crate::sdk::solana_rpc::proxy;
 use solana_program::pubkey::Pubkey;
 
 const BINS_PER_ARRAY: i32 = 70;
@@ -17,8 +17,7 @@ pub async fn calculate_bin_arrays_for_swap(
         &PoolProgram::METEORA_DLMM,
     );
 
-    let bitmap_extension = rpc_client()
-        .get_account_data(&bitmap_extension_key)
+    let bitmap_extension = proxy::get_account_data(&bitmap_extension_key)
         .await
         .ok();
 

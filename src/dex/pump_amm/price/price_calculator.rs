@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use crate::dex::interface::PoolDataLoader;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::rpc::rpc_client;
+    use crate::sdk::solana_rpc::proxy;
     use crate::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
 
@@ -66,7 +66,7 @@ mod tests {
         let cope: Pubkey = "DMwbVy48dWVKGe9z1pcVnwF3HLMLrqWdDLfbvx8RchhK".to_pubkey();
         let wsol: Pubkey = Mints::WSOL;
 
-        let account = rpc_client()
+        let account = proxy
             .get_account(&pool_address)
             .await
             .expect("Failed to fetch pool account");
