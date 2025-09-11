@@ -58,7 +58,7 @@ mod test {
     use crate::dex::interface::PoolDataLoader;
     use crate::global::client::db::must_init_db;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+    use crate::sdk::rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
 
     #[tokio::test]

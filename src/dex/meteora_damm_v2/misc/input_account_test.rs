@@ -28,13 +28,13 @@ fn expected_account() -> MeteoraDammV2InputAccount {
 
 #[tokio::test]
 async fn test_restore_from() {
-    use crate::sdk::solana_rpc::client::_set_test_client;
-    use crate::sdk::solana_rpc::methods::transaction::fetch_tx;
-    
+    use crate::sdk::rpc::client::_set_test_client;
+    use crate::sdk::rpc::methods::transaction::fetch_tx;
+
     // https://solscan.io/tx/57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP
     const TX: &str =
         "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
-    
+
     _set_test_client();
     let tx = fetch_tx(TX).await.unwrap();
 

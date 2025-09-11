@@ -185,7 +185,7 @@ mod tests {
     use crate::dex::interface::PoolDataLoader;
     use crate::dex::meteora_damm_v2::pool_data::test::load_pool_data;
     use crate::global::constant::mint::Mints;
-    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+    use crate::sdk::rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
     use solana_program::pubkey::Pubkey;
     use std::str::FromStr;

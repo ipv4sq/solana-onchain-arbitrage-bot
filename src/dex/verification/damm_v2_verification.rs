@@ -8,7 +8,7 @@ mod tests {
     use crate::dex::meteora_damm_v2::misc::input_account::MeteoraDammV2InputAccount;
     use crate::dex::verification::common::simulate_damm_v2_swap_and_get_balance_diff;
     use crate::global::client::db::must_init_db;
-    use crate::sdk::solana_rpc::client::_set_test_client;
+    use crate::sdk::rpc::client::_set_test_client;
     use crate::unit_ok;
     use crate::util::alias::AResult;
     use crate::util::traits::pubkey::ToPubkey;

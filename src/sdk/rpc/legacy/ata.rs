@@ -1,5 +1,5 @@
 use crate::global::constant::token_program::TokenProgram;
-use crate::sdk::solana_rpc::client;
+use crate::sdk::rpc::client;
 use crate::util::solana::pda::ata;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;

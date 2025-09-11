@@ -1,6 +1,6 @@
 use crate::convention::chain::util::simulation::SimulationResult;
-use crate::sdk::solana_rpc::client;
-use crate::sdk::solana_rpc::client::rpc_client;
+use crate::sdk::rpc::client;
+use crate::sdk::rpc::client::rpc_client;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_client::rpc_response::{Response, RpcSimulateTransactionResult};
 use solana_sdk::transaction::VersionedTransaction;

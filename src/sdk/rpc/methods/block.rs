@@ -1,4 +1,4 @@
-use crate::sdk::solana_rpc::client::rpc_client;
+use crate::sdk::rpc::client::rpc_client;
 use solana_program::hash::Hash;
 
 pub async fn get_latest_blockhash() -> Result<Hash, solana_client::client_error::ClientError> {

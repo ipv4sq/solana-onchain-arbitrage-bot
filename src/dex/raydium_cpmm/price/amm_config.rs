@@ -1,5 +1,5 @@
 use crate::return_error;
-use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::alias::AResult;
 use crate::util::cache::persistent_cache::PersistentCache;
 use crate::util::structs::cache_type::CacheType;

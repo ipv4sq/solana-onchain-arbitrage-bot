@@ -1,6 +1,6 @@
 use crate::global::constant::duration::Interval;
 use crate::global::state::token_balance_holder::QueryRateLimiter;
-use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;

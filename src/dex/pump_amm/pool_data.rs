@@ -69,7 +69,7 @@ impl PumpAmmPoolData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+    use crate::sdk::rpc::methods::account::buffered_get_account;
     use crate::util::traits::pubkey::ToPubkey;
     use serde_json::Value;
 

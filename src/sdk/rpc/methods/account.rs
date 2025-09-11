@@ -1,5 +1,5 @@
 use crate::lined_err;
-use crate::sdk::solana_rpc::client::rpc_client;
+use crate::sdk::rpc::client::rpc_client;
 use crate::util::alias::AResult;
 use crate::util::traits::option::OptionExt;
 use anyhow::anyhow;

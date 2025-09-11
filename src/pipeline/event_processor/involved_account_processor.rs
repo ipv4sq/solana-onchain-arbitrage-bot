@@ -74,7 +74,7 @@ pub async fn process_involved_account_transaction(update: TxWithTrace) -> AResul
 
 #[cfg(test)]
 mod tests {
-    use crate::sdk::solana_rpc::methods::transaction::fetch_tx;
+    use crate::sdk::rpc::methods::transaction::fetch_tx;
 
     #[tokio::test]
     async fn test_find_pump_swap_pool() {

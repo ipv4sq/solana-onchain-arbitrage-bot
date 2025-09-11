@@ -2,7 +2,7 @@ use crate::convention::chain::instruction::Instruction;
 use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::global::enums::direction::Direction;
-use crate::sdk::solana_rpc::methods::account::buffered_get_account;
+use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::structs::mint_pair::MintPair;
 use serde::{Deserialize, Serialize};

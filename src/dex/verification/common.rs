@@ -13,8 +13,8 @@ use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
 use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
-use crate::sdk::solana_rpc::methods::account::buffered_get_account;
-use crate::sdk::solana_rpc::methods::{block, simulation};
+use crate::sdk::rpc::methods::account::buffered_get_account;
+use crate::sdk::rpc::methods::{block, simulation};
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use solana_account_decoder::UiAccountEncoding;
@@ -338,8 +338,8 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
 ) -> AResult<SwapSimulationResult> {
     use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
     use crate::dex::raydium_cpmm::misc::input_account::RaydiumCpmmInputAccount;
-    use crate::sdk::solana_rpc::methods::{block, simulation};
-    use crate::sdk::solana_rpc::utils;
+    use crate::sdk::rpc::methods::{block, simulation};
+    use crate::sdk::rpc::utils;
 
     let config = RaydiumCpmmConfig::from_address(pool_address).await?;
 

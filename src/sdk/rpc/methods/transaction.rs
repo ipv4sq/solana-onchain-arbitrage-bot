@@ -1,6 +1,6 @@
 use crate::convention::chain::mapper::traits::ToUnified;
 use crate::convention::chain::Transaction;
-use crate::sdk::solana_rpc::client;
+use crate::sdk::rpc::client;
 use crate::util::traits::signature::ToSignature;
 use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::signature::Signature;
