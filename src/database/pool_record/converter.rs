@@ -1,12 +1,12 @@
 use crate::database::mint_record::repository::MintRecordRepository;
 use crate::database::pool_record::model::{Model as PoolRecord, PoolRecordDescriptor};
 use crate::dex::any_pool_config::AnyPoolConfig;
-use crate::util::traits::orm::ToOrmString;
 use crate::f;
+use crate::util::traits::orm::ToOrmString;
 
 pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
-    let base = MintRecordRepository::get_mint_err(&config.base_mint()).await?;
-    let quote = MintRecordRepository::get_mint_err(&config.quote_mint()).await?;
+    let base = MintRecordRepository::get_mint_or_err(&config.base_mint()).await?;
+    let quote = MintRecordRepository::get_mint_or_err(&config.quote_mint()).await?;
 
     let name = f!("{} - {}", base.repr, quote.repr);
     Ok(PoolRecord {

@@ -20,7 +20,7 @@ impl MintRecordRepository {
         Ok(MintCache.get(mint).await)
     }
 
-    pub async fn get_mint_err(mint: &Pubkey) -> Result<MintRecord> {
+    pub async fn get_mint_or_err(mint: &Pubkey) -> Result<MintRecord> {
         (*MintCache).get(mint).await.or_err(f!(
             "Fail to get mint from cache and db and loader: {}",
             mint
