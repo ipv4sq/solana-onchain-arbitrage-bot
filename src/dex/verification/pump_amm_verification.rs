@@ -42,7 +42,7 @@ mod tests {
         let base_record = MintRecordRepository::get_mint(&base_mint).await?;
         let base_symbol = base_record
             .as_ref()
-            .map(|m| m.symbol.clone())
+            .map(|m| m.repr.clone())
             .unwrap_or_else(|| base_mint.to_string()[..6].to_string());
         let base_decimals = base_record
             .as_ref()
@@ -52,7 +52,7 @@ mod tests {
         let quote_record = MintRecordRepository::get_mint(&quote_mint).await?;
         let quote_symbol = quote_record
             .as_ref()
-            .map(|m| m.symbol.clone())
+            .map(|m| m.repr.clone())
             .unwrap_or_else(|| quote_mint.to_string()[..6].to_string());
         let quote_decimals = quote_record
             .as_ref()
@@ -216,7 +216,7 @@ mod tests {
         let base_record = MintRecordRepository::get_mint(&base_mint).await?;
         let base_symbol = base_record
             .as_ref()
-            .map(|m| m.symbol.clone())
+            .map(|m| m.repr.clone())
             .unwrap_or_else(|| base_mint.to_string()[..6].to_string());
         let base_decimals = base_record
             .as_ref()
@@ -226,7 +226,7 @@ mod tests {
         let quote_record = MintRecordRepository::get_mint(&quote_mint).await?;
         let quote_symbol = quote_record
             .as_ref()
-            .map(|m| m.symbol.clone())
+            .map(|m| m.repr.clone())
             .unwrap_or_else(|| quote_mint.to_string()[..6].to_string());
         let quote_decimals = quote_record
             .as_ref()

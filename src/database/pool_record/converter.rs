@@ -8,7 +8,7 @@ pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
     let base = MintRecordRepository::get_mint_err(&config.base_mint()).await?;
     let quote = MintRecordRepository::get_mint_err(&config.quote_mint()).await?;
 
-    let name = f!("{} - {}", base.symbol, quote.symbol);
+    let name = f!("{} - {}", base.repr, quote.repr);
     Ok(PoolRecord {
         address: config.pool().to_orm(),
         name,
@@ -16,11 +16,8 @@ pub async fn build_model(config: AnyPoolConfig) -> anyhow::Result<PoolRecord> {
         base_mint: config.base_mint().to_orm(),
         quote_mint: config.quote_mint().to_orm(),
         description: PoolRecordDescriptor {
-            base_symbol: base.symbol,
-            quote_symbol: quote.symbol,
-            base: config.base_mint().to_string(),
-            quote: config.quote_mint().to_string(),
-            pool_address: config.pool().to_string(),
+            base_symbol: base.repr,
+            quote_symbol: quote.repr,
         },
         data_snapshot: config.pool_data_json(),
         created_at: None,

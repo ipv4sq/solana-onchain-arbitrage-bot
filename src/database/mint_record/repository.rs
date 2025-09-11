@@ -27,10 +27,10 @@ impl MintRecordRepository {
         ))
     }
 
-    pub fn get_symbol_if_present(mint: &Pubkey) -> String {
+    pub fn get_repr_if_present(mint: &Pubkey) -> String {
         (*MintCache)
             .get_if_present(mint)
-            .map(|record| record.symbol)
+            .map(|record| record.repr)
             .unwrap_or("Unknown".parse().unwrap())
     }
 
@@ -47,7 +47,7 @@ impl MintRecordRepository {
         let db = get_db().await;
         let active_model = model::ActiveModel {
             address: Set(mint.address.clone()),
-            symbol: Set(mint.symbol.clone()),
+            repr: Set(mint.repr.clone()),
             decimals: Set(mint.decimals),
             program: Set(mint.program.clone()),
             created_at: NotSet,

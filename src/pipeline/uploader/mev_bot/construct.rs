@@ -421,8 +421,8 @@ pub async fn log_mev_simulation(
     let params = MevSimulationLogParams {
         minor_mint: *minor_mint,
         desired_mint: *desired_mint,
-        minor_mint_sym: minor_mint_record.symbol,
-        desired_mint_sym: desired_mint_record.symbol,
+        minor_mint_sym: minor_mint_record.repr,
+        desired_mint_sym: desired_mint_record.repr,
         pools: pool_addresses,
         pool_types,
         profitable,

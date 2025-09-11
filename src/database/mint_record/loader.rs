@@ -37,14 +37,22 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
         ));
     };
 
-    let symbol = match fetch_token_metadata(mint).await {
-        Ok((symbol, _name)) => symbol,
+    let repr = match fetch_token_metadata(mint).await {
+        Ok((symbol, name)) => {
+            if !symbol.is_empty() {
+                symbol
+            } else if !name.is_empty() {
+                name
+            } else {
+                "Unknown".to_string()
+            }
+        }
         Err(_) => "Unknown".to_string(),
     };
 
     Ok(MintRecord {
         address: mint.to_orm(),
-        symbol,
+        repr,
         decimals: decimals as i16,
         program: owner.to_orm(),
         created_at: None,
@@ -81,7 +89,7 @@ async fn test_load_mint_from_address() {
 
     if let Ok(mint_record) = result {
         assert_eq!(mint_record.decimals, 9);
-        assert_eq!(mint_record.symbol, "SOL");
+        assert_eq!(mint_record.repr, "SOL");
     }
 }
 
@@ -91,7 +99,7 @@ async fn test_load_custom_mint() {
 
     if let Ok(mint_record) = result {
         assert_eq!(mint_record.decimals, 6);
-        assert_eq!(mint_record.symbol, "USDC");
+        assert_eq!(mint_record.repr, "USDC");
     }
 }
 
@@ -106,6 +114,6 @@ async fn test_load_token_2022_mint() {
         assert_eq!(mint_record.decimals, 9);
         assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
         assert_eq!(mint_record.address.0, token_2022_mint);
-        assert!(mint_record.symbol == "Unknown" || mint_record.symbol == "LLM");
+        assert!(mint_record.repr == "Unknown" || mint_record.repr == "LLM");
     }
 }
