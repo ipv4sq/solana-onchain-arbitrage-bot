@@ -192,8 +192,8 @@ mod tests {
     use crate::global::constant::pool_program::PoolProgram;
     use crate::global::constant::token_program::TokenProgram;
     use crate::program::mev_bot::ix::extract_mev_instruction;
-    use crate::sdk::solana_rpc::methods::transaction::fetch_tx_sync;
-    use crate::test::test_utils::get_test_rpc_client;
+    use crate::sdk::solana_rpc::client::_set_test_client;
+    use crate::sdk::solana_rpc::methods::transaction::fetch_tx;
     use crate::util::traits::account_meta::ToAccountMeta;
     use crate::util::traits::pubkey::ToPubkey;
 
@@ -201,9 +201,9 @@ mod tests {
     const TX: &str =
         "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
 
-    fn get_tx() -> Transaction {
-        let client = get_test_rpc_client();
-        fetch_tx_sync(&client, TX).unwrap()
+    async fn get_tx() -> Transaction {
+        _set_test_client();
+        fetch_tx(TX).await.unwrap()
     }
 
     fn expected_account() -> MeteoraDammV2InputAccount {
@@ -225,9 +225,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_restore_from() {
-        let tx = get_tx();
+    #[tokio::test]
+    async fn test_restore_from() {
+        let tx = get_tx().await;
 
         let (_, inner_ixs) = extract_mev_instruction(&tx).unwrap();
 

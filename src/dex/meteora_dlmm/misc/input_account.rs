@@ -259,7 +259,8 @@ mod tests {
     use crate::global::constant::pool_program::PoolProgram;
     use crate::global::constant::token_program::TokenProgram;
     use crate::program::mev_bot::ix::extract_mev_instruction;
-    use crate::sdk::solana_rpc::methods::transaction::fetch_tx_sync;
+    use crate::sdk::solana_rpc::client::_set_test_client;
+    use crate::sdk::solana_rpc::methods::transaction::fetch_tx;
     use crate::test::test_utils::get_test_rpc_client;
     use crate::util::traits::account_meta::ToAccountMeta;
     use crate::util::traits::pubkey::ToPubkey;
@@ -314,10 +315,11 @@ mod tests {
         assert_eq!(result, expected_result())
     }
 
-    #[test]
-    fn test_restore_from() {
+    #[tokio::test]
+    async fn test_restore_from() {
+        _set_test_client();
         let tx_sig = "57kgd8oiLFRmRyFR5dKwUoTggoP25FyBKsqqGpm58pJ3qAUE8WPhQXECjGjx5ATF87qP7MMjmZK45qACoTB476eP";
-        let tx = fetch_tx_sync(&get_test_rpc_client(), tx_sig).unwrap();
+        let tx = fetch_tx(tx_sig).await.unwrap();
         let (_, inner) = extract_mev_instruction(&tx).unwrap();
         let dlmm_swap = inner
             .instructions
