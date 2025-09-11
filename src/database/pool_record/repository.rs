@@ -71,8 +71,8 @@ impl PoolRecordRepository {
             Ok(_) => Ok(pool),
             Err(e) => {
                 error!("Failed to update pool record: {}", e);
-                Self::find_by_address(&pool.address.0)
-                    .await?
+                Self::find_by_address(pool.address.0)
+                    .await
                     .ok_or_else(|| anyhow::anyhow!("Failed to fetch existing pool"))
             }
         }
@@ -90,12 +90,12 @@ impl PoolRecordRepository {
             .await?)
     }
 
-    pub async fn find_by_address(address: &Pubkey) -> Result<Option<PoolRecord>> {
+    pub async fn find_by_address(address: Pubkey) -> Option<PoolRecord> {
         let db = get_db().await;
-        Ok(
-            PoolRecordEntity::find_by_id(PubkeyTypeString::from(*address))
-                .one(db)
-                .await?,
-        )
+        PoolRecordEntity::find_by_id(PubkeyTypeString::from(address))
+            .one(db)
+            .await
+            .ok()
+            .flatten()
     }
 }

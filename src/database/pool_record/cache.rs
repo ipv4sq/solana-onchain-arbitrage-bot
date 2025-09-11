@@ -18,13 +18,13 @@ pub static PoolsContainMintSecondary: Lazy<PersistentCache<MintAddress, HashSet<
             1_000_000,
             i64::MAX,
             |_mint: MintAddress| async move { None },
-            Some(|mint: MintAddress| async move {
+            |mint: MintAddress| async move {
                 PoolRecordRepository::find_by_any_mint(&mint)
                     .await
                     .ok()
                     .map(|pools| pools.into_iter().collect())
-            }),
-            Some(|_mint: MintAddress, _pools: HashSet<PoolRecord>, _ttl: i64| async move {}),
+            },
+            |_mint: MintAddress, _pools: HashSet<PoolRecord>, _ttl: i64| async move {},
         )
     });
 
@@ -40,31 +40,16 @@ pub static PoolCachePrimary: Lazy<PersistentCache<PoolAddress, PoolRecord>> = La
                 build_model(config).await.ok()
             }
         },
-        Some(|addr: PoolAddress| async move {
-            PoolRecordRepository::find_by_address(&addr)
-                .await
-                .ok()
-                .flatten()
-        }),
-        Some(
-            |_addr: PoolAddress, record: PoolRecord, _ttl: i64| async move {
-                let _ = PoolRecordRepository::upsert_pool(record).await;
-            },
-        ),
+        PoolRecordRepository::find_by_address,
+        |_addr: PoolAddress, record: PoolRecord, _ttl: i64| async move {
+            let _ = PoolRecordRepository::upsert_pool(record).await;
+        },
     )
 });
 
 pub static PoolInDataBaseSecondary: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
     LoadingCache::new(1_000_000, |addr: &PoolAddress| {
         let addr = *addr;
-        async move {
-            Some(
-                PoolRecordRepository::find_by_address(&addr)
-                    .await
-                    .ok()
-                    .flatten()
-                    .is_some(),
-            )
-        }
+        async move { Some(PoolRecordRepository::find_by_address(addr).await.is_some()) }
     })
 });

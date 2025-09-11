@@ -13,14 +13,14 @@ pub static MintCachePrimary: Lazy<PersistentCache<MintAddress, MintRecord>> = La
         100000,
         3 * 24 * 60 * 60, // 3 days
         |mint: MintAddress| async move { load_mint_from_address(&mint).await.ok() },
-        Some(|mint: MintAddress| async move {
+        |mint: MintAddress| async move {
             MintRecordRepository::find_by_address(mint)
                 .await
                 .ok()
                 .flatten()
-        }),
-        Some(|_mint: MintAddress, record: MintRecord, _ttl: i64| async move {
+        },
+        |_mint: MintAddress, record: MintRecord, _ttl: i64| async move {
             let _ = MintRecordRepository::upsert_mint(record).await;
-        }),
+        },
     )
 });

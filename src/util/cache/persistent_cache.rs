@@ -127,8 +127,8 @@ where
         max_capacity: u64,
         ttl_seconds: i64,
         loader: F,
-        load_from_db: Option<LF>,
-        save_to_db: Option<SF>,
+        load_from_db: LF,
+        save_to_db: SF,
     ) -> Self
     where
         F: Fn(K) -> Fut + Send + Sync + 'static + Clone,
@@ -138,17 +138,15 @@ where
         SF: Fn(K, V, i64) -> SFut + Send + Sync + 'static,
         SFut: Future<Output = ()> + Send + 'static,
     {
-        let load_from_db_fn: Option<LoadFromDbFn<K, V>> = load_from_db.map(|f| {
-            Arc::new(move |key| Box::pin(f(key)) as Pin<Box<dyn Future<Output = Option<V>> + Send>>)
-                as LoadFromDbFn<K, V>
-        });
+        let load_from_db_fn: LoadFromDbFn<K, V> = Arc::new(move |key| 
+            Box::pin(load_from_db(key)) as Pin<Box<dyn Future<Output = Option<V>> + Send>>
+        );
 
-        let save_to_db_fn: Option<SaveToDbFn<K, V>> = save_to_db.map(|f| {
-            Arc::new(move |key, value, ttl| Box::pin(f(key, value, ttl)) as Pin<Box<dyn Future<Output = ()> + Send>>)
-                as SaveToDbFn<K, V>
-        });
+        let save_to_db_fn: SaveToDbFn<K, V> = Arc::new(move |key, value, ttl| 
+            Box::pin(save_to_db(key, value, ttl)) as Pin<Box<dyn Future<Output = ()> + Send>>
+        );
 
-        Self::new_internal(cache_type, max_capacity, ttl_seconds, loader, load_from_db_fn, save_to_db_fn)
+        Self::new_internal(cache_type, max_capacity, ttl_seconds, loader, Some(load_from_db_fn), Some(save_to_db_fn))
     }
 
     pub async fn get(&self, key: &K) -> Option<V> {
@@ -359,22 +357,22 @@ mod tests {
                     None
                 }
             },
-            Some(move |key: String| {
+            move |key: String| {
                 let storage = storage_clone1.clone();
                 let count = load_count_clone.clone();
                 async move {
                     count.fetch_add(1, Ordering::SeqCst);
                     storage.lock().await.get(&key).cloned()
                 }
-            }),
-            Some(move |key: String, value: String, _ttl: i64| {
+            },
+            move |key: String, value: String, _ttl: i64| {
                 let storage = storage_clone2.clone();
                 let count = save_count_clone.clone();
                 async move {
                     count.fetch_add(1, Ordering::SeqCst);
                     storage.lock().await.insert(key, value);
                 }
-            }),
+            },
         );
         
         // First call loads from loader and saves via custom function
@@ -414,18 +412,18 @@ mod tests {
                 10,
                 60,
                 |_key: String| async move { None },
-                Some(move |key: String| {
+                move |key: String| {
                     let storage = storage_clone1.clone();
                     async move {
                         storage.lock().await.get(&key).cloned()
                     }
-                }),
-                Some(move |key: String, value: String, _ttl: i64| {
+                },
+                move |key: String, value: String, _ttl: i64| {
                     let storage = storage_clone2.clone();
                     async move {
                         storage.lock().await.insert(key, value);
                     }
-                }),
+                },
             );
             
             cache.put("test_key".to_string(), "test_value".to_string()).await;
