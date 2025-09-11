@@ -3,7 +3,7 @@ use crate::global::enums::dex_type::DexType;
 use crate::global::state::token_balance_holder::QueryRateLimiter;
 use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::{AResult, PoolAddress};
-use crate::util::structs::legacy_loading_cache::LoadingCache;
+use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::traits::option::OptionExt;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;

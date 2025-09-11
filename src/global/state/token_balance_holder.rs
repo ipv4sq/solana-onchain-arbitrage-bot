@@ -4,10 +4,9 @@ use crate::pipeline::event_processor::token_balance::token_balance_processor::{
     TokenAmount, TokenBalanceShortLivingCache,
 };
 use crate::sdk::solana_rpc::buffered_get_account::buffered_get_account;
-use crate::sdk::solana_rpc::rpc::rpc_client;
 use crate::util::alias::MintAddress;
+use crate::util::cache::loading_cache::LoadingCache;
 use crate::util::structs::rate_limiter::RateLimiter;
-use crate::util::structs::ttl_loading_cache::TtlLoadingCache;
 use once_cell::sync::Lazy;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -17,8 +16,8 @@ use std::time::Duration;
 use tracing::{error, warn};
 
 #[allow(non_upper_case_globals)]
-static LongTermCache: Lazy<TtlLoadingCache<(Pubkey, MintAddress), TokenAmount>> = Lazy::new(|| {
-    TtlLoadingCache::new(
+static LongTermCache: Lazy<LoadingCache<(Pubkey, MintAddress), TokenAmount>> = Lazy::new(|| {
+    LoadingCache::with_ttl(
         1_000_000,
         Duration::from_secs(3600 * 3),
         |_| async move { None },
