@@ -1,5 +1,7 @@
 use crate::database::columns::PubkeyTypeString;
-use crate::database::pool_record::cache::{MINT_TO_POOLS, POOL_CACHE, POOL_RECORDED};
+use crate::database::pool_record::cache::{
+    PoolCachePrimary, PoolInDataBaseSecondary, PoolsContainMintSecondary,
+};
 use crate::database::pool_record::model::{
     self, Entity as PoolRecordEntity, Model as PoolRecord, Model,
 };
@@ -20,15 +22,15 @@ pub struct PoolRecordRepository;
 // cache related
 impl PoolRecordRepository {
     pub async fn get_pools_contains_mint(mint: &MintAddress) -> Option<HashSet<PoolRecord>> {
-        MINT_TO_POOLS.get(mint).await
+        PoolsContainMintSecondary.get(mint).await
     }
 
     pub async fn ensure_exists(pool: &PoolAddress) -> Option<Model> {
-        POOL_CACHE.get(pool).await
+        PoolCachePrimary.get(pool).await
     }
 
     pub async fn is_pool_recorded(pool: &PoolAddress) -> bool {
-        POOL_RECORDED.get(pool).await.unwrap_or(false)
+        PoolInDataBaseSecondary.get(pool).await.unwrap_or(false)
     }
 }
 
@@ -56,12 +58,12 @@ impl PoolRecordRepository {
             .await;
 
         // update corresponding cache
-        POOL_RECORDED.put(pool.address.0, true).await;
+        PoolInDataBaseSecondary.put(pool.address.0, true).await;
         // update mint to pool cache
         for mint in [pool.base_mint, pool.quote_mint] {
-            if let Some(mut pools) = MINT_TO_POOLS.get(mint.as_ref()).await {
+            if let Some(mut pools) = PoolsContainMintSecondary.get(mint.as_ref()).await {
                 pools.insert(pool.clone());
-                MINT_TO_POOLS.put(mint.0, pools).await;
+                PoolsContainMintSecondary.put(mint.0, pools).await;
             }
         }
 

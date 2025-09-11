@@ -16,7 +16,7 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 
-pub static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> =
+pub static PoolsContainMintSecondary: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>> =
     Lazy::new(|| {
         PersistentCache::new_with_custom_db(
             CacheType::Custom("mint_to_pools".to_string()),
@@ -36,7 +36,8 @@ pub static MINT_TO_POOLS: Lazy<PersistentCache<MintAddress, HashSet<PoolRecord>>
             Some(|_mint_str: String, _pools: HashSet<PoolRecord>, _ttl: i64| async move {}),
         )
     });
-pub static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(|| {
+
+pub static PoolCachePrimary: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::new(|| {
     PersistentCache::new_with_custom_db(
         CacheType::Custom("pool_cache".to_string()),
         1_000_000,
@@ -67,7 +68,8 @@ pub static POOL_CACHE: Lazy<PersistentCache<PoolAddress, PoolRecord>> = Lazy::ne
         ),
     )
 });
-pub static POOL_RECORDED: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
+
+pub static PoolInDataBaseSecondary: Lazy<LoadingCache<PoolAddress, bool>> = Lazy::new(|| {
     LoadingCache::new(1_000_000, |addr: &PoolAddress| {
         let addr = *addr;
         async move {
