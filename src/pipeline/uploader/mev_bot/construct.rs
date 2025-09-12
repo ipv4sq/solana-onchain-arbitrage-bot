@@ -3,7 +3,7 @@ use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::constant::mev_bot::MevBot;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::{SystemProgram, TokenProgram};
-use crate::util::alias::{MintAddress, TokenProgramAddress};
+use crate::util::alias::{Lamport, MintAddress, TokenProgramAddress};
 use crate::util::random::random_choose;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
@@ -19,7 +19,7 @@ pub async fn build_mev_ix(
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
-    minimum_profit: u64,
+    minimum_profit: Lamport,
     never_abort: bool,
     include_create_token_account_ix: bool,
 ) -> Result<Vec<Instruction>> {
@@ -59,7 +59,7 @@ pub async fn create_invoke_mev_instruction(
     token_program: &TokenProgramAddress,
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
-    minimum_profit: u64,
+    minimum_profit: Lamport,
     never_abort: bool,
 ) -> Result<Instruction> {
     let use_flashloan = true;

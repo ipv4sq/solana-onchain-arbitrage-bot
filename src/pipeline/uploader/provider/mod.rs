@@ -5,7 +5,7 @@ use crate::pipeline::uploader::provider::helius::facade::{
 };
 use crate::pipeline::uploader::provider::jito::facade::send_bundle;
 use crate::return_error;
-use crate::util::alias::AResult;
+use crate::util::alias::{AResult, Lamport, Literal};
 use jito::facade::build_jito_tip_ix;
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
@@ -25,7 +25,7 @@ pub enum SenderChannel {
 }
 
 impl SenderChannel {
-    pub fn tip_ix(&self, payer: &Pubkey, unit_price: u64) -> (Vec<Instruction>, f64) {
+    pub fn tip_ix(&self, payer: &Pubkey, unit_price: Lamport) -> (Vec<Instruction>, Literal) {
         let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
         match self {
             SenderChannel::Jito => build_jito_tip_ix(payer),

@@ -16,7 +16,7 @@ use crate::pipeline::uploader::provider::shyft::facade::send_shyft_transaction;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
-use crate::util::alias::AResult;
+use crate::util::alias::{AResult, Literal, SOLUnitConvert};
 use crate::util::traits::pubkey::ToPubkey;
 use construct::build_mev_ix;
 use debug::print_log_to_console;
@@ -49,18 +49,9 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         .flatten()
         .collect();
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
-    let minimum_profit = 0.0001;
-    build_and_send(
-        &wallet,
-        minor_mint,
-        250_000,
-        &configs,
-        (minimum_profit * LAMPORTS_PER_SOL as f64) as u64,
-        true,
-        trace,
-    )
-    .await
-    .map(|result| print_log_to_console(result.0, &wallet.pubkey(), result.1))?;
+    build_and_send(&wallet, minor_mint, 250_000, &configs, true, trace)
+        .await
+        .map(|result| print_log_to_console(result.0, &wallet.pubkey(), result.1))?;
     unit_ok!()
 }
 
@@ -69,10 +60,11 @@ pub async fn build_and_send(
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
-    minimum_profit: u64,
     include_create_token_account_ix: bool,
     trace: Trace,
 ) -> anyhow::Result<(SimulationResult, Trace)> {
+    let minimum_profit = (0.0001 as Literal).to_lamport();
+
     trace.step(StepType::MevIxBuilding);
     let (mut instructions, _limit) = compute_limit_ix(compute_unit_limit);
 
