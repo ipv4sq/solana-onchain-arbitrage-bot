@@ -82,10 +82,10 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
     fn dex_type(&self) -> DexType {
         self.as_ref().dex_type
     }
-    fn base_reserve(&self) -> Pubkey {
+    fn base_reserve_address(&self) -> Pubkey {
         self.as_ref().base_reserve
     }
-    fn quote_reserve(&self) -> Pubkey {
+    fn quote_reserve_address(&self) -> Pubkey {
         self.as_ref().quote_reserve
     }
 
