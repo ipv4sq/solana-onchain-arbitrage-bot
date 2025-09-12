@@ -14,6 +14,12 @@ pub struct TokenAmount {
     pub amount: u64,
     pub decimals: u8,
 }
+
+impl TokenAmount {
+    pub fn to_value(&self) -> f64 {
+        self.amount as f64 / 10_f64.powi(self.decimals as i32)
+    }
+}
 #[allow(non_upper_case_globals)]
 pub static TokenBalanceShortLivingCache: Lazy<LoadingCache<(Pubkey, MintAddress), TokenAmount>> =
     Lazy::new(|| {
