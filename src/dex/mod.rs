@@ -12,6 +12,6 @@ mod verification;
 pub mod whirlpool;
 
 #[derive(Debug, Clone, Copy)]
-pub struct DlmmQuote {
+pub struct EstimatedQuote {
     pub mid_price: Decimal, // 0滑点价: 1 unit_in -> ? unit_out
 }

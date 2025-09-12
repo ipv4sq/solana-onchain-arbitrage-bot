@@ -4,7 +4,7 @@ use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::dex::pump_amm::PUMP_GLOBAL_CONFIG;
-use crate::dex::DlmmQuote;
+use crate::dex::EstimatedQuote;
 use crate::global::constant::mint::Mints;
 use crate::global::enums::dex_type::DexType;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};

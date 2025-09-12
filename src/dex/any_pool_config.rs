@@ -8,7 +8,7 @@ use crate::dex::meteora_damm_v2::config::MeteoraDammV2Config;
 use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
 use crate::dex::pump_amm::config::PumpAmmConfig;
 use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
-use crate::dex::DlmmQuote;
+use crate::dex::EstimatedQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::global::state::account_balance_holder::get_balance_of_account;
 use crate::pipeline::event_processor::token_balance::token_balance_processor::TokenAmount;

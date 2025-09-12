@@ -1,5 +1,5 @@
 use crate::convention::chain::instruction::Instruction;
-use crate::dex::DlmmQuote;
+use crate::dex::EstimatedQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::global::enums::direction::Direction;
 use crate::sdk::rpc::methods::account::buffered_get_account;

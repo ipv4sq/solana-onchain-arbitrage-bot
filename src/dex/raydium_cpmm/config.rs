@@ -2,7 +2,7 @@ use crate::convention::chain::instruction::Instruction;
 use crate::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
 use crate::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
-use crate::dex::DlmmQuote;
+use crate::dex::EstimatedQuote;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::enums::dex_type::DexType;

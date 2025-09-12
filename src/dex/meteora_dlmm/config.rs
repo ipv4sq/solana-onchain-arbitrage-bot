@@ -3,7 +3,7 @@ use crate::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::dex::DlmmQuote;
+use crate::dex::EstimatedQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::traits::account_meta::ToAccountMeta;
