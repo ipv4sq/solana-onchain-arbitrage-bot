@@ -10,13 +10,15 @@ use crate::global::wallet::get_wallet;
 use crate::pipeline::uploader::common::debug;
 use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
-use crate::pipeline::uploader::mev_bot::sender::{send_real_mev_tx, simulate_mev_tx};
+use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
 use crate::pipeline::uploader::provider::jito::get_jito_tips;
+use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
 use crate::unit_ok;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use construct::build_tx;
+use debug::print_log_to_console;
 use futures::future::join_all;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
@@ -68,7 +70,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         trace,
     )
     .await
-    .map(|result| debug::print_log_to_console(result.0, &wallet_pubkey, result.1))?;
+    .map(|result| print_log_to_console(result.0, &wallet_pubkey, result.1))?;
     unit_ok!()
 }
 

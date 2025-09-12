@@ -4,8 +4,12 @@ use crate::lined_err;
 use crate::sdk::rpc::client;
 use crate::util::alias::AResult;
 use crate::util::traits::signature::ToSignature;
+use solana_program::address_lookup_table::AddressLookupTableAccount;
+use solana_program::hash::Hash;
+use solana_program::instruction::Instruction;
+use solana_program::message::v0::Message;
 use solana_sdk::commitment_config::CommitmentLevel;
-use solana_sdk::signature::Signature;
+use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::info;
 
@@ -37,4 +41,18 @@ pub async fn fetch_tx(signature: &str) -> AResult<Transaction> {
         .await
         .map_err(|e| lined_err!("Failed to fetch transaction: {}", e))?
         .to_unified()
+}
+
+pub fn compile_instruction_to_tx(
+    wallet: &Keypair,
+    instructions: Vec<Instruction>,
+    alts: &[AddressLookupTableAccount],
+    blockhash: Hash,
+) -> AResult<VersionedTransaction> {
+    let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
+    let tx = VersionedTransaction::try_new(
+        solana_sdk::message::VersionedMessage::V0(message),
+        &[wallet],
+    )?;
+    Ok(tx)
 }
