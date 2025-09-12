@@ -1,6 +1,6 @@
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
-use crate::pipeline::uploader::provider::jito::send_bundle;
+use crate::pipeline::uploader::provider::jito::entry::send_bundle;
 use crate::return_error;
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::{error, info};

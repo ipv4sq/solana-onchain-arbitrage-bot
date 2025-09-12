@@ -11,7 +11,7 @@ use crate::pipeline::uploader::common::debug;
 use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
-use crate::pipeline::uploader::provider::jito::get_jito_tips;
+use crate::pipeline::uploader::provider::jito::entry::get_jito_tips;
 use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
 use crate::pipeline::uploader::provider::SenderChannel;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};

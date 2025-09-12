@@ -3,7 +3,7 @@ use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::common::simulation_log;
-use crate::pipeline::uploader::provider::jito::send_bundle;
+use crate::pipeline::uploader::provider::jito::entry::send_bundle;
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation::simulate_transaction_with_config;
 use simulation_log::log_mev_simulation;

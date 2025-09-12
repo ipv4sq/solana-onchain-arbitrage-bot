@@ -3,18 +3,15 @@ use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::constant::mev_bot::MevBot;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::{SystemProgram, TokenProgram};
-use crate::pipeline::uploader::provider::jito::{get_jito_tips, get_random_tip_account};
 use crate::util::alias::{MintAddress, TokenProgramAddress};
 use crate::util::random::random_select;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
 use solana_program::instruction::Instruction;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
 use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::system_instruction::transfer;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 
 pub async fn build_mev_ix(
@@ -34,16 +31,6 @@ pub async fn build_mev_ix(
         .await?
         .program
         .0;
-    let jito_tip_account = get_random_tip_account();
-    let p75_jito_tip = get_jito_tips()
-        .map(|t| t.landed_tips_75th_percentile)
-        .unwrap_or(0.00001);
-
-    let jito_tip_ix = transfer(
-        &wallet_pub,
-        &jito_tip_account,
-        (p75_jito_tip * LAMPORTS_PER_SOL as f64) as u64,
-    );
 
     if include_create_token_account_ix {
         instructions.push(ensure_token_account_exists(
@@ -64,7 +51,6 @@ pub async fn build_mev_ix(
     )
     .await?;
     instructions.push(swap_ix);
-    instructions.push(jito_tip_ix);
 
     Ok(instructions)
 }

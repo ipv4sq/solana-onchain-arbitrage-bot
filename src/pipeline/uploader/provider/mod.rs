@@ -1,11 +1,11 @@
-use crate::pipeline::uploader::provider::jito::build_jito_tip_ix;
+use jito::entry::build_jito_tip_ix;
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
 
 pub mod helius;
 pub mod jito;
-mod jito_new;
 pub mod sender;
+pub mod shyft;
 
 pub enum SenderChannel {
     HeliusSwqos,
