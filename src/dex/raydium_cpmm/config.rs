@@ -1,8 +1,8 @@
 use crate::convention::chain::instruction::Instruction;
 use crate::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
-use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::raydium_cpmm::pool_data::RaydiumCpmmPoolData;
 use crate::dex::raydium_cpmm::RAYDIUM_CPMM_AUTHORITY;
+use crate::dex::DlmmQuote;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::enums::dex_type::DexType;
@@ -86,10 +86,6 @@ impl PoolConfig<RaydiumCpmmPoolData> for RaydiumCpmmConfig {
         ];
 
         Ok(accounts)
-    }
-
-    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote> {
-        todo!()
     }
 
     async fn get_amount_out(

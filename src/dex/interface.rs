@@ -1,5 +1,5 @@
 use crate::convention::chain::instruction::Instruction;
-use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
+use crate::dex::DlmmQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::global::enums::direction::Direction;
 use crate::sdk::rpc::methods::account::buffered_get_account;
@@ -50,8 +50,6 @@ pub trait PoolConfig<Data: PoolDataLoader>: AsRef<PoolBase<Data>> {
         }
         panic!("pool doesn't contain from and to");
     }
-
-    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
 
     async fn get_amount_out(
         &self,

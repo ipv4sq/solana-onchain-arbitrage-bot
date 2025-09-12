@@ -1,6 +1,6 @@
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::dex_type::DexType;
-use crate::global::state::token_balance_holder::QueryRateLimiter;
+use crate::global::state::account_balance_holder::QueryRateLimiter;
 use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::alias::{AResult, PoolAddress};
 use crate::util::cache::loading_cache::LoadingCache;

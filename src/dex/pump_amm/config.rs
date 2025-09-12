@@ -1,10 +1,10 @@
 use crate::convention::chain::instruction::Instruction;
 use crate::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::dex::legacy_interface::InputAccountUtil;
-use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::dex::pump_amm::PUMP_GLOBAL_CONFIG;
+use crate::dex::DlmmQuote;
 use crate::global::constant::mint::Mints;
 use crate::global::enums::dex_type::DexType;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
@@ -83,10 +83,6 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
         }
 
         Ok(accounts)
-    }
-
-    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote> {
-        self.pool_data.mid_price_for_quick_estimate(from, to).await
     }
 
     async fn get_amount_out(

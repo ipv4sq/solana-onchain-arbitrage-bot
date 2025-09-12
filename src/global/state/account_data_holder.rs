@@ -1,5 +1,5 @@
 use crate::global::constant::duration::Interval;
-use crate::global::state::token_balance_holder::QueryRateLimiter;
+use crate::global::state::account_balance_holder::QueryRateLimiter;
 use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use once_cell::sync::Lazy;

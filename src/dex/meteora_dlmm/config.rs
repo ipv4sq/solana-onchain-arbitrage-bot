@@ -3,7 +3,7 @@ use crate::dex::interface::{PoolBase, PoolConfig, PoolDataLoader};
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::meteora_dlmm::misc::input_account::MeteoraDlmmInputAccounts;
 use crate::dex::meteora_dlmm::pool_data::MeteoraDlmmPoolData;
-use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
+use crate::dex::DlmmQuote;
 use crate::global::enums::dex_type::DexType;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::traits::account_meta::ToAccountMeta;
@@ -53,10 +53,6 @@ impl PoolConfig<MeteoraDlmmPoolData> for MeteoraDlmmConfig {
         ]
         .concat();
         Ok(accounts)
-    }
-
-    async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote> {
-        self.pool_data.mid_price_for_quick_estimate(from, to).await
     }
 
     async fn get_amount_out(

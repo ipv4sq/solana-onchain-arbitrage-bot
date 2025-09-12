@@ -3,7 +3,7 @@ use crate::dex::pump_amm::pool_data::PumpAmmPoolData;
 use crate::dex::pump_amm::price::global_config::{compute_fees_bps, GlobalConfig};
 use crate::f;
 use crate::global::constant::pool_program::PoolProgram;
-use crate::global::state::token_balance_holder::get_balance_of_account;
+use crate::global::state::account_balance_holder::get_balance_of_account;
 use crate::util::alias::{AResult, MintAddress};
 use crate::util::traits::option::OptionExt;
 use solana_program::pubkey::Pubkey;
