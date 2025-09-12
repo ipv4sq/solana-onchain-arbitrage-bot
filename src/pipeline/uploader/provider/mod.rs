@@ -1,4 +1,4 @@
-use jito::entry::build_jito_tip_ix;
+use jito::facade::build_jito_tip_ix;
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
 

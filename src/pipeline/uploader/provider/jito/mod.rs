@@ -1,3 +1,3 @@
 mod client;
-pub mod entry;
+pub mod facade;
 pub mod types;
