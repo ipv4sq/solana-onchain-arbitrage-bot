@@ -10,6 +10,7 @@ use crate::global::wallet::get_wallet;
 use crate::pipeline::uploader::common::debug;
 use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
+use crate::pipeline::uploader::mev_bot::construct::compute_limit_ix;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
 use crate::pipeline::uploader::provider::shyft::facade::send_shyft_transaction;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
@@ -53,22 +54,18 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
     .collect();
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
 
-    let wallet_pubkey = wallet.pubkey();
-
     let minimum_profit = 0.0001;
     build_and_send(
-        &wallet,    //
-        minor_mint, //
-        250_000,    //
-        // 30_000,
-        1,                                                 //
-        &configs,                                          //
-        (minimum_profit * LAMPORTS_PER_SOL as f64) as u64, //
-        true,                                              //
+        &wallet,
+        minor_mint,
+        250_000,
+        &configs,
+        (minimum_profit * LAMPORTS_PER_SOL as f64) as u64,
+        true,
         trace,
     )
     .await
-    .map(|result| print_log_to_console(result.0, &wallet_pubkey, result.1))?;
+    .map(|result| print_log_to_console(result.0, &wallet.pubkey(), result.1))?;
     unit_ok!()
 }
 
@@ -76,14 +73,13 @@ pub async fn build_and_send(
     wallet: &Keypair,
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
-    unit_price: u64,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
     include_create_token_account_ix: bool,
     trace: Trace,
 ) -> anyhow::Result<(SimulationResult, Trace)> {
     trace.step(StepType::MevIxBuilding);
-    let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
+    let (mut instructions, _limit) = compute_limit_ix(compute_unit_limit);
 
     let mev_ix = build_mev_ix(
         wallet,
@@ -96,13 +92,10 @@ pub async fn build_and_send(
     )
     .await?;
 
-    let tx = compile_instruction_to_tx(
-        wallet,
-        mev_ix,
-        &alts,
-        get_blockhash().await?, //compile the tx
-    )?;
+    instructions.extend(mev_ix);
 
+    let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
+    let tx = compile_instruction_to_tx(wallet, instructions, &alts, get_blockhash().await?)?;
     trace.step(StepType::MevIxBuilt);
 
     let simulation_result = simulate_mev_tx(&tx, &trace).await?;

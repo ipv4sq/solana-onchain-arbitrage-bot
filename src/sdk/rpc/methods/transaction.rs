@@ -1,6 +1,5 @@
 use crate::convention::chain::mapper::traits::ToUnified;
 use crate::convention::chain::Transaction;
-use crate::global::trace::types::Trace;
 use crate::lined_err;
 use crate::sdk::rpc::client;
 use crate::sdk::rpc::client::rpc_client;

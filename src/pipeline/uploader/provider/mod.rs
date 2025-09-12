@@ -35,7 +35,7 @@ impl SenderChannel {
                 (ix, tip)
             }
             SenderChannel::HeliusJito => {
-                let (mut ix, tip) = build_helius_jito_tip_ix(payer)
+                let (mut ix, tip) = build_helius_jito_tip_ix(payer);
                 ix.push(priority_fee_ix);
                 (ix, tip)
             }

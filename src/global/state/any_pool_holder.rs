@@ -15,6 +15,8 @@ impl AnyPoolHolder {
         cache.get(addr).await
     }
 
+    pub async fn batch_get(pools: Vec<&Pubkey>) -> Vec<AnyPoolConfig> {}
+
     pub async fn fresh_get(addr: &Pubkey) -> AResult<AnyPoolConfig> {
         let config = AnyPoolConfig::from(addr).await?;
         cache.put(addr.clone(), config.clone()).await;

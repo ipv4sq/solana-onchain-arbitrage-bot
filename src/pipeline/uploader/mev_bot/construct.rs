@@ -23,9 +23,7 @@ pub async fn build_mev_ix(
     never_abort: bool,
     include_create_token_account_ix: bool,
 ) -> Result<Vec<Instruction>> {
-    let (mut instructions, _limit) = compute_limit_ix(compute_unit_limit);
-
-    let wallet_pub = wallet.pubkey();
+    let mut instructions: Vec<Instruction> = vec![];
     let mint_token_program = MintRecordRepository::get_mint_or_err(minor_mint)
         .await?
         .program
@@ -33,7 +31,7 @@ pub async fn build_mev_ix(
 
     if include_create_token_account_ix {
         instructions.push(ensure_token_account_exists(
-            &wallet_pub,
+            &wallet.pubkey(),
             minor_mint,
             &mint_token_program,
         ))
@@ -49,6 +47,7 @@ pub async fn build_mev_ix(
         never_abort,
     )
     .await?;
+
     instructions.push(swap_ix);
 
     Ok(instructions)
