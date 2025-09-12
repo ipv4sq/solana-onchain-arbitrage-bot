@@ -29,8 +29,12 @@ pub struct HeliusClient {
 }
 
 impl HeliusClient {
-    pub fn new() -> Self {
-        let url = "http://fra-sender.helius-rpc.com/fast?swqos_only=true".to_string();
+    pub fn new(swqos_only: bool) -> Self {
+        let url = if swqos_only {
+            "http://fra-sender.helius-rpc.com/fast?swqos_only=true";
+        } else {
+            "http://fra-sender.helius-rpc.com/fast";
+        };
         let ping_url = "http://fra-sender.helius-rpc.com/ping".to_string();
         Self {
             client: Client::new(),

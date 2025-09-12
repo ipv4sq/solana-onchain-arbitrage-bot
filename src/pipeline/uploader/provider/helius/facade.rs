@@ -18,7 +18,7 @@ pub async fn send_helius_swqos(tx: &VersionedTransaction) -> AResult<()> {
 }
 
 static HeliusHolder: Lazy<RwLock<Arc<HeliusClient>>> = Lazy::new(|| {
-    let client = Arc::new(HeliusClient::new());
+    let client = Arc::new(HeliusClient::new(false));
     let client_clone = client.clone();
 
     tokio::spawn(async move {
