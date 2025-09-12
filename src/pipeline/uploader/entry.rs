@@ -20,7 +20,6 @@ use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
 use construct::build_mev_ix;
 use debug::print_log_to_console;
-use futures::future::join_all;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::signature::Keypair;
@@ -41,19 +40,15 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
     }
+
     trace.step_with(StepType::MevTxFired, "path", format!("{:?}", pools));
     let wallet = get_wallet();
-    let configs: Vec<_> = join_all(
-        pools
-            .iter()
-            .map(|pool_address| async move { AnyPoolHolder::get(pool_address).await }),
-    )
-    .await
-    .into_iter()
-    .flatten()
-    .collect();
+    let configs: Vec<_> = AnyPoolHolder::batch_get(pools)
+        .await
+        .into_iter()
+        .flatten()
+        .collect();
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
-
     let minimum_profit = 0.0001;
     build_and_send(
         &wallet,

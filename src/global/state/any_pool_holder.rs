@@ -15,7 +15,14 @@ impl AnyPoolHolder {
         cache.get(addr).await
     }
 
-    pub async fn batch_get(pools: Vec<&Pubkey>) -> Vec<AnyPoolConfig> {}
+    pub async fn batch_get(pool_addresses: &[Pubkey]) -> Vec<Option<AnyPoolConfig>> {
+        let futures = pool_addresses
+            .iter()
+            .map(|addr| cache.get(addr))
+            .collect::<Vec<_>>();
+        
+        futures::future::join_all(futures).await
+    }
 
     pub async fn fresh_get(addr: &Pubkey) -> AResult<AnyPoolConfig> {
         let config = AnyPoolConfig::from(addr).await?;
