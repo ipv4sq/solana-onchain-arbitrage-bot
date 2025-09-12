@@ -6,6 +6,7 @@ use crate::pipeline::uploader::common::simulation_log;
 use crate::pipeline::uploader::provider::jito::send_bundle;
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation::simulate_transaction_with_config;
+use simulation_log::log_mev_simulation;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -88,16 +89,8 @@ pub async fn simulate_and_log_mev(
 ) -> anyhow::Result<(SimulationResult, Trace)> {
     let result = simulate_mev_tx(tx, &trace).await?;
 
-    if let Err(e) = simulation_log::log_mev_simulation(
-        &result,
-        &trace,
-        &owner,
-        tx,
-        minor_mint,
-        desired_mint,
-        pools,
-    )
-    .await
+    if let Err(e) =
+        log_mev_simulation(&result, &trace, &owner, tx, minor_mint, desired_mint, pools).await
     {
         error!("Failed to log MEV simulation: {}", e);
     }
