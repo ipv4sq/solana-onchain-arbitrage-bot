@@ -99,7 +99,6 @@ impl AnyPoolConfig {
             pub fn quote_mint(&self) -> MintAddress;
             pub fn dex_type(&self) -> DexType;
             pub fn pool_data_json(&self) -> Value;
-            pub async fn mid_price(&self, from: &MintAddress, to: &MintAddress) -> AResult<DlmmQuote>;
             pub async fn get_amount_out(&self,input_amount: u64,from_mint: &MintAddress,to_mint: &MintAddress,) -> AResult<u64>;
             pub fn mint_pair(&self) -> MintPair;
             pub fn base_reserve_address(&self) -> Pubkey;
