@@ -97,7 +97,7 @@ The `logs/` directory is in `.gitignore` so log files won't be committed to the 
 
 ### Core Modules
 
-#### 1. **Convention Module** (`src/arb/convention/`)
+#### 1. **Convention Module** (`src/convention/`)
 
 Provides abstraction layers for consistent interaction across different components:
 
@@ -106,20 +106,21 @@ Provides abstraction layers for consistent interaction across different componen
     - **Utils** (`util/`): ALT utilities, instruction analysis, simulation, transaction handling
     - Core types: `account.rs`, `instruction.rs`, `transaction.rs`, `meta.rs`
 
-#### 2. **DEX Module** (`src/arb/dex/`)
+#### 2. **DEX Module** (`src/dex/`)
 
 Unified DEX interface with trait-based abstraction:
 
 - **Interface** (`interface.rs`): Core traits for pool operations
     - `PoolConfig` trait with `get_amount_out`, `mid_price` methods
 - **Any Pool Config** (`any_pool_config.rs`): Universal pool configuration
+- **Legacy Interface** (`legacy_interface.rs`): Compatibility layer for older implementations
 - **DEX Implementations**:
     - `meteora_damm_v2/` - Meteora Dynamic AMM V2 with advanced curves
     - `meteora_dlmm/` - Meteora Dynamic Liquidity Market Maker
     - `raydium_cpmm/` - Raydium Constant Product Market Maker
     - `pump_amm/` - Pump.fun AMM with creator fees
     - `whirlpool/` - Orca Whirlpool concentrated liquidity
-    - `meteora_damm/` - Legacy Meteora DAMM (minimal implementation)
+    - `meteora_damm/` - Legacy Meteora DAMM (maintenance mode)
 
 Each implementation contains:
 
@@ -128,7 +129,7 @@ Each implementation contains:
 - `price/` - Price calculation logic
 - `misc/` - Supporting utilities
 
-#### 3. **Pipeline Module** (`src/arb/pipeline/`)
+#### 3. **Pipeline Module** (`src/pipeline/`)
 
 Orchestrates the main business logic flow:
 
@@ -136,7 +137,6 @@ Orchestrates the main business logic flow:
     - `owner_account_subscriber.rs` - Monitor pool owner accounts via gRPC
     - `involved_account_subscriber.rs` - Monitor accounts involved in transactions
     - `registrar.rs` - Bootstrap chain subscription (starts both monitors)
-    - `legacy/` - Legacy MEV bot transaction subscriber (currently disabled)
 
 - **Event Processor** (`pipeline/event_processor/`):
     - `mev_bot/` - MEV bot transaction processing
@@ -154,16 +154,24 @@ Orchestrates the main business logic flow:
 
 - **Uploader** (`pipeline/uploader/`):
     - `mev_bot/` - MEV bot instruction construction
-    - `wallet.rs` - Wallet management utilities
+    - `provider/` - Transaction submission providers
+        - `jito.rs` - Jito bundle submission integration
+        - `helius.rs` - Helius priority fee and submission
+    - `common/` - Common uploader utilities
+        - `debug.rs` - Debug utilities for transaction analysis
+        - `simulation_log.rs` - Transaction simulation logging
+    - `variables.rs` - Uploader configuration variables
     - Transaction building and submission
 
-#### 4. **Database Module** (`src/arb/database/`)
+#### 4. **Database Module** (`src/database/`)
 
 Advanced SeaORM-based persistence:
 
 - **Custom Columns** (`database/columns/`):
-    - `pubkey_type.rs` - Custom Solana address storage type
+    - `pubkey_type.rs` - Custom Solana address storage type  
+    - `pubkey_type_string.rs` - String-based Pubkey type
     - `cache_type_column.rs` - Cache type definitions
+    - `pool_descriptor.rs` - Pool descriptor type
 
 - **Entities**:
     - `mint_record/` - Token metadata (address, symbol, decimals, program)
@@ -177,7 +185,7 @@ Each entity module contains:
 - `repository.rs` - Data access layer
 - Optional: `cache.rs`, `loader.rs`, `converter.rs`
 
-#### 5. **Global Module** (`src/arb/global/`)
+#### 5. **Global Module** (`src/global/`)
 
 Shared state and utilities:
 
@@ -197,13 +205,14 @@ Shared state and utilities:
     - `mint.rs` - Well-known mint addresses (WSOL, USDC, etc.)
     - `pool_program.rs` - All supported DEX program IDs
     - `token_program.rs` - SPL Token program constants
+    - `duration.rs` - Time duration constants
 
 - **Enums** (`global/enums/`):
     - `dex_type.rs` - Comprehensive DEX type system
 
 - **Trace** (`global/trace/`) - Tracing and monitoring types
 
-#### 6. **Program Module** (`src/arb/program/`)
+#### 6. **Program Module** (`src/program/`)
 
 Onchain program interaction:
 
@@ -211,57 +220,72 @@ Onchain program interaction:
     - `ix.rs` - Instruction building and parsing
     - `ix_input.rs` - Input parameter structures for MEV operations
 
-#### 7. **Utility Module** (`src/arb/util/`)
+#### 7. **Utility Module** (`src/util/`)
 
 Production-grade utilities and abstractions:
 
+- **Cache Systems** (`util/cache/`):
+    - `loading_cache.rs` - LRU cache with async loader and automatic refresh
+    - `persistent_cache.rs` - Database-backed cache with TTL support and SeaORM integration
+
 - **Advanced Structures** (`util/structs/`):
-    - `loading_cache.rs` - LRU cache with async loader
-    - `persistent_cache.rs` - Database-backed cache with TTL support
-    - `ttl_loading_cache.rs` - TTL-aware LRU cache
     - `rate_limiter.rs` - Token bucket rate limiter with burst capacity
     - `buffered_debouncer.rs` - Event debouncing utility
     - `lazy_cache.rs`, `lazy_arc.rs` - Lazy initialization utilities
     - `mint_pair.rs` - Token pair management
+    - `ttl_loading_cache.rs` - TTL-aware LRU cache (if still present)
 
 - **Traits** (`util/traits/`):
     - `pubkey.rs` - `.to_pubkey()` extension for string conversion
     - `orm.rs` - SeaORM conversion traits (`.to_orm()`)
     - `account_meta.rs`, `signature.rs` - Solana utilities
+    - Additional trait extensions for common operations
 
 - **Workers** (`util/worker/`):
     - `pubsub.rs` - PubSub worker implementations
 
+- **Environment & Error Handling** (`util/`):
+    - `env/` - Environment variable management
+    - `error_handle/` - Error handling utilities
+    - `solana/` - Solana-specific utilities
+    - `random/` - Random number generation utilities
+
 - **Other** (`util/`):
     - `logging.rs` - Dual console/file logging with auto-rotation
     - `macros.rs` - Utility macros
+    - `debug.rs` - Debug utilities
+    - `serde_helpers.rs` - Serde serialization helpers
+    - `alias.rs` - Type aliases
     - `cron/periodic_logger.rs` - Periodic logging utilities
 
-#### 8. **SDK Module** (`src/arb/sdk/`)
+#### 8. **SDK Module** (`src/sdk/`)
 
-- `yellowstone.rs` - Yellowstone gRPC integration for real-time data
+- **RPC Module** (`sdk/rpc/`):
+    - Enhanced RPC client functionality
+    - Connection pooling and retry logic
+    - Custom RPC methods and utilities
+- `yellowstone.rs` - Yellowstone gRPC integration for real-time blockchain data subscription
 
-### Additional Top-Level Modules
+### Project Structure
 
-Located in `src/` alongside the main `arb` module:
+**Entry Points**:
+- `src/main.rs` - Main binary entry point that:
+  - Initializes the logging system (dual console/file output)
+  - Sets up the database connection pool
+  - Starts the blockhash daemon thread
+  - Launches the chain subscriber for monitoring blockchain events
+  - Coordinates all components of the MEV bot system
 
-- `bot.rs` - Bot orchestration logic
-- `config.rs` - Configuration management (supports environment variables with `$` prefix)
-- `legacy_dex/` - Legacy DEX implementations (being phased out)
-    - Contains legacy implementations for Raydium, Meteora, Pump, Whirlpool, Solfi, Vertigo
-    - Includes pool fetching and checking utilities
-- `pools.rs` - Pool management utilities
-- `refresh.rs` - Data refresh logic
-- `server.rs` - HTTP server for monitoring
-- `service/` - Service layer implementations
-- `transaction.rs` - Transaction utilities
-- `util/` - Additional utilities
-- `test/` - Test utilities and initialization
-- `main.rs` - Entry point: initializes logging, database, blockhash daemon, and chain subscriber
+- `src/lib.rs` - Library root that exports all modules for testing and integration
+
+**Test Module** (`src/test/`):
+- Test utilities and initialization helpers
+- Database test fixtures and setup
+- Mock data generators
 
 ### DEX Support
 
-**Current DEX implementations** in `src/arb/dex/`:
+**Current DEX implementations** in `src/dex/`:
 
 1. **Meteora DLMM** (`meteora_dlmm/`) - Dynamic Liquidity Market Maker
     - Bin-based liquidity with dynamic fees
@@ -276,7 +300,8 @@ Located in `src/` alongside the main `arb` module:
     - Program: `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG`
 
 3. **Meteora DAMM** (`meteora_damm/`) - Legacy Dynamic AMM
-    - Minimal implementation (being phased out)
+    - Minimal implementation (maintenance mode)
+    - Basic swap functionality only
     - Program: `Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB`
 
 4. **Raydium CPMM** (`raydium_cpmm/`) - Constant Product Market Maker
@@ -291,17 +316,25 @@ Located in `src/` alongside the main `arb` module:
     - Program: `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA`
 
 6. **Orca Whirlpool** (`whirlpool/`) - Concentrated liquidity
-    - Tick-based liquidity
-    - Position management
+    - Tick-based liquidity management
+    - Position management and price calculation
     - Program: `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc`
 
-**Legacy DEX implementations** (in `src/legacy_dex/`, being phased out):
+**DEX Verification Module** (`src/dex/verification/`):
 
-- Raydium V4 (`675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`)
-- Raydium CLMM (`CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK`)
-- Pump.fun Classic (`6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`)
-- Solfi (`SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe`)
-- Vertigo (`vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ`)
+Provides rigorous validation of pool states and swap calculations:
+- `common.rs` - Shared verification utilities and traits for all DEX types
+- `dlmm_verification.rs` - Meteora DLMM pool validation and price verification
+- `damm_v2_verification.rs` - Meteora DAMM V2 curve and fee validation
+- `pump_amm_verification.rs` - Pump.fun AMM bonding curve verification
+- `raydium_cpmm_verification.rs` - Raydium CPMM invariant and fee validation
+
+Each verification module ensures:
+- Pool state consistency and validity
+- Correct price calculation according to DEX formulas
+- Fee calculation accuracy
+- Swap amount validation
+- Protection against common MEV attack vectors
 
 ### Configuration Structure
 
@@ -338,6 +371,16 @@ enabled = true
 sending_rpc_urls = ["..."]  # Multiple RPC endpoints for redundancy
 compute_unit_price = 1000
 max_retries = 3
+
+[jito]  # Optional - Jito bundle submission
+enabled = true
+tip_amount = 10000  # Tip in lamports
+leader_rpc_urls = ["..."]  # Jito leader RPC endpoints
+
+[helius]  # Optional - Helius priority fee
+enabled = true
+api_key = "$HELIUS_API_KEY"
+priority_level = "medium"  # low, medium, high, veryHigh
 
 [flashloan]  # Optional - flashloan support
 enabled = true
@@ -512,15 +555,17 @@ result.insert(item.key, value);
 - `PoolPrograms::RAYDIUM_AMM`, etc - DEX program IDs
 - `MevBot::PROGRAM_ID` - MEV bot constants
 
-**Use built-in caching**:
+**Use built-in caching systems**:
 
-- Database-backed caches in repositories
-- LoadingCache for frequently accessed data
-- TTLLoadingCache for time-sensitive data
+- `LoadingCache` (`util/cache/loading_cache.rs`) - LRU cache with async loader and automatic refresh
+- `PersistentCache` (`util/cache/persistent_cache.rs`) - Database-backed cache with TTL support
+- Database-backed caches in repositories via `kv_cache` table
+- Pool instance caching via `AnyPoolHolder` in global state
+- Token balance caching via `TokenBalanceHolder`
 
 ### Meteora DLMM Specific Notes
 
-Located in `src/arb/dex/meteora_dlmm/price/best_effort.rs`:
+Located in `src/dex/meteora_dlmm/price/best_effort.rs`:
 
 - **Price Calculation**: Always calculate from bin ID: `price = (1 + bin_step/10000)^bin_id`
 - **Bin Structure**: 70 bins per array, bin array index = bin_id / 70
@@ -593,7 +638,7 @@ sqlx migrate add create_<table_name>_table
 
 ### 2. Create Entity
 
-In `src/arb/database/<table_name>/model.rs`:
+In `src/database/<table_name>/model.rs`:
 
 - Define `Model` with `#[derive(DeriveEntityModel)]`
 - Add `#[sea_orm(primary_key)]` to ID field
@@ -604,7 +649,7 @@ In `src/arb/database/<table_name>/model.rs`:
 
 ### 3. Create Repository
 
-In `src/arb/database/<table_name>/repository.rs`:
+In `src/database/<table_name>/repository.rs`:
 
 - Use param structs for methods with many parameters
 - Use `get_db()` from `global::client::db` directly (not `await`)
@@ -629,14 +674,15 @@ sqlx migrate run
 - **Token Programs**: SPL Token and Token-2022 supported
 - **Blockhash Refresh**: Every 200ms via dedicated thread (`global::daemon::blockhash`)
 - **Database Pool**: Managed via `global::client::db` (SeaORM connection pool)
-- **RPC Client**: Access via `crate::arb::global::client::rpc::rpc_client()`
+- **RPC Client**: Access via `crate::global::client::rpc::rpc_client()`
 - **MEV Bot Program**: `MEViEnscUm6tsQRoGd9h6nLQaQspKj7DB2M5FwM3Xvz`
 
 # Important Instruction Reminders
 
-- If you are creating a tokio test, it will be good to call src/arb/global/client/db.rs:32 must_init_db() to init db
+- If you are creating a tokio test, it will be good to call src/global/client/db.rs:32 must_init_db() to init db
 - Do what has been asked; nothing more, nothing less
 - NEVER create files unless they're absolutely necessary for achieving your goal
 - ALWAYS prefer editing an existing file to creating a new one
 - NEVER proactively create documentation files (*.md) or README files unless explicitly requested
 - Check compile errors once you update files, unless told not to
+- All modules are now at the top level under `src/` (no more `src/arb/` prefix)

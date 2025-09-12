@@ -10,6 +10,8 @@ use crate::dex::meteora_dlmm::price::price_calculator::DlmmQuote;
 use crate::dex::pump_amm::config::PumpAmmConfig;
 use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
 use crate::global::enums::dex_type::DexType;
+use crate::global::state::token_balance_holder::get_balance_of_account;
+use crate::pipeline::event_processor::token_balance::token_balance_processor::TokenAmount;
 use crate::return_error;
 use crate::util::alias::{AResult, MintAddress, PoolAddress};
 use crate::util::structs::mint_pair::MintPair;
@@ -70,6 +72,20 @@ impl AnyPoolConfig {
 }
 
 impl AnyPoolConfig {
+    pub async fn get_reserves(&self) -> (Option<TokenAmount>, Option<TokenAmount>) {
+        let base_reserve_addr = self.base_reserve_address();
+        let quote_reserve_addr = self.quote_reserve_address();
+        let base_mint = self.base_mint();
+        let quote_mint = self.quote_mint();
+        
+        let (base_balance, quote_balance) = tokio::join!(
+            get_balance_of_account(&base_reserve_addr, &base_mint),
+            get_balance_of_account(&quote_reserve_addr, &quote_mint)
+        );
+        
+        (base_balance, quote_balance)
+    }
+    
     delegate! {
         to match self {
             MeteoraDlmm(a) => a,
