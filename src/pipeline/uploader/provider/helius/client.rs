@@ -9,7 +9,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tracing::{info, warn};
 
-const HELIUS_TIP_ACCOUNTS: &[&str] = &[
+pub(crate) const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
     "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
     "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta",
@@ -30,16 +30,15 @@ pub struct HeliusClient {
 
 impl HeliusClient {
     pub fn new(swqos_only: bool) -> Self {
-        let url = if swqos_only {
-            "http://fra-sender.helius-rpc.com/fast?swqos_only=true";
-        } else {
-            "http://fra-sender.helius-rpc.com/fast";
-        };
-        let ping_url = "http://fra-sender.helius-rpc.com/ping".to_string();
         Self {
             client: Client::new(),
-            url,
-            ping_url,
+            url: if swqos_only {
+                "http://fra-sender.helius-rpc.com/fast?swqos_only=true"
+            } else {
+                "http://fra-sender.helius-rpc.com/fast"
+            }
+            .to_string(),
+            ping_url: "http://fra-sender.helius-rpc.com/ping".to_string(),
         }
     }
 
