@@ -1,5 +1,5 @@
 use crate::convention::chain::simulation::SimulationResponse;
-use crate::convention::chain::util::alt::get_alt_by_key;
+use crate::convention::chain::util::alt::get_alt;
 use crate::dex::interface::PoolConfig;
 use crate::dex::legacy_interface::InputAccountUtil;
 use crate::dex::meteora_damm_v2::config::MeteoraDammV2Config;
@@ -70,7 +70,7 @@ async fn build_test_swap_tx(
 
     let mut alts = Vec::new();
     for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
+        alts.push(get_alt(key).await?);
     }
     let blockhash = block::get_latest_blockhash().await?;
 
@@ -244,7 +244,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
 
     let mut alts = Vec::new();
     for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
+        alts.push(get_alt(key).await?);
     }
     let blockhash = block::get_latest_blockhash().await?;
 
@@ -374,7 +374,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
 
     let mut alts = Vec::new();
     for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
+        alts.push(get_alt(key).await?);
     }
     let blockhash = block::get_latest_blockhash().await?;
 
@@ -560,7 +560,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
 
     let mut alts = Vec::new();
     for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
+        alts.push(get_alt(key).await?);
     }
     let blockhash = block::get_latest_blockhash().await?;
 

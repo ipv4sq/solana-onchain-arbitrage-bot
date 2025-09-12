@@ -1,4 +1,4 @@
-use crate::convention::chain::util::alt::fetch_address_lookup_tables;
+use crate::convention::chain::util::alt::get_alt_batch;
 use crate::convention::chain::util::simulation::SimulationResult;
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::constant::mint::Mints;
@@ -86,10 +86,7 @@ pub async fn build_and_send(
     trace: Trace,
 ) -> anyhow::Result<(SimulationResult, Trace)> {
     trace.step(StepType::MevIxBuilding);
-    let alts = fetch_address_lookup_tables(&[
-        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-    ])
-    .await?;
+    let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
 
     let mev_ix = build_tx(
         wallet,
