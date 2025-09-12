@@ -1,7 +1,6 @@
 use crate::convention::chain::util::simulation::SimulationResult;
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
-use crate::pipeline::uploader::common::simulation_log;
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation::simulate_transaction_with_config;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;

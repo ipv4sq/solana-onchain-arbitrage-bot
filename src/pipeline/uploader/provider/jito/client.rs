@@ -4,14 +4,13 @@ use anyhow::anyhow;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
 use parking_lot::RwLock;
-use rand::Rng;
 use reqwest::Client;
 use serde_json::json;
 use solana_sdk::transaction::VersionedTransaction;
 use std::time::Duration;
 use tracing::{info, warn};
 
-const JITO_TIP_ACCOUNTS: [&str; 8] = [
+pub(crate) const JITO_TIP_ACCOUNTS: [&str; 8] = [
     "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
     "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
     "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
@@ -143,12 +142,6 @@ impl JitoClient {
                 (data.landed_tips_99th_percentile * 1e9) as u64,
             )
         })
-    }
-
-    pub fn get_random_tip_account() -> &'static str {
-        let mut rng = rand::rng();
-        let index = rng.random_range(0..JITO_TIP_ACCOUNTS.len());
-        JITO_TIP_ACCOUNTS[index]
     }
 
     pub(crate) async fn periodic_tip_fetch(&self) -> AResult<()> {

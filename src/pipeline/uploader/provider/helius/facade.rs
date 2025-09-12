@@ -1,4 +1,5 @@
 #![allow(non_upper_case_globals)]
+use crate::convention::chain::instruction::Instruction;
 use crate::pipeline::uploader::provider::helius::client::HeliusClient;
 use crate::unit_ok;
 use crate::util::alias::AResult;
@@ -8,6 +9,14 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use tracing::error;
+
+pub fn build_helius_jito_tip_ix() -> (Vec<Instruction>, f64) {
+    todo!()
+}
+
+pub fn build_helius_swqos_tip_ix() -> (Vec<Instruction>, f64) {
+    todo!()
+}
 
 pub async fn send_helius_swqos(tx: &VersionedTransaction) -> AResult<()> {
     HeliusSwqosHolder

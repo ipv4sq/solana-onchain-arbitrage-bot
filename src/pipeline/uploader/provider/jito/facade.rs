@@ -1,5 +1,6 @@
-use crate::pipeline::uploader::provider::jito::client::JitoClient;
+use crate::pipeline::uploader::provider::jito::client::{JitoClient, JITO_TIP_ACCOUNTS};
 use crate::util::alias::AResult;
+use crate::util::random::random_choose;
 use crate::util::traits::pubkey::ToPubkey;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
@@ -13,17 +14,19 @@ use tokio::time::{interval, Duration};
 use tracing::error;
 
 pub fn build_jito_tip_ix(payer: &Pubkey) -> (Vec<Instruction>, f64) {
-    let jito_tip_account = JitoClient::get_random_tip_account().to_pubkey();
-    let p75_jito_tip = jito_client()
+    let tip_account = random_choose(&JITO_TIP_ACCOUNTS).to_pubkey();
+
+    let p75_tip = jito_client()
         .get_latest_tip_amounts()
         .map(|t| t.landed_tips_75th_percentile)
         .unwrap_or(0.00001);
-    let jito_tip_ix = transfer(
+
+    let ix = transfer(
         &payer,
-        &jito_tip_account,
-        (p75_jito_tip * LAMPORTS_PER_SOL as f64) as u64,
+        &tip_account,
+        (p75_tip * LAMPORTS_PER_SOL as f64) as u64,
     );
-    (vec![jito_tip_ix], p75_jito_tip)
+    (vec![ix], p75_tip)
 }
 
 pub fn jito_client() -> Arc<JitoClient> {

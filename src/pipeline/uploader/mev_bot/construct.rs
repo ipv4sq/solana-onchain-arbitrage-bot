@@ -4,7 +4,7 @@ use crate::global::constant::mev_bot::MevBot;
 use crate::global::constant::mint::Mints;
 use crate::global::constant::token_program::{SystemProgram, TokenProgram};
 use crate::util::alias::{MintAddress, TokenProgramAddress};
-use crate::util::random::random_select;
+use crate::util::random::random_choose;
 use crate::util::solana::pda::{ata, ata_sol_token};
 use crate::util::traits::account_meta::ToAccountMeta;
 use anyhow::Result;
@@ -126,12 +126,11 @@ fn fee_collector(use_flashloan: bool) -> Pubkey {
     if use_flashloan {
         MevBot::FLASHLOAN_FEE_ACCOUNT
     } else {
-        let fee_accounts = [
+        *random_choose(&[
             MevBot::NON_FLASHLOAN_ACCOUNT_1,
             MevBot::NON_FLASHLOAN_ACCOUNT_2,
             MevBot::NON_FLASHLOAN_ACCOUNT_3,
-        ];
-        *random_select(&fee_accounts).expect("fee_accounts should not be empty")
+        ])
     }
 }
 
