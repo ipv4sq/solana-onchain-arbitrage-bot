@@ -1,4 +1,4 @@
-use crate::convention::chain::util::alt::get_alt_by_key;
+use crate::convention::chain::util::alt::fetch_address_lookup_tables;
 use crate::convention::chain::util::simulation::SimulationResult;
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::constant::mint::Mints;
@@ -14,6 +14,7 @@ use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
 use crate::pipeline::uploader::provider::jito::get_jito_tips;
 use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
+use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
@@ -84,30 +85,25 @@ pub async fn build_and_send(
     include_create_token_account_ix: bool,
     trace: Trace,
 ) -> anyhow::Result<(SimulationResult, Trace)> {
-    let alt_keys = vec![
-        // this seems to be legit
-        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
-    ];
     trace.step(StepType::MevIxBuilding);
+    let alts = fetch_address_lookup_tables(&[
+        "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey(),
+    ])
+    .await?;
 
-    let mut alts = Vec::new();
-    for key in &alt_keys {
-        alts.push(get_alt_by_key(key).await?);
-    }
-
-    let tx = build_tx(
+    let mev_ix = build_tx(
         wallet,
         minor_mint,
         compute_unit_limit,
         unit_price,
         pools,
-        get_blockhash().await?,
-        &alts,
         minimum_profit,
         false,
         include_create_token_account_ix,
     )
     .await?;
+
+    let tx = compile_instruction_to_tx(wallet, mev_ix, &alts, get_blockhash().await?)?;
 
     trace.step(StepType::MevIxBuilt);
 

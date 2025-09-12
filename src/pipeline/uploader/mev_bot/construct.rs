@@ -12,13 +12,9 @@ use anyhow::Result;
 use solana_program::instruction::Instruction;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::compute_budget::ComputeBudgetInstruction;
-use solana_sdk::hash::Hash;
-use solana_sdk::message::v0::Message;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::system_instruction::transfer;
-use solana_sdk::transaction::VersionedTransaction;
 use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
@@ -38,12 +34,10 @@ pub async fn build_tx(
     compute_unit_limit: u32,
     unit_price: u64,
     pools: &[AnyPoolConfig],
-    blockhash: Hash,
-    alts: &[AddressLookupTableAccount],
     minimum_profit: u64,
     never_abort: bool,
     include_create_token_account_ix: bool,
-) -> Result<VersionedTransaction> {
+) -> Result<Vec<Instruction>> {
     let (mut instructions, _limit) = gas_instructions(compute_unit_limit, unit_price);
 
     let wallet_pub = wallet.pubkey();
@@ -83,12 +77,7 @@ pub async fn build_tx(
     instructions.push(swap_ix);
     instructions.push(jito_tip_ix);
 
-    let message = Message::try_compile(&wallet.pubkey(), &instructions, alts, blockhash)?;
-    let tx = VersionedTransaction::try_new(
-        solana_sdk::message::VersionedMessage::V0(message),
-        &[wallet],
-    )?;
-    Ok(tx)
+    Ok(instructions)
 }
 
 pub async fn create_invoke_mev_instruction(

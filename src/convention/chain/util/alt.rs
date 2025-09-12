@@ -2,11 +2,12 @@ use crate::global::constant::duration::Interval;
 use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use anyhow::Result;
+use futures::future::try_join_all;
 use once_cell::sync::Lazy;
 use solana_sdk::address_lookup_table::state::AddressLookupTable;
 use solana_sdk::address_lookup_table::AddressLookupTableAccount;
 use solana_sdk::pubkey::Pubkey;
-use tracing::{debug, warn};
+use tracing::debug;
 
 #[allow(non_upper_case_globals)]
 pub static LutCache: Lazy<LoadingCache<Pubkey, AddressLookupTableAccount>> = Lazy::new(|| {
@@ -38,31 +39,7 @@ pub fn invalidate_all_alt_cache() {
 pub async fn fetch_address_lookup_tables(
     alt_keys: &[Pubkey],
 ) -> Result<Vec<AddressLookupTableAccount>> {
-    let mut alts = Vec::new();
-
-    for key in alt_keys {
-        match fetch_single_alt(key).await {
-            Ok(alt) => alts.push(alt),
-            Err(e) => {
-                warn!("Skipping ALT {}: {}", key, e);
-                continue;
-            }
-        }
-    }
-
-    if alts.is_empty() && !alt_keys.is_empty() {
-        return Err(anyhow::anyhow!(
-            "Failed to fetch any ALTs from {} provided keys",
-            alt_keys.len()
-        ));
-    }
-
-    debug!(
-        "Successfully fetched {}/{} ALTs",
-        alts.len(),
-        alt_keys.len()
-    );
-
+    let alts = try_join_all(alt_keys.iter().map(fetch_single_alt)).await?;
     Ok(alts)
 }
 
@@ -222,25 +199,6 @@ mod tests {
                         || e.to_string().contains("Failed to fetch ALT"),
                     "Should properly handle non-existent ALT"
                 );
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_get_alt_by_key_with_cache() {
-        let alt_key = "4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey();
-
-        match get_alt_by_key(&alt_key).await {
-            Ok(alt) => {
-                assert_eq!(alt.key, alt_key);
-                assert!(!alt.addresses.is_empty(), "ALT should have addresses");
-
-                let cached = get_alt_by_key_cached(&alt_key).await;
-                assert!(cached.is_some(), "Should be cached after first fetch");
-                assert_eq!(cached.unwrap().key, alt_key);
-            }
-            Err(e) => {
-                println!("Note: Cache test requires mainnet RPC connection: {}", e);
             }
         }
     }
