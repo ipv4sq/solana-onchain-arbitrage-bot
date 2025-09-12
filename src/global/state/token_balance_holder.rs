@@ -11,9 +11,12 @@ use once_cell::sync::Lazy;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use spl_token::state::Account;
+use spl_token_2022::extension::StateWithExtensions;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, warn};
+
+type Token2022Account<'a> = StateWithExtensions<'a, spl_token_2022::state::Account>;
 
 #[allow(non_upper_case_globals)]
 static LongTermCache: Lazy<LoadingCache<(Pubkey, MintAddress), TokenAmount>> = Lazy::new(|| {
@@ -62,13 +65,24 @@ async fn fetch_from_rpc(account: &Pubkey, mint: &MintAddress) -> Option<TokenAmo
         return None;
     }
     let data = buffered_get_account(account).await.ok()?;
-    let vault = Account::unpack_from_slice(&data.data).ok()?;
-    if *mint != vault.mint {
-        error!("Fucked up here mint={:?}, vault={:?}", mint, vault);
+
+    let (vault_mint, vault_amount) = if let Ok(vault) = Account::unpack_from_slice(&data.data) {
+        (vault.mint, vault.amount)
+    } else if let Ok(state) = Token2022Account::unpack(&data.data) {
+        (state.base.mint, state.base.amount)
+    } else {
+        return None;
+    };
+
+    if *mint != vault_mint {
+        error!(
+            "Fucked up here mint={:?}, vault_mint={:?}",
+            mint, vault_mint
+        );
     }
     let decimals = MintRecordRepository::get_decimal(mint).await?;
     Some(TokenAmount {
-        amount: vault.amount,
+        amount: vault_amount,
         decimals,
     })
 }
