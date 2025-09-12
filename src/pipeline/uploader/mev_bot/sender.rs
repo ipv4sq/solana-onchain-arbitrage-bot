@@ -1,18 +1,14 @@
 use crate::convention::chain::util::simulation::SimulationResult;
-use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::common::simulation_log;
-use crate::pipeline::uploader::provider::jito::entry::send_bundle;
 use crate::return_error;
 use crate::sdk::rpc::methods::simulation::simulate_transaction_with_config;
-use simulation_log::log_mev_simulation;
 use solana_client::rpc_config::RpcSimulateTransactionConfig;
-use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::transaction::VersionedTransaction;
 use solana_transaction_status::UiTransactionEncoding;
-use tracing::{error, info};
+use tracing::info;
 
 pub async fn simulate_mev_tx(
     tx: &VersionedTransaction,

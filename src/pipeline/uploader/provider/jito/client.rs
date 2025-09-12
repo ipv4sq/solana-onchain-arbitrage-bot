@@ -1,4 +1,3 @@
-use crate::pipeline::uploader::provider::jito::entry::JITO_TIP_ACCOUNTS;
 use crate::pipeline::uploader::provider::jito::types::{JitoBundleResponse, TipFloorData};
 use crate::util::alias::AResult;
 use anyhow::anyhow;
@@ -12,11 +11,16 @@ use solana_sdk::transaction::VersionedTransaction;
 use std::time::Duration;
 use tracing::{info, warn};
 
-pub struct JitoClient {
-    client: Client,
-    base_url: String,
-    latest_tip_amounts: RwLock<Option<TipFloorData>>,
-}
+const JITO_TIP_ACCOUNTS: [&str; 8] = [
+    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+    "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
+    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+    "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
+    "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
+    "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
+    "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
+    "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
+];
 
 impl JitoClient {
     pub fn new() -> Self {
@@ -165,4 +169,10 @@ impl JitoClient {
         }
         Ok(())
     }
+}
+
+pub struct JitoClient {
+    client: Client,
+    base_url: String,
+    latest_tip_amounts: RwLock<Option<TipFloorData>>,
 }

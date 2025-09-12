@@ -11,9 +11,7 @@ use crate::pipeline::uploader::common::debug;
 use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
-use crate::pipeline::uploader::provider::jito::entry::get_jito_tips;
 use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
-use crate::pipeline::uploader::provider::SenderChannel;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
@@ -56,10 +54,8 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
 
     let wallet_pubkey = wallet.pubkey();
-    let jito_tips = get_jito_tips()
-        .map(|t| t.landed_tips_75th_percentile)
-        .unwrap_or(0.00001);
-    let minimum_profit = jito_tips + 0.0001;
+
+    let minimum_profit = 0.0001;
     build_and_send(
         &wallet,    //
         minor_mint, //

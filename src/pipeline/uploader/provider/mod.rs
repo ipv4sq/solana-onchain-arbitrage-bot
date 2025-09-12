@@ -15,7 +15,7 @@ pub enum SenderChannel {
 }
 
 impl SenderChannel {
-    pub fn tip_ix(&self, payer: &Pubkey) -> Vec<Instruction> {
+    pub fn tip_ix(&self, payer: &Pubkey) -> (Vec<Instruction>, f64) {
         match self {
             SenderChannel::HeliusSwqos => {
                 todo!()
