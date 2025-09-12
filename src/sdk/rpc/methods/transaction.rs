@@ -15,29 +15,21 @@ use solana_sdk::transaction::VersionedTransaction;
 use tracing::info;
 
 pub async fn send_transaction(tx: &VersionedTransaction) -> AResult<Signature> {
-    rpc_client().send_transaction(tx).await.map_err(Into::into)
-}
-
-pub async fn send_tx_with_retry(
-    tx: &VersionedTransaction,
-    max_retries: u64,
-) -> anyhow::Result<Signature> {
     let tx_bytes = bincode::serialize(tx)?;
     let tx_size = tx_bytes.len();
     info!("Transaction size after compilation: {} bytes", tx_size);
 
-    client::rpc_client()
+    rpc_client()
         .send_transaction_with_config(
             tx,
             solana_client::rpc_config::RpcSendTransactionConfig {
                 skip_preflight: true,
-                max_retries: Some(max_retries as usize),
                 preflight_commitment: Some(CommitmentLevel::Processed),
                 ..Default::default()
             },
         )
         .await
-        .map_err(|e| lined_err!("Failed to send transaction: {}", e))
+        .map_err(Into::into)
 }
 
 pub async fn fetch_tx(signature: &str) -> AResult<Transaction> {
