@@ -21,7 +21,6 @@ use crate::util::traits::pubkey::ToPubkey;
 use construct::build_mev_ix;
 use debug::print_log_to_console;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use tracing::warn;
@@ -62,7 +61,7 @@ pub async fn build_and_send(
     pools: &[AnyPoolConfig],
     include_create_token_account_ix: bool,
     trace: Trace,
-) -> anyhow::Result<(SimulationResult, Trace)> {
+) -> AResult<(SimulationResult, Trace)> {
     let minimum_profit = (0.0001 as Literal).to_lamport();
 
     trace.step(StepType::MevIxBuilding);
