@@ -12,6 +12,19 @@ use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use tracing::{error, info, warn};
 
+const HELIUS_TIP_ACCOUNTS: &[&str] = &[
+    "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
+    "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ",
+    "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta",
+    "5VY91ws6B2hMmBFRsXkoAAdsPHBJwRfBht4DXox3xkwn",
+    "2nyhqdwKcJZR2vcqCyrYsaPVdAnFoJjiksCXJ7hfEYgD",
+    "2q5pghRs6arqVjRvT5gfgWfWcHWmw1ZuCzphgd5KfWGJ",
+    "wyvPkWjVZz1M8fHQnMMCDTQDbkManefNNhweYk5WkcF",
+    "3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT",
+    "4vieeGHPYPG2MmyPRcYjdiDmmhN3ww7hsFNap8pVN3Ey",
+    "4TQLFNWK8AovT1gFvda5jfw2oJeRMKEmw7aH6MGBJ3or",
+];
+
 pub struct HeliusClient {
     client: Client,
     url: String,
