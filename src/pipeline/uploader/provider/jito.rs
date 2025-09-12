@@ -8,6 +8,9 @@ use rand::Rng;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use solana_program::instruction::Instruction;
+use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::system_instruction::transfer;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::transaction::VersionedTransaction;
 use std::sync::Arc;
@@ -24,6 +27,19 @@ const JITO_TIP_ACCOUNTS: [&str; 8] = [
     "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
     "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
 ];
+
+pub fn build_jito_tip_ix(payer: &Pubkey) -> Vec<Instruction> {
+    let jito_tip_account = get_random_tip_account();
+    let p75_jito_tip = get_jito_tips()
+        .map(|t| t.landed_tips_75th_percentile)
+        .unwrap_or(0.00001);
+    let jito_tip_ix = transfer(
+        &payer,
+        &jito_tip_account,
+        (p75_jito_tip * LAMPORTS_PER_SOL as f64) as u64,
+    );
+    vec![jito_tip_ix]
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize)]

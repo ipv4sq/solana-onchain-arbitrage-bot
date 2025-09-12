@@ -28,7 +28,7 @@ const HELIUS_TIP_ACCOUNTS: &[&str] = &[
     "4vieeGHPYPG2MmyPRcYjdiDmmhN3ww7hsFNap8pVN3Ey",
     "4TQLFNWK8AovT1gFvda5jfw2oJeRMKEmw7aH6MGBJ3or",
 ];
-pub async fn build_tx(
+pub async fn build_mev_ix(
     wallet: &Keypair,
     minor_mint: &Pubkey,
     compute_unit_limit: u32,

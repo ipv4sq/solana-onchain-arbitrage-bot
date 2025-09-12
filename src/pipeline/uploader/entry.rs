@@ -13,12 +13,13 @@ use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
 use crate::pipeline::uploader::provider::jito::get_jito_tips;
 use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
+use crate::pipeline::uploader::provider::SenderChannel;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
 use crate::util::alias::AResult;
 use crate::util::traits::pubkey::ToPubkey;
-use construct::build_tx;
+use construct::build_mev_ix;
 use debug::print_log_to_console;
 use futures::future::join_all;
 use solana_program::pubkey::Pubkey;
@@ -88,7 +89,7 @@ pub async fn build_and_send(
     trace.step(StepType::MevIxBuilding);
     let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
 
-    let mev_ix = build_tx(
+    let mev_ix = build_mev_ix(
         wallet,
         minor_mint,
         compute_unit_limit,
@@ -100,7 +101,12 @@ pub async fn build_and_send(
     )
     .await?;
 
-    let tx = compile_instruction_to_tx(wallet, mev_ix, &alts, get_blockhash().await?)?;
+    let tx = compile_instruction_to_tx(
+        wallet,
+        mev_ix,
+        &alts,
+        get_blockhash().await?, //compile the tx
+    )?;
 
     trace.step(StepType::MevIxBuilt);
 
