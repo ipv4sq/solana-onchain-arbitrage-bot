@@ -18,13 +18,12 @@ pub async fn build_mev_ix(
     wallet: &Keypair,
     minor_mint: &Pubkey,
     compute_unit_limit: u32,
-    unit_price: u64,
     pools: &[AnyPoolConfig],
     minimum_profit: u64,
     never_abort: bool,
     include_create_token_account_ix: bool,
 ) -> Result<Vec<Instruction>> {
-    let (mut instructions, _limit) = gas_instructions(compute_unit_limit, unit_price);
+    let (mut instructions, _limit) = compute_limit_ix(compute_unit_limit);
 
     let wallet_pub = wallet.pubkey();
     let mint_token_program = MintRecordRepository::get_mint_or_err(minor_mint)
@@ -134,13 +133,10 @@ fn fee_collector(use_flashloan: bool) -> Pubkey {
     }
 }
 
-pub fn gas_instructions(compute_limit: u32, unit_price: u64) -> (Vec<Instruction>, u32) {
+pub fn compute_limit_ix(compute_limit: u32) -> (Vec<Instruction>, u32) {
     let seed = rand::random::<u32>() % 1000;
     let compute_limit_ix = ComputeBudgetInstruction::set_compute_unit_limit(compute_limit + seed);
-    // 1 lamport = 1_000_000
-    let unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
-
-    (vec![compute_limit_ix, unit_price_ix], compute_limit + seed)
+    (vec![compute_limit_ix], compute_limit + seed)
 }
 
 fn ensure_token_account_exists(

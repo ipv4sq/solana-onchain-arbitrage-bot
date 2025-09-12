@@ -1,7 +1,9 @@
 use crate::convention::chain::mapper::traits::ToUnified;
 use crate::convention::chain::Transaction;
+use crate::global::trace::types::Trace;
 use crate::lined_err;
 use crate::sdk::rpc::client;
+use crate::sdk::rpc::client::rpc_client;
 use crate::util::alias::AResult;
 use crate::util::traits::signature::ToSignature;
 use solana_program::address_lookup_table::AddressLookupTableAccount;
@@ -12,6 +14,10 @@ use solana_sdk::commitment_config::CommitmentLevel;
 use solana_sdk::signature::{Keypair, Signature, Signer};
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::info;
+
+pub async fn send_transaction(tx: &VersionedTransaction) -> AResult<Signature> {
+    rpc_client().send_transaction(tx).await.map_err(Into::into)
+}
 
 pub async fn send_tx_with_retry(
     tx: &VersionedTransaction,

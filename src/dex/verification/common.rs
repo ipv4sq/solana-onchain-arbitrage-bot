@@ -12,7 +12,7 @@ use crate::dex::pump_amm::misc::input_account::PumpAmmInputAccounts;
 use crate::dex::pump_amm::misc::input_data::{PumpAmmIxData, PumpSwapDirection};
 use crate::global::constant::pool_program::PoolProgram;
 use crate::global::constant::token_program::TokenProgram;
-use crate::pipeline::uploader::mev_bot::construct::gas_instructions;
+use crate::pipeline::uploader::mev_bot::construct::compute_limit_ix;
 use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::sdk::rpc::methods::{block, simulation};
 use crate::util::alias::AResult;
@@ -52,7 +52,7 @@ async fn build_test_swap_tx(
     amount_in: u64,
     min_amount_out: u64,
 ) -> AResult<VersionedTransaction> {
-    let (mut instructions, _limit) = gas_instructions(100_000, 0);
+    let (mut instructions, _limit) = compute_limit_ix(100_000);
     let data = MeteoraDlmmIxData {
         amount_in,
         min_amount_out,
@@ -231,7 +231,7 @@ pub async fn simulate_damm_v2_swap_and_get_balance_diff(
     data.extend_from_slice(&min_amount_out.to_le_bytes());
 
     // Build the swap instruction
-    let (mut instructions, _limit) = gas_instructions(100_000, 0);
+    let (mut instructions, _limit) = compute_limit_ix(100_000);
     let swap_ix = Instruction {
         program_id: PoolProgram::METEORA_DAMM_V2,
         accounts: accounts.clone(),
@@ -361,7 +361,7 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     data.extend_from_slice(&min_amount_out.to_le_bytes());
 
     // Build the swap instruction
-    let (mut instructions, _limit) = gas_instructions(100_000, 0);
+    let (mut instructions, _limit) = compute_limit_ix(100_000);
     let swap_ix = Instruction {
         program_id: PoolProgram::RAYDIUM_CPMM,
         accounts: accounts.clone(),
@@ -547,7 +547,7 @@ pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     let data = hex::decode(data_hex)?;
 
     // Build the swap instruction
-    let (mut instructions, _limit) = gas_instructions(100_000, 0);
+    let (mut instructions, _limit) = compute_limit_ix(100_000);
     let swap_ix = Instruction {
         program_id: PoolProgram::PUMP_AMM,
         accounts: accounts.clone(),

@@ -11,7 +11,7 @@ use crate::pipeline::uploader::common::debug;
 use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
-use crate::pipeline::uploader::provider::sender::send_real_mev_tx;
+use crate::pipeline::uploader::provider::shyft::facade::send_shyft_transaction;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
@@ -89,7 +89,6 @@ pub async fn build_and_send(
         wallet,
         minor_mint,
         compute_unit_limit,
-        unit_price,
         pools,
         minimum_profit,
         false,
@@ -125,7 +124,7 @@ pub async fn build_and_send(
             // )
             // .await?;
             trace.step(StepType::MevRealTxBuilding);
-            send_real_mev_tx(&tx, &trace).await?;
+            send_shyft_transaction(&tx).await?;
             // sender(&tx).await?
         }
     }
