@@ -1,3 +1,4 @@
+use crate::util::env::env_config::ENV_CONFIG;
 use anyhow::{Context, Result};
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
@@ -24,12 +25,8 @@ impl SolanaGrpcClient {
     }
 
     pub fn from_env() -> Result<Self> {
-        // Load .env file if it exists
-        dotenv::dotenv().ok();
-
-        let endpoint = std::env::var("GRPC_URL").context("GRPC_URL not found in environment")?;
-        let token = std::env::var("GRPC_TOKEN").context("GRPC_TOKEN not found in environment")?;
-
+        let endpoint = ENV_CONFIG.grpc_url.clone();
+        let token = ENV_CONFIG.grpc_token.clone();
         Ok(Self::new(endpoint, token))
     }
 

@@ -5,6 +5,7 @@ use crate::global::constant::mint::Mints;
 use crate::global::enums::step_type::StepType;
 use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::global::trace::types::Trace;
+use crate::pipeline::event_processor::token_balance::token_balance_processor::TokenAmount;
 use crate::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
 use crate::util::alias::{MintAddress, PoolAddress};
 use crate::util::structs::mint_pair::MintPair;
@@ -12,7 +13,7 @@ use futures::stream::{self, StreamExt};
 use maplit::hashset;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 const MAX_OPPORTUNITIES: usize = 3;
 const MAX_PROCESSING_TIME_MS: u32 = 10_000;
@@ -199,22 +200,134 @@ async fn check_bidirectional_arbitrage(
     results
 }
 
+#[allow(dead_code)]
+struct PoolDepthAnalysis {
+    base_reserve: TokenAmount,
+    quote_reserve: TokenAmount,
+    wsol_reserve: TokenAmount,
+    minor_reserve: TokenAmount,
+    max_base_trade: TokenAmount,
+    max_quote_trade: TokenAmount,
+}
+
+async fn analyze_pool_depth(
+    config: &AnyPoolConfig,
+    minor_mint: &MintAddress,
+    impact_threshold: f64,
+) -> Option<PoolDepthAnalysis> {
+    const MIN_RESERVE_SOL: f64 = 0.01; // 0.01 SOL minimum
+
+    let (base_token_amount, quote_token_amount) = config.get_reserves().await;
+
+    let base_reserve = base_token_amount?;
+    let quote_reserve = quote_token_amount?;
+
+    // Determine which reserves correspond to WSOL and minor token
+    let wsol_reserve = if config.base_mint() == Mints::WSOL {
+        base_reserve.clone()
+    } else {
+        quote_reserve.clone()
+    };
+    
+    let minor_reserve = if config.base_mint() == *minor_mint {
+        base_reserve.clone()
+    } else {
+        quote_reserve.clone()
+    };
+
+    // Convert WSOL reserve to SOL value
+    let wsol_value = wsol_reserve.to_value();
+    
+    // For minor token, we just check if it has any liquidity
+    let minor_value = minor_reserve.to_value();
+
+    if wsol_value < MIN_RESERVE_SOL || minor_value == 0.0 {
+        trace!(
+            "Pool {} insufficient liquidity: WSOL={} SOL, minor={} (decimals={})",
+            config.pool_address(),
+            wsol_value,
+            minor_value,
+            minor_reserve.decimals
+        );
+        return None;
+    }
+
+    // Calculate max trades based on impact threshold
+    let max_base_trade = TokenAmount {
+        amount: (base_reserve.amount as f64 * impact_threshold * 2.0) as u64,
+        decimals: base_reserve.decimals,
+    };
+    
+    let max_quote_trade = TokenAmount {
+        amount: (quote_reserve.amount as f64 * impact_threshold * 2.0) as u64,
+        decimals: quote_reserve.decimals,
+    };
+
+    Some(PoolDepthAnalysis {
+        base_reserve,
+        quote_reserve,
+        wsol_reserve,
+        minor_reserve,
+        max_base_trade,
+        max_quote_trade,
+    })
+}
+
 async fn simulate_arbitrage_path(
     input_sol_lamports: u64,
     first_config: &AnyPoolConfig,
     second_config: &AnyPoolConfig,
     minor_mint: &MintAddress,
 ) -> Option<u64> {
-    // First swap: WSOL -> minor_mint
-    let tokens_received =
-        simulate_swap(input_sol_lamports, first_config, &Mints::WSOL, minor_mint).await?;
+    const IMPACT_THRESHOLD: f64 = 0.005;
 
-    // Second swap: minor_mint -> WSOL
+    // Analyze both pools' depth in parallel
+    let (pool1_depth, pool2_depth) = tokio::join!(
+        analyze_pool_depth(first_config, minor_mint, IMPACT_THRESHOLD),
+        analyze_pool_depth(second_config, minor_mint, IMPACT_THRESHOLD)
+    );
+
+    let pool1_depth = pool1_depth?;
+    let pool2_depth = pool2_depth?;
+
+    // Determine safe amount for first pool (get the amount value)
+    let safe_input_for_first = if first_config.base_mint() == Mints::WSOL {
+        pool1_depth.max_base_trade.amount
+    } else {
+        pool1_depth.max_quote_trade.amount
+    };
+
+    // Adjust input amount if it exceeds safe threshold
+    let adjusted_input = input_sol_lamports.min(safe_input_for_first);
+
+    if adjusted_input < input_sol_lamports {
+        trace!(
+            "Adjusted input from {} to {} due to liquidity constraints",
+            input_sol_lamports,
+            adjusted_input
+        );
+    }
+
+    // First swap: WSOL -> minor_mint with adjusted amount
+    let tokens_received =
+        simulate_swap(adjusted_input, first_config, &Mints::WSOL, minor_mint).await?;
+
+    // Check if second pool can handle the output from first pool (get the amount value)
+    let safe_input_for_second = if second_config.base_mint() == *minor_mint {
+        pool2_depth.max_base_trade.amount
+    } else {
+        pool2_depth.max_quote_trade.amount
+    };
+
+    // Adjust tokens if needed
+    let adjusted_tokens = tokens_received.min(safe_input_for_second);
+
+    // Second swap: minor_mint -> WSOL with adjusted amount
     let output_sol =
-        simulate_swap(tokens_received, second_config, minor_mint, &Mints::WSOL).await?;
+        simulate_swap(adjusted_tokens, second_config, minor_mint, &Mints::WSOL).await?;
 
     // Calculate profit (can be negative if unprofitable)
-    Some(output_sol.saturating_sub(input_sol_lamports))
+    Some(output_sol.saturating_sub(adjusted_input))
 }
 
 async fn simulate_swap(

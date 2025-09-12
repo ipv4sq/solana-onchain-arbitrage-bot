@@ -11,6 +11,8 @@ pub struct EnvironmentStruct {
     pub grpc_url: String,
     pub grpc_token: String,
     pub solana_rpc_url: String,
+    pub wallet_file_path: String,
+    pub enable_send_tx: bool,
 }
 
 impl EnvironmentStruct {
@@ -22,6 +24,8 @@ impl EnvironmentStruct {
             grpc_url: std::env::var("GRPC_URL")?,
             grpc_token: std::env::var("GRPC_TOKEN")?,
             solana_rpc_url: std::env::var("SOLANA_RPC_URL")?,
+            wallet_file_path: std::env::var("WALLET_FILE_PATH")?,
+            enable_send_tx: std::env::var("ENABLE_SEND_TX")?.to_lowercase() == "true",
         })
     }
 }

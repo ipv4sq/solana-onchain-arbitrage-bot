@@ -1,4 +1,4 @@
-use crate::util::env::holder::ENV_CONFIG;
+use crate::util::env::env_config::ENV_CONFIG;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use solana_client::nonblocking::rpc_client;

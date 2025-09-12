@@ -1,11 +1,12 @@
 #![allow(non_upper_case_globals)]
 use crate::global::trace::types::Trace;
+use crate::lazy_arc;
 use crate::pipeline::uploader::entry::fire_mev_bot;
 use crate::util::alias::{MintAddress, PoolAddress};
+use crate::util::env::env_config::ENV_CONFIG;
 use crate::util::structs::rate_limiter::RateLimiter;
 use crate::util::structs::tx_dedup::TxDeduplicator;
 use crate::util::worker::pubsub::{PubSubConfig, PubSubProcessor};
-use crate::lazy_arc;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use std::time::Duration;
@@ -37,10 +38,8 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     )
 });
 pub static ENABLE_SEND_TX: Lazy<bool> = Lazy::new(|| {
-    let env = std::env::var("ENABLE_SEND_TX")
-        .unwrap_or("false".to_string())
-        .to_lowercase();
-    return env == "true";
+    return ENV_CONFIG.enable_send_tx;
 });
+
 pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> =
     lazy_arc!(TxDeduplicator::new(Duration::from_secs(60)));

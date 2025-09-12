@@ -1,7 +1,6 @@
-use crate::util::env::holder::ENV_CONFIG;
+use crate::util::env::env_config::ENV_CONFIG;
 use anyhow::Result;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use std::env;
 use std::time::Duration;
 use tokio::sync::OnceCell;
 
