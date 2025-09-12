@@ -16,7 +16,7 @@ pub struct TokenAmount {
 }
 
 impl TokenAmount {
-    pub fn to_value(&self) -> f64 {
+    pub fn to_literal(&self) -> f64 {
         self.amount as f64 / 10_f64.powi(self.decimals as i32)
     }
 }

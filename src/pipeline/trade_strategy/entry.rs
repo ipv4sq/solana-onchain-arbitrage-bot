@@ -228,7 +228,7 @@ async fn analyze_pool_depth(
     } else {
         quote_reserve.clone()
     };
-    
+
     let minor_reserve = if config.base_mint() == *minor_mint {
         base_reserve.clone()
     } else {
@@ -236,10 +236,10 @@ async fn analyze_pool_depth(
     };
 
     // Convert WSOL reserve to SOL value
-    let wsol_value = wsol_reserve.to_value();
-    
+    let wsol_value = wsol_reserve.to_literal();
+
     // For minor token, we just check if it has any liquidity
-    let minor_value = minor_reserve.to_value();
+    let minor_value = minor_reserve.to_literal();
 
     if wsol_value < MIN_RESERVE_SOL || minor_value == 0.0 {
         trace!(
@@ -257,7 +257,7 @@ async fn analyze_pool_depth(
         amount: (base_reserve.amount as f64 * impact_threshold * 2.0) as u64,
         decimals: base_reserve.decimals,
     };
-    
+
     let max_quote_trade = TokenAmount {
         amount: (quote_reserve.amount as f64 * impact_threshold * 2.0) as u64,
         decimals: quote_reserve.decimals,
