@@ -49,19 +49,11 @@ pub async fn load_mint_from_address(mint: &Pubkey) -> Result<MintRecord> {
     };
 
     let repr = if account.owner == TokenProgram::TOKEN_2022 {
-        if let Ok(symbol) = read_token2022_symbol(account) {
-            if let Some(sym) = symbol {
-                if !sym.is_empty() {
-                    sym
-                } else {
-                    get_repr_from_metadata(metadata_account)
-                }
-            } else {
-                get_repr_from_metadata(metadata_account)
-            }
-        } else {
-            get_repr_from_metadata(metadata_account)
-        }
+        read_token2022_symbol(account)
+            .ok()
+            .flatten()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| get_repr_from_metadata(metadata_account))
     } else {
         get_repr_from_metadata(metadata_account)
     };
@@ -138,56 +130,59 @@ fn read_token2022_symbol(mint_account: &solana_sdk::account::Account) -> Result<
     Ok(None)
 }
 
-#[tokio::test]
-async fn test_load_mint_from_address() {
-    let result = load_mint_from_address(&Mints::WSOL).await;
-
-    if let Ok(mint_record) = result {
-        assert_eq!(mint_record.decimals, 9);
-        assert_eq!(mint_record.repr, "SOL");
-    }
-}
-
-#[tokio::test]
-async fn test_load_custom_mint() {
-    let result = load_mint_from_address(&Mints::USDC).await;
-
-    if let Ok(mint_record) = result {
-        assert_eq!(mint_record.decimals, 6);
-        assert_eq!(mint_record.repr, "USDC");
-    }
-}
-
-#[tokio::test]
-async fn test_load_token_2022_mint() {
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::global::constant::mint::Mints;
     use crate::util::traits::pubkey::ToPubkey;
 
-    let token_2022_mint = "BnszRWbs9LxSzsCUUS57HMTNNtyDHFsnmZ1mVhAYdaos".to_pubkey();
-    let result = load_mint_from_address(&token_2022_mint).await;
+    #[tokio::test]
+    async fn test_load_mint_from_address() {
+        let result = load_mint_from_address(&Mints::WSOL).await;
 
-    if let Ok(mint_record) = result {
-        assert_eq!(mint_record.decimals, 9);
-        assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
-        assert_eq!(mint_record.address.0, token_2022_mint);
-        assert!(mint_record.repr == "Unknown" || mint_record.repr == "LLM");
+        if let Ok(mint_record) = result {
+            assert_eq!(mint_record.decimals, 9);
+            assert_eq!(mint_record.repr, "SOL");
+        }
     }
-}
 
-#[tokio::test]
-async fn test_load_token_2022_with_metadata_extension() {
-    use crate::util::traits::pubkey::ToPubkey;
+    #[tokio::test]
+    async fn test_load_custom_mint() {
+        let result = load_mint_from_address(&Mints::USDC).await;
 
-    let pump_mint = "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn".to_pubkey();
-    let result = load_mint_from_address(&pump_mint).await;
+        if let Ok(mint_record) = result {
+            assert_eq!(mint_record.decimals, 6);
+            assert_eq!(mint_record.repr, "USDC");
+        }
+    }
 
-    if let Ok(mint_record) = result {
-        println!("Token-2022 mint: {}", pump_mint);
-        println!("Symbol: {}", mint_record.repr);
-        println!("Decimals: {}", mint_record.decimals);
-        println!("Program: {:?}", mint_record.program.0);
+    #[tokio::test]
+    async fn test_load_token_2022_mint() {
+        let token_2022_mint = "BnszRWbs9LxSzsCUUS57HMTNNtyDHFsnmZ1mVhAYdaos".to_pubkey();
+        let result = load_mint_from_address(&token_2022_mint).await;
 
-        assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
-        assert_eq!(mint_record.address.0, pump_mint);
-        assert_eq!(mint_record.repr, "PUMP");
+        if let Ok(mint_record) = result {
+            assert_eq!(mint_record.decimals, 9);
+            assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
+            assert_eq!(mint_record.address.0, token_2022_mint);
+            assert!(mint_record.repr == "Unknown" || mint_record.repr == "LLM");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_load_token_2022_with_metadata_extension() {
+        let pump_mint = "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn".to_pubkey();
+        let result = load_mint_from_address(&pump_mint).await;
+
+        if let Ok(mint_record) = result {
+            println!("Token-2022 mint: {}", pump_mint);
+            println!("Symbol: {}", mint_record.repr);
+            println!("Decimals: {}", mint_record.decimals);
+            println!("Program: {:?}", mint_record.program.0);
+
+            assert_eq!(mint_record.program.0, TokenProgram::TOKEN_2022);
+            assert_eq!(mint_record.address.0, pump_mint);
+            assert_eq!(mint_record.repr, "PUMP");
+        }
     }
 }
