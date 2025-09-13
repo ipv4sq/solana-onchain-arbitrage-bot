@@ -37,16 +37,12 @@ impl WhirlpoolPoolData {
         // This gives us the exact price the swap would reach
         let sqrt_price_limit = if a_to_b {
             // For A->B swap, calculate how far the price can move with the given input
-            match Self::get_next_sqrt_price_from_a(self.sqrt_price, self.liquidity, input_amount, true) {
-                Ok(price) => price,
-                Err(_) => MIN_SQRT_PRICE_X64, // If calculation fails, use min price
-            }
+            Self::get_next_sqrt_price_from_a(self.sqrt_price, self.liquidity, input_amount, true)
+                .unwrap_or_else(|_| MIN_SQRT_PRICE_X64)
         } else {
             // For B->A swap, calculate how far the price can move with the given input
-            match Self::get_next_sqrt_price_from_b(self.sqrt_price, self.liquidity, input_amount, true) {
-                Ok(price) => price,
-                Err(_) => MAX_SQRT_PRICE_X64, // If calculation fails, use max price
-            }
+            Self::get_next_sqrt_price_from_b(self.sqrt_price, self.liquidity, input_amount, true)
+                .unwrap_or_else(|_| MAX_SQRT_PRICE_X64)
         };
 
         // Use compute_swap_step for accurate calculation
@@ -212,7 +208,9 @@ impl WhirlpoolPoolData {
             quotient
         };
 
-        result.try_into().map_err(|_| lined_err!("Amount delta_a exceeds u64 max"))
+        result
+            .try_into()
+            .map_err(|_| lined_err!("Amount delta_a exceeds u64 max"))
     }
 
     fn get_next_sqrt_price_from_a(
@@ -242,7 +240,8 @@ impl WhirlpoolPoolData {
         let denominator = if specified_input {
             current_liquidity_shifted + p
         } else {
-            current_liquidity_shifted.checked_sub(p)
+            current_liquidity_shifted
+                .checked_sub(p)
                 .ok_or_else(|| lined_err!("Arithmetic underflow"))?
         };
 
@@ -290,7 +289,8 @@ impl WhirlpoolPoolData {
         let result = if specified_input {
             current_sqrt_price + delta
         } else {
-            current_sqrt_price.checked_sub(delta)
+            current_sqrt_price
+                .checked_sub(delta)
                 .ok_or_else(|| lined_err!("Arithmetic underflow"))?
         };
 
@@ -381,6 +381,8 @@ impl WhirlpoolPoolData {
             quotient
         };
 
-        result.try_into().map_err(|_| lined_err!("Amount delta_b exceeds u64 max"))
+        result
+            .try_into()
+            .map_err(|_| lined_err!("Amount delta_b exceeds u64 max"))
     }
 }

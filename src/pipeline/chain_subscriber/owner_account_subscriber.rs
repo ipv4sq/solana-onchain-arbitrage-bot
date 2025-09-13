@@ -28,6 +28,7 @@ impl OwnerSubscriber {
             PoolProgram::PUMP_AMM,
             PoolProgram::RAYDIUM_CPMM,
             PoolProgram::RAYDIUM_CLMM,
+            PoolProgram::WHIRLPOOL,
         ]);
 
         self.client
