@@ -52,7 +52,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
     build_and_send(
         &wallet,
         minor_mint,
-        250_000,
+        300_000,
         &configs,
         true,
         LandingChannel::HeliusSwqos,
