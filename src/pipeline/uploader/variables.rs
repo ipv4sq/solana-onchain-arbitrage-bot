@@ -37,9 +37,6 @@ pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
         "MevBotRateLimiter".to_string(),
     )
 });
-pub static ENABLE_SEND_TX: Lazy<bool> = Lazy::new(|| {
-    return ENV_CONFIG.enable_send_tx;
-});
 
 pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> =
     lazy_arc!(TxDeduplicator::new(Duration::from_secs(60)));

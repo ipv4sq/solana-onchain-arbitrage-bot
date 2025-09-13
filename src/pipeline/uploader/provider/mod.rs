@@ -17,29 +17,29 @@ pub mod helius;
 pub mod jito;
 pub mod shyft;
 
-pub enum SenderChannel {
+pub enum LandingChannel {
     HeliusSwqos,
     Jito,
     HeliusJito,
     Shyft,
 }
 
-impl SenderChannel {
+impl LandingChannel {
     pub fn tip_ix(&self, payer: &Pubkey, unit_price: Lamport) -> (Vec<Instruction>, Literal) {
         let priority_fee_ix = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
         match self {
-            SenderChannel::Jito => build_jito_tip_ix(payer),
-            SenderChannel::HeliusSwqos => {
+            LandingChannel::Jito => build_jito_tip_ix(payer),
+            LandingChannel::HeliusSwqos => {
                 let (mut ix, tip) = build_helius_swqos_tip_ix(payer);
                 ix.push(priority_fee_ix);
                 (ix, tip)
             }
-            SenderChannel::HeliusJito => {
+            LandingChannel::HeliusJito => {
                 let (mut ix, tip) = build_helius_jito_tip_ix(payer);
                 ix.push(priority_fee_ix);
                 (ix, tip)
             }
-            SenderChannel::Shyft => (vec![priority_fee_ix.into()], 0f64),
+            LandingChannel::Shyft => (vec![priority_fee_ix.into()], 0f64),
         }
     }
 
@@ -53,8 +53,8 @@ impl SenderChannel {
         }
         trace.step(StepType::MevRealTxRpcCall);
         match self {
-            SenderChannel::HeliusSwqos => {}
-            SenderChannel::Jito => {
+            LandingChannel::HeliusSwqos => {}
+            LandingChannel::Jito => {
                 let response = send_bundle(tx).await;
                 let _ = match response {
                     Ok(bundle_id) => {
@@ -72,8 +72,8 @@ impl SenderChannel {
                 };
                 todo!()
             }
-            SenderChannel::HeliusJito => {}
-            SenderChannel::Shyft => {}
+            LandingChannel::HeliusJito => {}
+            LandingChannel::Shyft => {}
         }
         todo!()
     }

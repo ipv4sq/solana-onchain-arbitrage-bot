@@ -12,11 +12,12 @@ use crate::pipeline::uploader::common::simulation_log::log_mev_simulation;
 use crate::pipeline::uploader::mev_bot::construct;
 use crate::pipeline::uploader::mev_bot::construct::compute_limit_ix;
 use crate::pipeline::uploader::mev_bot::sender::simulate_mev_tx;
-use crate::pipeline::uploader::provider::shyft::facade::send_shyft_transaction;
-use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter, ENABLE_SEND_TX};
+use crate::pipeline::uploader::provider::LandingChannel;
+use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
 use crate::util::alias::{AResult, Literal, SOLUnitConvert};
+use crate::util::env::env_config::ENV_CONFIG;
 use crate::util::traits::pubkey::ToPubkey;
 use construct::build_mev_ix;
 use debug::print_log_to_console;
@@ -48,9 +49,17 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         .flatten()
         .collect();
     trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
-    build_and_send(&wallet, minor_mint, 250_000, &configs, true, trace)
-        .await
-        .map(|result| print_log_to_console(result.0, &wallet.pubkey(), result.1))?;
+    build_and_send(
+        &wallet,
+        minor_mint,
+        250_000,
+        &configs,
+        true,
+        LandingChannel::HeliusSwqos,
+        trace,
+    )
+    .await
+    .map(|result| print_log_to_console(result.0, &wallet.pubkey(), result.1))?;
     unit_ok!()
 }
 
@@ -60,13 +69,16 @@ pub async fn build_and_send(
     compute_unit_limit: u32,
     pools: &[AnyPoolConfig],
     include_create_token_account_ix: bool,
+    channel: LandingChannel,
     trace: Trace,
 ) -> AResult<(SimulationResult, Trace)> {
-    let minimum_profit = (0.0001 as Literal).to_lamport();
-
     trace.step(StepType::MevIxBuilding);
     let (mut instructions, _limit) = compute_limit_ix(compute_unit_limit);
 
+    let (tip_or_unite_price_ix, tip) = channel.tip_ix(&wallet.pubkey(), 30_000);
+    instructions.extend(tip_or_unite_price_ix);
+
+    let minimum_profit = (0.0001 as Literal + tip).to_lamport();
     let mev_ix = build_mev_ix(
         wallet,
         minor_mint,
@@ -77,7 +89,6 @@ pub async fn build_and_send(
         include_create_token_account_ix,
     )
     .await?;
-
     instructions.extend(mev_ix);
 
     let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
@@ -85,26 +96,9 @@ pub async fn build_and_send(
     trace.step(StepType::MevIxBuilt);
 
     let simulation_result = simulate_mev_tx(&tx, &trace).await?;
-
     if simulation_result.err.is_none() {
-        // alright, let's get it
-        if *ENABLE_SEND_TX {
-            // let new_tx = build_tx(
-            //     wallet,
-            //     minor_mint,
-            //     compute_unit_limit,
-            //     unit_price,
-            //     pools,
-            //     get_blockhash().await?,
-            //     &alts,
-            //     minimum_profit,
-            //     false,
-            //     include_create_token_account_ix,
-            // )
-            // .await?;
-            trace.step(StepType::MevRealTxBuilding);
-            send_shyft_transaction(&tx).await?;
-            // sender(&tx).await?
+        if ENV_CONFIG.enable_send_tx {
+            channel.send_tx(&tx, &trace).await?;
         }
     }
 
