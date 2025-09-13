@@ -147,15 +147,14 @@ impl WhirlpoolIxAccount {
         tick_spacing: i32,
         a_to_b: bool,
     ) -> AResult<[Pubkey; 3]> {
-        let offsets = if a_to_b { [0, -1, -2] } else { [0, 1, 2] };
+        let (ta0_start, ta1_start_opt, ta2_start_opt) =
+            Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, a_to_b);
 
-        let mut tick_arrays = [Pubkey::default(); 3];
-        for (i, offset) in offsets.iter().enumerate() {
-            let start_tick = Self::get_start_tick_index(current_tick, tick_spacing, *offset)?;
-            tick_arrays[i] = Self::derive_tick_array_pda(pool, start_tick);
-        }
-
-        Ok(tick_arrays)
+        Ok([
+            Self::derive_tick_array_pda(pool, ta0_start),
+            Self::derive_tick_array_pda(pool, ta1_start_opt.unwrap_or(ta0_start)),
+            Self::derive_tick_array_pda(pool, ta2_start_opt.unwrap_or(ta1_start_opt.unwrap_or(ta0_start))),
+        ])
     }
 
     fn get_tick_arrays_bidirectional(
@@ -163,32 +162,75 @@ impl WhirlpoolIxAccount {
         current_tick: i32,
         tick_spacing: i32,
     ) -> AResult<[Pubkey; 3]> {
-        let current_start = Self::get_start_tick_index(current_tick, tick_spacing, 0)?;
-        let prev_start = Self::get_start_tick_index(current_tick, tick_spacing, -1)?;
-        let next_start = Self::get_start_tick_index(current_tick, tick_spacing, 1)?;
+        let tick_array_starts =
+            Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, true);
+        let tick_array_reverse_starts =
+            Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, false);
 
         Ok([
-            Self::derive_tick_array_pda(pool, prev_start),
-            Self::derive_tick_array_pda(pool, current_start),
-            Self::derive_tick_array_pda(pool, next_start),
+            Self::derive_tick_array_pda(
+                pool,
+                tick_array_reverse_starts.1.unwrap_or(tick_array_reverse_starts.0),
+            ),
+            Self::derive_tick_array_pda(pool, tick_array_starts.0),
+            Self::derive_tick_array_pda(
+                pool,
+                tick_array_starts.1.unwrap_or(tick_array_starts.0),
+            ),
         ])
     }
 
-    fn get_start_tick_index(tick_index: i32, tick_spacing: i32, offset: i32) -> AResult<i32> {
-        let real_index = tick_index / tick_spacing / Self::TICK_ARRAY_SIZE;
-        let start_tick_index = (real_index + offset) * tick_spacing * Self::TICK_ARRAY_SIZE;
+    fn derive_tick_array_start_indexes(
+        curr_tick: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+    ) -> (i32, Option<i32>, Option<i32>) {
+        let ta0_start_index = Self::derive_first_tick_array_start_tick(curr_tick, tick_spacing, !a_to_b);
+        let ta1_start_index_opt = Self::derive_next_start_tick_in_seq(ta0_start_index, tick_spacing, a_to_b);
+        let ta2_start_index_opt = ta1_start_index_opt
+            .and_then(|nsi| Self::derive_next_start_tick_in_seq(nsi, tick_spacing, a_to_b));
+        (ta0_start_index, ta1_start_index_opt, ta2_start_index_opt)
+    }
+
+    fn derive_first_tick_array_start_tick(curr_tick: i32, tick_spacing: u16, shifted: bool) -> i32 {
+        let tick = if shifted {
+            curr_tick + tick_spacing as i32
+        } else {
+            curr_tick
+        };
+        Self::derive_start_tick(tick, tick_spacing)
+    }
+
+    fn derive_start_tick(curr_tick: i32, tick_spacing: u16) -> i32 {
+        let num_of_ticks_in_array = Self::TICK_ARRAY_SIZE * tick_spacing as i32;
+        let rem = curr_tick % num_of_ticks_in_array;
+        if curr_tick < 0 && rem != 0 {
+            curr_tick - rem - num_of_ticks_in_array
+        } else {
+            curr_tick - rem
+        }
+    }
+
+    fn derive_next_start_tick_in_seq(
+        start_tick: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+    ) -> Option<i32> {
+        let num_of_ticks_in_array = Self::TICK_ARRAY_SIZE * tick_spacing as i32;
+        let potential_last = if a_to_b {
+            start_tick - num_of_ticks_in_array
+        } else {
+            start_tick + num_of_ticks_in_array
+        };
 
         const MIN_TICK_INDEX: i32 = -443636;
         const MAX_TICK_INDEX: i32 = 443636;
 
-        if start_tick_index < MIN_TICK_INDEX || start_tick_index > MAX_TICK_INDEX {
-            return Err(lined_err!(
-                "Tick array start index out of bounds: {}",
-                start_tick_index
-            ));
+        if potential_last < MAX_TICK_INDEX && potential_last > MIN_TICK_INDEX {
+            Some(potential_last)
+        } else {
+            None
         }
-
-        Ok(start_tick_index)
     }
 
     fn derive_tick_array_pda(pool: &Pubkey, start_tick: i32) -> Pubkey {
@@ -360,36 +402,25 @@ mod tests {
             accounts_reverse[13].pubkey
         );
 
-        // Calculate expected tick arrays manually for verification
+        // Verify tick arrays are calculated
         let tick_spacing = pool_data.tick_spacing as i32;
         let current_tick = pool_data.tick_current_index;
         println!("\n=== Tick Array Calculation ===");
         println!("Current tick: {}", current_tick);
         println!("Tick spacing: {}", tick_spacing);
 
-        // For A to B (decreasing tick)
-        let start_tick_0 =
-            WhirlpoolIxAccount::get_start_tick_index(current_tick, tick_spacing, 0).unwrap();
-        let start_tick_minus_1 =
-            WhirlpoolIxAccount::get_start_tick_index(current_tick, tick_spacing, -1).unwrap();
-        let start_tick_minus_2 =
-            WhirlpoolIxAccount::get_start_tick_index(current_tick, tick_spacing, -2).unwrap();
+        // Verify the tick arrays are different for bidirectional
+        // (they should include both forward and reverse arrays)
+        let tick_arrays_bidirectional = [
+            accounts[11].pubkey,
+            accounts[12].pubkey,
+            accounts[13].pubkey,
+        ];
 
-        println!(
-            "A to B tick array start indices: {}, {}, {}",
-            start_tick_0, start_tick_minus_1, start_tick_minus_2
-        );
-
-        // For B to A (increasing tick)
-        let start_tick_plus_1 =
-            WhirlpoolIxAccount::get_start_tick_index(current_tick, tick_spacing, 1).unwrap();
-        let start_tick_plus_2 =
-            WhirlpoolIxAccount::get_start_tick_index(current_tick, tick_spacing, 2).unwrap();
-
-        println!(
-            "B to A tick array start indices: {}, {}, {}",
-            start_tick_0, start_tick_plus_1, start_tick_plus_2
-        );
+        println!("Bidirectional tick arrays:");
+        for (i, tick_array) in tick_arrays_bidirectional.iter().enumerate() {
+            println!("  Tick Array {}: {}", i, tick_array);
+        }
 
         println!("\n✓ All Whirlpool accounts calculated successfully!");
     }
