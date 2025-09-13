@@ -121,7 +121,17 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
         return;
     }
 
-    let x = QueryRateLimiter.try_acquire_err();
+    if let Err(rate_limit_err) = QueryRateLimiter.try_acquire_err() {
+        for (_, requests) in current_batch {
+            for request in requests {
+                let _ = request
+                    .on_response
+                    .send(Err(rate_limit_err.clone().into()))
+                    .await;
+            }
+        }
+        return;
+    }
 
     let public_keys = current_batch.keys().cloned().collect::<Vec<_>>();
     let response = rpc_client().get_multiple_accounts(&public_keys).await;
