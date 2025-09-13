@@ -1,12 +1,13 @@
 use crate::convention::chain::instruction::Instruction;
 use crate::convention::chain::types::SwapInstruction;
 use crate::dex::any_pool_config::AnyPoolConfig::{
-    MeteoraDammV2, MeteoraDlmm, PumpAmm, RaydiumCpmm,
+    MeteoraDammV2, MeteoraDlmm, PumpAmm, RaydiumClmm, RaydiumCpmm,
 };
 use crate::dex::interface::PoolConfig;
 use crate::dex::meteora_damm_v2::config::MeteoraDammV2Config;
 use crate::dex::meteora_dlmm::config::MeteoraDlmmConfig;
 use crate::dex::pump_amm::config::PumpAmmConfig;
+use crate::dex::raydium_clmm::config::RaydiumClmmConfig;
 use crate::dex::raydium_cpmm::config::RaydiumCpmmConfig;
 use crate::global::enums::dex_type::DexType;
 use crate::global::state::account_balance_holder::get_balance_of_account;
@@ -26,6 +27,7 @@ pub enum AnyPoolConfig {
     MeteoraDammV2(MeteoraDammV2Config),
     PumpAmm(PumpAmmConfig),
     RaydiumCpmm(RaydiumCpmmConfig),
+    RaydiumClmm(RaydiumClmmConfig),
 }
 
 impl AnyPoolConfig {
@@ -47,6 +49,9 @@ impl AnyPoolConfig {
             DexType::RaydiumCpmm => {
                 RaydiumCpmm(RaydiumCpmmConfig::from_data(pool_address, dex_type, data)?)
             }
+            DexType::RaydiumClmm => {
+                RaydiumClmm(RaydiumClmmConfig::from_data(pool_address, dex_type, data)?)
+            }
             _ => return_error!("unsupported dex type {:?}", dex_type),
         };
         Ok(r)
@@ -60,6 +65,7 @@ impl AnyPoolConfig {
             DexType::MeteoraDammV2 => MeteoraDammV2Config::pase_swap_from_ix(ix),
             DexType::PumpAmm => PumpAmmConfig::pase_swap_from_ix(ix),
             DexType::RaydiumCpmm => RaydiumCpmmConfig::pase_swap_from_ix(ix),
+            DexType::RaydiumClmm => RaydiumClmmConfig::pase_swap_from_ix(ix),
             _ => return_error!("Unsupported dex {}", dex_type),
         }?;
 
@@ -91,6 +97,7 @@ impl AnyPoolConfig {
             MeteoraDammV2(b) => b,
             PumpAmm(c) => c,
             RaydiumCpmm(d) => d,
+            RaydiumClmm(e) => e,
         } {
             pub async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>>;
             pub fn pool_address(&self) -> PoolAddress;

@@ -27,6 +27,7 @@ impl OwnerSubscriber {
             PoolProgram::METEORA_DAMM_V2,
             PoolProgram::PUMP_AMM,
             PoolProgram::RAYDIUM_CPMM,
+            PoolProgram::RAYDIUM_CLMM,
         ]);
 
         self.client
