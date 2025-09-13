@@ -3,7 +3,6 @@ use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::cache::loading_cache::LoadingCache;
 use once_cell::sync::Lazy;
 use solana_program::pubkey::Pubkey;
-use tracing::warn;
 
 #[allow(non_upper_case_globals)]
 static AccountDataCache: Lazy<LoadingCache<Pubkey, Vec<u8>>> =
