@@ -1,6 +1,7 @@
 use crate::dex::whirlpool::pool_data::WhirlpoolPoolData;
 use crate::lined_err;
 use crate::util::alias::{AResult, MintAddress};
+use ethnum::U256;
 
 const Q64_RESOLUTION: u32 = 64;
 const FEE_RATE_MUL_VALUE: u128 = 1_000_000;
@@ -32,23 +33,28 @@ impl WhirlpoolPoolData {
             return Err(lined_err!("From mint not found in pool"));
         };
 
+        // Use a more reasonable price limit for single-step calculation
+        // This approximates swapping within current tick range
         let sqrt_price_limit = if a_to_b {
-            MIN_SQRT_PRICE_X64
+            // For A->B, price decreases. Use 1% slippage
+            self.sqrt_price.saturating_mul(99) / 100
         } else {
-            MAX_SQRT_PRICE_X64
+            // For B->A, price increases. Use 1% slippage
+            self.sqrt_price.saturating_mul(101) / 100
         };
 
+        // Use compute_swap_step for accurate calculation
         let swap_result = self.compute_swap_step(
             input_amount,
             self.fee_rate as u32,
             self.liquidity,
             self.sqrt_price,
             sqrt_price_limit,
-            true,
+            true, // amount_specified_is_input
             a_to_b,
         )?;
 
-        Ok(swap_result.1)
+        Ok(swap_result.1) // Return amount_out
     }
 
     fn compute_swap_step(
@@ -61,7 +67,8 @@ impl WhirlpoolPoolData {
         amount_specified_is_input: bool,
         a_to_b: bool,
     ) -> AResult<(u64, u64, u64)> {
-        let amount_after_fee = if amount_specified_is_input {
+        // Apply fee for input amounts
+        let amount_calculated = if amount_specified_is_input {
             let fee_amount = Self::calculate_fee_amount(amount_remaining, fee_rate)?;
             amount_remaining
                 .checked_sub(fee_amount)
@@ -70,60 +77,72 @@ impl WhirlpoolPoolData {
             amount_remaining
         };
 
-        let (amount_in, amount_out) = if a_to_b {
-            let amount_out = Self::get_amount_delta_b(
-                sqrt_price_current,
-                sqrt_price_target,
-                liquidity,
-                false,
-            )?;
-
-            let capped_amount_out = amount_out.min(amount_after_fee);
-
-            let amount_in = if amount_specified_is_input {
-                amount_after_fee.min(Self::get_amount_delta_a(
-                    sqrt_price_current,
-                    sqrt_price_target,
-                    liquidity,
-                    true,
-                )?)
-            } else {
-                Self::get_amount_delta_a(
-                    sqrt_price_current,
-                    sqrt_price_target,
-                    liquidity,
-                    true,
-                )?
-            };
-
-            (amount_in, capped_amount_out)
+        // Calculate the maximum amount that can be swapped at the target price
+        let amount_fixed_delta = if a_to_b == amount_specified_is_input {
+            Self::get_amount_delta_a(sqrt_price_current, sqrt_price_target, liquidity, a_to_b)?
         } else {
-            let amount_out = Self::get_amount_delta_a(
-                sqrt_price_current,
-                sqrt_price_target,
-                liquidity,
-                false,
-            )?;
+            Self::get_amount_delta_b(sqrt_price_current, sqrt_price_target, liquidity, !a_to_b)?
+        };
 
-            let capped_amount_out = amount_out.min(amount_after_fee);
+        // Check if we can reach the target price with the amount we have
+        let is_max_swap = amount_calculated >= amount_fixed_delta;
 
-            let amount_in = if amount_specified_is_input {
-                amount_after_fee.min(Self::get_amount_delta_b(
-                    sqrt_price_current,
-                    sqrt_price_target,
-                    liquidity,
-                    true,
-                )?)
+        let (amount_in, amount_out) = if is_max_swap {
+            // We can reach the target price
+            let amount_unfixed = if a_to_b == amount_specified_is_input {
+                Self::get_amount_delta_b(sqrt_price_current, sqrt_price_target, liquidity, false)?
             } else {
-                Self::get_amount_delta_b(
-                    sqrt_price_current,
-                    sqrt_price_target,
-                    liquidity,
-                    true,
-                )?
+                Self::get_amount_delta_a(sqrt_price_current, sqrt_price_target, liquidity, false)?
             };
 
-            (amount_in, capped_amount_out)
+            if amount_specified_is_input {
+                (amount_fixed_delta, amount_unfixed)
+            } else {
+                (amount_unfixed, amount_fixed_delta)
+            }
+        } else {
+            // We can't reach the target price, calculate partial swap
+            if amount_specified_is_input {
+                // Calculate output for given input
+                if a_to_b {
+                    // Calculate output B for input A
+                    let output = Self::calculate_partial_swap_output(
+                        amount_calculated,
+                        sqrt_price_current,
+                        liquidity,
+                        true,
+                    )?;
+                    (amount_calculated, output)
+                } else {
+                    // Calculate output A for input B
+                    let output = Self::calculate_partial_swap_output(
+                        amount_calculated,
+                        sqrt_price_current,
+                        liquidity,
+                        false,
+                    )?;
+                    (amount_calculated, output)
+                }
+            } else {
+                // Calculate input for given output (exact out)
+                if a_to_b {
+                    let input = Self::calculate_partial_swap_input(
+                        amount_calculated,
+                        sqrt_price_current,
+                        liquidity,
+                        true,
+                    )?;
+                    (input, amount_calculated)
+                } else {
+                    let input = Self::calculate_partial_swap_input(
+                        amount_calculated,
+                        sqrt_price_current,
+                        liquidity,
+                        false,
+                    )?;
+                    (input, amount_calculated)
+                }
+            }
         };
 
         let fee_amount = if amount_specified_is_input {
@@ -167,31 +186,109 @@ impl WhirlpoolPoolData {
 
         let sqrt_price_diff = sqrt_price_upper - sqrt_price_lower;
 
-        let numerator = (liquidity as u128)
-            .checked_mul(sqrt_price_diff)
+        // Use U256 for overflow-safe calculation
+        let numerator: U256 = U256::from(liquidity)
+            .checked_mul(U256::from(sqrt_price_diff))
             .ok_or_else(|| lined_err!("Multiplication overflow in delta_a"))?
             .checked_shl(64)
             .ok_or_else(|| lined_err!("Shift overflow in delta_a"))?;
 
-        let denominator = (sqrt_price_upper as u128)
-            .checked_mul(sqrt_price_lower as u128)
+        let denominator: U256 = U256::from(sqrt_price_lower)
+            .checked_mul(U256::from(sqrt_price_upper))
             .ok_or_else(|| lined_err!("Multiplication overflow in denominator"))?;
 
-        let mut result = numerator
-            .checked_div(denominator)
-            .ok_or_else(|| lined_err!("Division by zero in delta_a"))?;
+        let quotient = numerator / denominator;
+        let remainder = numerator % denominator;
 
-        if round_up && numerator % denominator != 0 {
-            result = result
-                .checked_add(1)
-                .ok_or_else(|| lined_err!("Addition overflow in rounding"))?;
+        let result = if round_up && remainder != U256::ZERO {
+            quotient + U256::ONE
+        } else {
+            quotient
+        };
+
+        result.try_into().map_err(|_| lined_err!("Amount delta_a exceeds u64 max"))
+    }
+
+    fn calculate_partial_swap_output(
+        amount_in: u64,
+        sqrt_price_current: u128,
+        liquidity: u128,
+        a_to_b: bool,
+    ) -> AResult<u64> {
+        // For partial swaps, we need to calculate the new sqrt price after consuming amount_in
+        // Then calculate the output from the price change
+
+        if liquidity == 0 {
+            return Ok(0);
         }
 
-        if result > u64::MAX as u128 {
-            return Err(lined_err!("Amount delta_a exceeds u64 max"));
+        // Calculate how much the price moves for the given input
+        // This is a simplified approximation
+        let price_impact = U256::from(amount_in) * U256::from(sqrt_price_current) / U256::from(liquidity);
+
+        // For a_to_b, price decreases; for b_to_a, price increases
+        let new_sqrt_price = if a_to_b {
+            U256::from(sqrt_price_current).saturating_sub(price_impact >> 64)
+        } else {
+            U256::from(sqrt_price_current).saturating_add(price_impact >> 64)
+        };
+
+        // Calculate output from price change
+        if a_to_b {
+            Self::get_amount_delta_b(
+                sqrt_price_current,
+                new_sqrt_price.as_u128(),
+                liquidity,
+                false,
+            )
+        } else {
+            Self::get_amount_delta_a(
+                sqrt_price_current,
+                new_sqrt_price.as_u128(),
+                liquidity,
+                false,
+            )
+        }
+    }
+
+    fn calculate_partial_swap_input(
+        amount_out: u64,
+        sqrt_price_current: u128,
+        liquidity: u128,
+        a_to_b: bool,
+    ) -> AResult<u64> {
+        // For exact output, calculate required input
+        // This is the inverse of calculate_partial_swap_output
+
+        if liquidity == 0 {
+            return Ok(u64::MAX);
         }
 
-        Ok(result as u64)
+        // Simplified approximation for exact output
+        let price_impact = U256::from(amount_out) * U256::from(sqrt_price_current) / U256::from(liquidity);
+
+        let new_sqrt_price = if a_to_b {
+            U256::from(sqrt_price_current).saturating_sub(price_impact >> 64)
+        } else {
+            U256::from(sqrt_price_current).saturating_add(price_impact >> 64)
+        };
+
+        // Calculate input required for this price change
+        if a_to_b {
+            Self::get_amount_delta_a(
+                sqrt_price_current,
+                new_sqrt_price.as_u128(),
+                liquidity,
+                true,
+            )
+        } else {
+            Self::get_amount_delta_b(
+                sqrt_price_current,
+                new_sqrt_price.as_u128(),
+                liquidity,
+                true,
+            )
+        }
     }
 
     fn get_amount_delta_b(
@@ -208,24 +305,22 @@ impl WhirlpoolPoolData {
 
         let sqrt_price_diff = sqrt_price_upper - sqrt_price_lower;
 
-        let product = (liquidity as u128)
-            .checked_mul(sqrt_price_diff)
+        // Use U256 for overflow-safe calculation
+        let product: U256 = U256::from(liquidity)
+            .checked_mul(U256::from(sqrt_price_diff))
             .ok_or_else(|| lined_err!("Multiplication overflow in delta_b"))?;
 
-        let result = product >> Q64_RESOLUTION;
+        let quotient = product >> Q64_RESOLUTION;
+        let remainder_mask = U256::from(u64::MAX);
 
-        let final_result = if round_up && (product & ((1u128 << Q64_RESOLUTION) - 1)) > 0 {
-            result
-                .checked_add(1)
-                .ok_or_else(|| lined_err!("Addition overflow in rounding"))?
+        let should_round = round_up && (product & remainder_mask) > U256::ZERO;
+
+        let result = if should_round {
+            quotient + U256::ONE
         } else {
-            result
+            quotient
         };
 
-        if final_result > u64::MAX as u128 {
-            return Err(lined_err!("Amount delta_b exceeds u64 max"));
-        }
-
-        Ok(final_result as u64)
+        result.try_into().map_err(|_| lined_err!("Amount delta_b exceeds u64 max"))
     }
 }

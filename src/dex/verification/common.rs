@@ -815,15 +815,20 @@ pub async fn simulate_whirlpool_swap_and_get_balance_diff(
         .await?
         .to_list();
 
-    // Build the swap instruction data for Whirlpool
-    // Whirlpool swap discriminator [0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]
-    let discriminator = [0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8];
-    let mut data = discriminator.to_vec();
-    data.extend_from_slice(&amount_in.to_le_bytes());
-    data.extend_from_slice(&min_amount_out.to_le_bytes());
-    data.extend_from_slice(&0u128.to_le_bytes()); // sqrt_price_limit
-    data.push(1); // amount_specified_is_input = true
-    data.push(if a_to_b { 1 } else { 0 }); // a_to_b
+    // Build the swap instruction data for Whirlpool SwapV2
+    // Use the WhirlpoolIxData structure for proper encoding
+    use crate::dex::whirlpool::ix_input::WhirlpoolIxData;
+
+    let ix_data = WhirlpoolIxData {
+        amount: amount_in,
+        other_amount_threshold: min_amount_out,
+        sqrt_price_limit: if a_to_b { 4295128739 } else { 79226673515401279992447579055 }, // Min/Max sqrt price based on direction
+        amount_specified_is_input: true,
+        a_to_b,
+        remaining_accounts_info: None,
+    };
+
+    let data = hex::decode(ix_data.to_hex()).expect("Failed to encode Whirlpool instruction");
 
     // Build the swap instruction
     let (mut instructions, _limit) = compute_limit_ix(100_000);
