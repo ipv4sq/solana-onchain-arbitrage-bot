@@ -1,4 +1,3 @@
-use crate::convention::chain::meta::TransactionMeta;
 use crate::convention::chain::util::simulation::SimulationResult;
 use crate::database::mev_simulation_log::repository::MevSimulationLogRepository;
 use crate::database::mev_simulation_log::{
@@ -8,7 +7,6 @@ use crate::database::mint_record::repository::MintRecordRepository;
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::trace::types::Trace;
 use crate::util::alias::AResult;
-use crate::util::solana::pda::ata;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::transaction::VersionedTransaction;
 use tracing::error;
@@ -25,8 +23,6 @@ pub async fn log_mev_simulation(
     let tx_size = bincode::serialize(tx)?.len() as i32;
     let simulation_status = get_simulation_status(result);
 
-    let (profitable, profitability) =
-        calculate_profitability(result, owner, desired_mint, &simulation_status);
 
     let accounts = extract_transaction_accounts(tx);
 
@@ -40,8 +36,6 @@ pub async fn log_mev_simulation(
         minor_mint_sym,
         desired_mint_sym,
         pools,
-        profitable,
-        profitability,
         accounts,
         tx_size,
         simulation_status,
@@ -62,57 +56,6 @@ fn get_simulation_status(result: &SimulationResult) -> &'static str {
     }
 }
 
-fn calculate_profitability(
-    result: &SimulationResult,
-    owner: &Pubkey,
-    desired_mint: &Pubkey,
-    simulation_status: &str,
-) -> (Option<bool>, Option<i64>) {
-    let Some(ref meta) = result.meta else {
-        return (None, None);
-    };
-
-    let user_ata = ata(owner, desired_mint, &spl_token::ID);
-    let user_ata_str = user_ata.to_string();
-
-    let actual_profit = calculate_token_balance_change(meta, desired_mint, &user_ata_str);
-
-    let is_profitable = if simulation_status == "success" {
-        Some(actual_profit > 0)
-    } else {
-        Some(false)
-    };
-
-    (is_profitable, Some(actual_profit))
-}
-
-fn calculate_token_balance_change(
-    meta: &TransactionMeta,
-    desired_mint: &Pubkey,
-    user_ata_str: &str,
-) -> i64 {
-    meta.post_token_balances
-        .iter()
-        .find(|tb| {
-            tb.mint == desired_mint.to_string()
-                && tb.owner.as_ref() == Some(&user_ata_str.to_string())
-        })
-        .and_then(|post| {
-            meta.pre_token_balances
-                .iter()
-                .find(|pre| {
-                    pre.mint == desired_mint.to_string() && pre.account_index == post.account_index
-                })
-                .map(|pre| {
-                    let post_amount: i128 = post.ui_token_amount.amount.parse().unwrap_or(0);
-                    let pre_amount: i128 = pre.ui_token_amount.amount.parse().unwrap_or(0);
-                    let profit = post_amount - pre_amount;
-
-                    profit.clamp(i64::MIN as i128, i64::MAX as i128) as i64
-                })
-        })
-        .unwrap_or(0)
-}
 
 fn extract_transaction_accounts(tx: &VersionedTransaction) -> Vec<SimulationAccount> {
     let (account_keys, header) = match &tx.message {
@@ -136,7 +79,7 @@ fn extract_transaction_accounts(tx: &VersionedTransaction) -> Vec<SimulationAcco
                 non_signer_idx < num_writable_unsigned
             };
             SimulationAccount {
-                pubkey: *pubkey,
+                pubkey: pubkey.to_string(),
                 is_signer,
                 is_writable,
             }
@@ -161,46 +104,28 @@ fn build_simulation_log_params(
     minor_mint_sym: String,
     desired_mint_sym: String,
     pools: &[AnyPoolConfig],
-    profitable: Option<bool>,
-    profitability: Option<i64>,
     accounts: Vec<SimulationAccount>,
     tx_size: i32,
     simulation_status: &str,
 ) -> MevSimulationLogParams {
     MevSimulationLogParams {
-        minor_mint: *minor_mint,
-        desired_mint: *desired_mint,
+        minor_mint: minor_mint.to_string(),
+        desired_mint: desired_mint.to_string(),
         minor_mint_sym,
         desired_mint_sym,
         pools: pools.iter().map(|p| p.pool_address().to_string()).collect(),
         pool_types: pools.iter().map(|p| p.dex_type().to_string()).collect(),
-        profitable,
-        profitability,
-        details: MevSimulationLogDetails { accounts },
+        details: MevSimulationLogDetails {
+            accounts,
+            minor_mint: minor_mint.to_string(),
+            desired_mint: desired_mint.to_string(),
+        },
         tx_size: Some(tx_size),
         simulation_status: Some(simulation_status.to_string()),
         compute_units_consumed: result.units_consumed.map(|u| u as i64),
         error_message: result.err.clone(),
         logs: Some(result.logs.clone()),
-        return_data: None,
-        units_per_byte: None,
         trace: Some(trace.dump_json()),
-        reason: generate_reason(result),
     }
 }
 
-fn generate_reason(result: &SimulationResult) -> Option<String> {
-    for log in &result.logs {
-        let log_lower = log.to_lowercase();
-
-        if log_lower.contains("no profitable") {
-            return Some("No profitable path".to_string());
-        }
-
-        if log_lower.contains("insufficient funds") {
-            return Some("Insufficient funds".to_string());
-        }
-    }
-
-    None
-}
