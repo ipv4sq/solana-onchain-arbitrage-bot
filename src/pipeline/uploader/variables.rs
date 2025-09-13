@@ -3,7 +3,6 @@ use crate::global::trace::types::Trace;
 use crate::lazy_arc;
 use crate::pipeline::uploader::entry::fire_mev_bot;
 use crate::util::alias::{MintAddress, PoolAddress};
-use crate::util::env::env_config::ENV_CONFIG;
 use crate::util::structs::rate_limiter::RateLimiter;
 use crate::util::structs::tx_dedup::TxDeduplicator;
 use crate::util::worker::pubsub::{PubSubConfig, PubSubProcessor};

@@ -387,12 +387,6 @@ async fn execute_opportunities(
             opportunity.profit_lamports as f64 / WSOL_LAMPORTS_PER_SOL as f64,
         );
 
-        trace.step_with(
-            StepType::MevTxTryToFire,
-            "path",
-            format!("{:?}", pools_for_mev),
-        );
-
         trace.step_with_struct(
             StepType::MevTxTryToFire,
             "context",

@@ -100,7 +100,8 @@ impl Trace {
         attr_value: serde_json::Value,
     ) {
         let mut attributes = HashMap::new();
-        attributes.insert(attr_name.into(), attr_value);
+        let converted_value = crate::util::serde_pubkey::to_json_value(&attr_value);
+        attributes.insert(attr_name.into(), converted_value);
 
         let mut steps = self.steps.lock().unwrap();
         let sequence = steps.len() as u32;
@@ -121,7 +122,7 @@ impl Trace {
         let mut attributes = HashMap::new();
         attributes.insert(
             attr_name.into(),
-            serde_json::to_value(attr_value).unwrap_or(json!(null)),
+            crate::util::serde_pubkey::to_json_value(attr_value),
         );
 
         let mut steps = self.steps.lock().unwrap();
