@@ -13,7 +13,6 @@ mod tests {
     use crate::unit_ok;
     use crate::util::alias::AResult;
     use crate::util::traits::account_meta::ToAccountMeta;
-    use crate::util::traits::pubkey::ToPubkey;
     use solana_sdk::pubkey;
     use solana_sdk::pubkey::Pubkey;
     use std::time::Duration;
