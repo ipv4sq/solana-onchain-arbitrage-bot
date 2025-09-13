@@ -6,5 +6,6 @@ mod damm_v2_verification;
 mod dlmm_verification;
 #[cfg(test)]
 mod pump_amm_verification;
+mod raydium_clmm_verification;
 #[cfg(test)]
 mod raydium_cpmm_verification;

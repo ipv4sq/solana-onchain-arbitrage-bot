@@ -20,12 +20,12 @@ pub struct RaydiumClmmIxAccount {
     pub input_vault_mint: AccountMeta,
     pub output_vault_mint: AccountMeta,
     // Remaining accounts
-    pub tickarray_bitmap_extension: Option<AccountMeta>,
+    pub tickarray_bitmap_extension: AccountMeta,
     pub tick_arrays: Vec<AccountMeta>,
 }
 
 impl RaydiumClmmIxAccount {
-    pub fn to_vec(&self) -> Vec<AccountMeta> {
+    pub fn to_list(&self) -> Vec<AccountMeta> {
         let mut accounts = vec![
             self.payer.clone(),
             self.amm_config.clone(),
@@ -40,31 +40,12 @@ impl RaydiumClmmIxAccount {
             self.memo_program.clone(),
             self.input_vault_mint.clone(),
             self.output_vault_mint.clone(),
+            self.tickarray_bitmap_extension.clone(),
         ];
 
-        // Add remaining accounts
-        if let Some(ref bitmap_ext) = self.tickarray_bitmap_extension {
-            accounts.push(bitmap_ext.clone());
-        }
         accounts.extend(self.tick_arrays.clone());
 
         accounts
-    }
-
-    pub async fn build_accounts_no_matter_direction_size(
-        payer: &Pubkey,
-        pool: &Pubkey,
-        pool_data: &RaydiumClmmPoolData,
-    ) -> AResult<RaydiumClmmIxAccount> {
-        // Default to token_0 -> token_1 swap (zero_for_one = true)
-        Self::build_accounts_with_direction(
-            payer,
-            pool,
-            pool_data,
-            &pool_data.token_mint_0,
-            &pool_data.token_mint_1,
-        )
-        .await
     }
 
     pub async fn build_accounts_with_direction(
@@ -146,7 +127,7 @@ impl RaydiumClmmIxAccount {
             memo_program: SPL_MEMO_PROGRAM.to_program(),
             input_vault_mint: input_vault_mint.to_readonly(),
             output_vault_mint: output_vault_mint.to_readonly(),
-            tickarray_bitmap_extension: Some(tickarray_bitmap_extension.to_writable()),
+            tickarray_bitmap_extension: tickarray_bitmap_extension.to_writable(),
             tick_arrays,
         })
     }
@@ -313,9 +294,6 @@ mod tests {
         assert_eq!(usdc_to_wsol.output_vault_mint.pubkey.to_string(), WSOL);
 
         println!("\nRemaining Accounts (USDC->WSOL, zero_for_one=false):");
-        if let Some(ref bitmap_ext) = usdc_to_wsol.tickarray_bitmap_extension {
-            println!("Tickarray Bitmap Extension: {}", bitmap_ext.pubkey);
-        }
 
         println!("Tick Arrays ({} total):", usdc_to_wsol.tick_arrays.len());
         for (i, tick_array) in usdc_to_wsol.tick_arrays.iter().enumerate() {
