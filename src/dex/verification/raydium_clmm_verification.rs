@@ -23,8 +23,8 @@ mod test {
             &PAYER,
             &POOL,
             &config.pool_data,
-            &config.base_mint,
             &config.quote_mint,
+            &config.base_mint,
         )
         .await?
         .to_list();

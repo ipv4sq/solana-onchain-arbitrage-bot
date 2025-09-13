@@ -41,6 +41,7 @@ impl RaydiumClmmIxAccount {
             self.memo_program.clone(),
             self.input_vault_mint.clone(),
             self.output_vault_mint.clone(),
+            self.bitmap_extension.clone(),
         ];
 
         accounts.extend(self.tick_arrays.clone());
@@ -100,12 +101,6 @@ impl RaydiumClmmIxAccount {
         );
 
         const SPL_MEMO_PROGRAM: Pubkey = pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
-
-        // Derive tick array bitmap extension PDA (optional)
-        let (tickarray_bitmap_extension, _) = Pubkey::find_program_address(
-            &[b"bitmap_extension", pool.as_ref()],
-            &PoolProgram::RAYDIUM_CLMM,
-        );
 
         // Convert tick array pubkeys to AccountMetas
         let tick_arrays: Vec<AccountMeta> = tick_array_pubkeys
@@ -196,6 +191,11 @@ mod tests {
 
     #[test]
     fn test_swap_v2_accounts_from_solscan() {
+        let pool = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey();
+
+        // Generate the bitmap extension PDA for this pool
+        let bitmap_extension = RaydiumClmmIxAccount::generate_bitmap(&pool);
+
         let expected_accounts = vec![
             "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey(), // Payer
             "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(), // Amm Config
@@ -210,10 +210,10 @@ mod tests {
             "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".to_pubkey(), // Memo Program
             "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(), // Input Vault Mint (USDC)
             "So11111111111111111111111111111111111111112".to_pubkey(), // Output Vault Mint (WSOL)
-            "4NFvUKqknMpoe6CWTzK758B8ojVLzURL5pC6MtiaJ8TQ".to_pubkey(), // Tick array 1
-            "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(), // Tick array 2
-            "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(), // Tick array 3
-            "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(), // Tick array 4
+            bitmap_extension,                                          // Bitmap Extension (PDA)
+            "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(), // Tick array 1
+            "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(), // Tick array 2
+            "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(), // Tick array 3
         ];
 
         // Create a mock RaydiumClmmIxAccount with the Solscan data
@@ -270,6 +270,7 @@ mod tests {
                 "So11111111111111111111111111111111111111112".to_pubkey(),
                 false,
             ),
+            bitmap_extension: AccountMeta::new(bitmap_extension, false),
             tick_arrays: vec![
                 AccountMeta::new(
                     "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(),
@@ -288,7 +289,7 @@ mod tests {
 
         let accounts = ix_account.to_list();
 
-        // Verify total number of accounts
+        // Verify total number of accounts (13 fixed + 1 bitmap + 3 tick arrays = 17)
         assert_eq!(accounts.len(), 17, "Expected 17 accounts for swap_v2");
 
         // Verify each account matches expected
