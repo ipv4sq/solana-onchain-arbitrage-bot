@@ -466,6 +466,148 @@ pub async fn simulate_raydium_cpmm_swap_and_get_balance_diff(
     })
 }
 
+pub async fn simulate_raydium_clmm_swap_and_get_balance_diff(
+    pool_address: &Pubkey,
+    payer: &Pubkey,
+    amount_in: u64,
+    min_amount_out: u64,
+    is_base_input: bool,
+    from_mint: &Pubkey,
+    to_mint: &Pubkey,
+) -> AResult<SwapSimulationResult> {
+    use crate::dex::raydium_clmm::config::RaydiumClmmConfig;
+    use crate::dex::raydium_clmm::ix_account::RaydiumClmmIxAccount;
+    use crate::dex::raydium_clmm::ix_input::RaydiumClmmIxData;
+
+    let config = RaydiumClmmConfig::from_address(pool_address).await?;
+
+    // Build accounts based on swap direction
+    let accounts = RaydiumClmmIxAccount::build_accounts_with_direction(
+        payer,
+        pool_address,
+        &config.pool_data,
+        from_mint,
+        to_mint,
+    )
+    .await?
+    .to_list();
+
+    // Build the swap instruction data for Raydium CLMM
+    let ix_data = RaydiumClmmIxData {
+        amount: amount_in,
+        other_amount_threshold: min_amount_out,
+        sqrt_price_limit_x64: 0, // 0 means use default based on swap direction
+        is_base_input,
+    };
+
+    // Use swap_v2 (the newer version)
+    let data = ix_data.to_bytes_with_discriminator(true);
+
+    // Build the swap instruction
+    let (mut instructions, _limit) = compute_limit_ix(100_000);
+    let swap_ix = Instruction {
+        program_id: PoolProgram::RAYDIUM_CLMM,
+        accounts: accounts.clone(),
+        data,
+    };
+    instructions.push(swap_ix);
+
+    // Use the same ALT as other DEXs
+    let alt_keys = vec!["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()];
+
+    let mut alts = Vec::new();
+    for key in &alt_keys {
+        alts.push(get_alt(key).await?);
+    }
+    let blockhash = block::get_latest_blockhash().await?;
+
+    let message = Message::try_compile(payer, &instructions, &alts, blockhash)?;
+
+    let tx = VersionedTransaction {
+        signatures: vec![Signature::default(); 1],
+        message: solana_sdk::message::VersionedMessage::V0(message),
+    };
+
+    // User token accounts are at indices 3 and 4 for Raydium CLMM
+    let user_token_in = accounts[3].pubkey;
+    let user_token_out = accounts[4].pubkey;
+
+    // Get pre-simulation balances
+    let pre_token_in = buffered_get_account(&user_token_in).await?;
+    let pre_token_out = buffered_get_account(&user_token_out).await?;
+
+    let pre_balance_in = if pre_token_in.lamports > 0 {
+        unpack_token_account(&pre_token_in.data, &pre_token_in.owner)?
+    } else {
+        0
+    };
+
+    let pre_balance_out = if pre_token_out.lamports > 0 {
+        unpack_token_account(&pre_token_out.data, &pre_token_out.owner)?
+    } else {
+        0
+    };
+
+    // Simulate the transaction
+    let rpc_response = simulation::simulate_transaction_with_config(
+        &tx,
+        RpcSimulateTransactionConfig {
+            sig_verify: false,
+            replace_recent_blockhash: true,
+            commitment: Some(CommitmentConfig::confirmed()),
+            encoding: Some(UiTransactionEncoding::Base64),
+            accounts: Some(RpcSimulateTransactionAccountsConfig {
+                encoding: Some(UiAccountEncoding::Base64),
+                addresses: vec![user_token_in.to_string(), user_token_out.to_string()],
+            }),
+            min_context_slot: None,
+            inner_instructions: true,
+        },
+    )
+    .await;
+
+    let rpc_response = match rpc_response {
+        Ok(rpc_response) => rpc_response,
+        Err(error) => {
+            println!("Simulation error: {}", error);
+            return Err(error.into());
+        }
+    };
+
+    let sim_response =
+        SimulationResponse::from_rpc_response(rpc_response, &[user_token_in, user_token_out])?;
+
+    if let Some(err) = &sim_response.error {
+        return Ok(SwapSimulationResult {
+            balance_diff_in: 0,
+            balance_diff_out: 0,
+            compute_units: sim_response.compute_units,
+            error: Some(err.clone()),
+        });
+    }
+
+    // Get post-simulation balances
+    let post_balance_in = sim_response
+        .get_account(&user_token_in)
+        .and_then(|acc| acc.get_token_balance().ok().flatten())
+        .unwrap_or(0);
+
+    let post_balance_out = sim_response
+        .get_account(&user_token_out)
+        .and_then(|acc| acc.get_token_balance().ok().flatten())
+        .unwrap_or(0);
+
+    let balance_diff_in = post_balance_in as i128 - pre_balance_in as i128;
+    let balance_diff_out = post_balance_out as i128 - pre_balance_out as i128;
+
+    Ok(SwapSimulationResult {
+        balance_diff_in,
+        balance_diff_out,
+        compute_units: sim_response.compute_units,
+        error: None,
+    })
+}
+
 pub async fn simulate_pump_amm_swap_and_get_balance_diff(
     pool_address: &Pubkey,
     payer: &Pubkey,

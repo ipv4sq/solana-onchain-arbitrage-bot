@@ -57,7 +57,7 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         300_000,
         &configs,
         true,
-        LandingChannel::HeliusSwqos,
+        LandingChannel::Jito,
         trace,
     )
     .await
