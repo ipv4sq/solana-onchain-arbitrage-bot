@@ -233,7 +233,7 @@ mod tests {
         // Give services time to initialize
         sleep(Duration::from_millis(500)).await;
 
-        let amount_in = 1_000_000; // 1 USDC (6 decimals)
+        let amount_in = 100_000_000; // 100 USDC (6 decimals)
         let min_amount_out = 0;
 
         // Get pool config for token info
