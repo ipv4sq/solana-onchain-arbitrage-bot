@@ -4,7 +4,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
 pub struct RewardInfo {
     pub reward_state: u8,
