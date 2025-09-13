@@ -7,10 +7,11 @@ use crate::global::state::any_pool_holder::AnyPoolHolder;
 use crate::global::trace::types::Trace;
 use crate::pipeline::event_processor::token_balance::token_balance_processor::TokenAmount;
 use crate::pipeline::uploader::variables::{FireMevBotConsumer, MevBotFire};
-use crate::util::alias::{MintAddress, PoolAddress};
+use crate::util::alias::{Lamport, MintAddress, PoolAddress, SOLUnitLamportConvert};
 use crate::util::structs::mint_pair::MintPair;
 use futures::stream::{self, StreamExt};
 use maplit::hashset;
+use serde_json::json;
 use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use tracing::{info, trace, warn};
@@ -72,7 +73,7 @@ pub async fn on_pool_update(
 pub struct ArbitrageResult {
     pub first_pool: PoolAddress,
     pub second_pool: PoolAddress,
-    pub profit_lamports: u64,
+    pub profit_lamports: Lamport,
 }
 
 async fn find_arbitrage_opportunities(
@@ -387,9 +388,20 @@ async fn execute_opportunities(
         );
 
         trace.step_with(
-            StepType::MevTxTryToFile,
+            StepType::MevTxTryToFire,
             "path",
             format!("{:?}", pools_for_mev),
+        );
+
+        trace.step_with_struct(
+            StepType::MevTxTryToFire,
+            "context",
+            &json!(
+                {
+                    "path": pools_for_mev,
+                    "profit": opportunity.profit_lamports.to_literal(),
+                }
+            ),
         );
 
         let _ = FireMevBotConsumer

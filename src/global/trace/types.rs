@@ -40,7 +40,7 @@ impl Trace {
             .map(|step| {
                 let relative_ms = (step.happened_at - first_timestamp).num_milliseconds();
 
-                json!({
+                let mut step_json = json!({
                     "sequence": step.sequence,
                     "type": match &step.step_type {
                         StepType::Custom(s) => s.as_str(),
@@ -48,8 +48,13 @@ impl Trace {
                     },
                     "absolute_time": step.happened_at.to_rfc3339(),
                     "relative_ms": relative_ms,
-                    "attributes": step.attributes,
-                })
+                });
+
+                if !step.attributes.is_empty() {
+                    step_json["attributes"] = json!(step.attributes);
+                }
+
+                step_json
             })
             .collect();
 

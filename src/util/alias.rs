@@ -12,11 +12,20 @@ pub type AResult<T, E = Error> = Result<T, E>;
 pub type Literal = f64;
 pub type Lamport = u64;
 
-pub trait SOLUnitConvert {
+pub trait SOLUnitLiteralConvert {
     fn to_lamport(&self) -> Lamport;
 }
-impl SOLUnitConvert for Literal {
+impl SOLUnitLiteralConvert for Literal {
     fn to_lamport(&self) -> Lamport {
         (self * LAMPORTS_PER_SOL as f64) as Lamport
+    }
+}
+
+pub trait SOLUnitLamportConvert {
+    fn to_literal(&self) -> Literal;
+}
+impl SOLUnitLamportConvert for Lamport {
+    fn to_literal(&self) -> Literal {
+        *self as f64 / LAMPORTS_PER_SOL as f64
     }
 }

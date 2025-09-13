@@ -15,7 +15,7 @@ pub enum StepType {
     DetermineOpportunityLoadedRelatedMints,
     DetermineOpportunityFinished,
     MevTxFired,
-    MevTxTryToFile,
+    MevTxTryToFire,
     MevTxReadyToBuild,
     MevIxBuilding,
     MevIxBuilt,

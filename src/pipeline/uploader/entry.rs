@@ -16,11 +16,12 @@ use crate::pipeline::uploader::provider::LandingChannel;
 use crate::pipeline::uploader::variables::{MevBotDeduplicator, MevBotRateLimiter};
 use crate::sdk::rpc::methods::transaction::compile_instruction_to_tx;
 use crate::unit_ok;
-use crate::util::alias::{AResult, Literal, SOLUnitConvert};
+use crate::util::alias::{AResult, Literal, SOLUnitLamportConvert, SOLUnitLiteralConvert};
 use crate::util::env::env_config::ENV_CONFIG;
 use crate::util::traits::pubkey::ToPubkey;
 use construct::build_mev_ix;
 use debug::print_log_to_console;
+use serde_json::json;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
@@ -78,7 +79,7 @@ pub async fn build_and_send(
     let (tip_or_unite_price_ix, tip) = channel.tip_ix(&wallet.pubkey(), 30_000);
     instructions.extend(tip_or_unite_price_ix);
 
-    let minimum_profit = (0.0001 as Literal + tip).to_lamport();
+    let minimum_profit = (0.00001 as Literal + tip).to_lamport();
     let mev_ix = build_mev_ix(
         wallet,
         minor_mint,
@@ -93,7 +94,13 @@ pub async fn build_and_send(
 
     let alts = get_alt_batch(&["4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_pubkey()]).await?;
     let tx = compile_instruction_to_tx(wallet, instructions, &alts, get_blockhash().await?)?;
-    trace.step(StepType::MevIxBuilt);
+    trace.step_with_struct(
+        StepType::MevIxBuilt,
+        "params",
+        &json!({
+            "minimum_profit": minimum_profit.to_literal(),
+        }),
+    );
 
     let simulation_result = simulate_mev_tx(&tx, &trace).await?;
     if simulation_result.err.is_none() {
