@@ -1,11 +1,12 @@
 use crate::global::enums::step_type::StepType;
 use crate::global::trace::types::Trace;
 use crate::pipeline::uploader::provider::helius::facade::{
-    build_helius_jito_tip_ix, build_helius_swqos_tip_ix,
+    build_helius_jito_tip_ix, build_helius_swqos_tip_ix, send_helius_jito, send_helius_swqos,
 };
 use crate::pipeline::uploader::provider::jito::facade::send_bundle;
-use crate::return_error;
+use crate::pipeline::uploader::provider::shyft::facade::send_shyft_transaction;
 use crate::util::alias::{AResult, Lamport, Literal};
+use crate::{return_error, unit_ok};
 use jito::facade::build_jito_tip_ix;
 use solana_program::instruction::Instruction;
 use solana_program::pubkey::Pubkey;
@@ -53,7 +54,9 @@ impl LandingChannel {
         }
         trace.step(StepType::MevRealTxRpcCall);
         match self {
-            LandingChannel::HeliusSwqos => {}
+            LandingChannel::HeliusSwqos => {
+                send_helius_swqos(tx).await?;
+            }
             LandingChannel::Jito => {
                 let response = send_bundle(tx).await;
                 let _ = match response {
@@ -70,11 +73,14 @@ impl LandingChannel {
                         error!("Failed to send MEV transaction: {}", e);
                     }
                 };
-                todo!()
             }
-            LandingChannel::HeliusJito => {}
-            LandingChannel::Shyft => {}
+            LandingChannel::HeliusJito => {
+                send_helius_jito(tx).await?;
+            }
+            LandingChannel::Shyft => {
+                send_shyft_transaction(tx).await?;
+            }
         }
-        todo!()
+        unit_ok!()
     }
 }
