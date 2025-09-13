@@ -1,6 +1,5 @@
 use crate::dex::any_pool_config::AnyPoolConfig;
 use crate::global::enums::dex_type::DexType;
-use crate::global::state::account_balance_holder::QueryRateLimiter;
 use crate::sdk::rpc::methods::account::buffered_get_account;
 use crate::util::alias::{AResult, PoolAddress};
 use crate::util::cache::loading_cache::LoadingCache;
@@ -20,7 +19,7 @@ impl AnyPoolHolder {
             .iter()
             .map(|addr| cache.get(addr))
             .collect::<Vec<_>>();
-        
+
         futures::future::join_all(futures).await
     }
 
@@ -66,7 +65,6 @@ impl AnyPoolConfig {
     }
 
     async fn from(pool_address: &Pubkey) -> AResult<AnyPoolConfig> {
-        QueryRateLimiter.try_acquire_err()?;
         let account = buffered_get_account(pool_address).await?;
         let dex_type = DexType::determine_from(&account.owner);
         Self::new(*pool_address, dex_type, &account.data)

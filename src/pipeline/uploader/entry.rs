@@ -41,15 +41,16 @@ pub async fn fire_mev_bot(minor_mint: &Pubkey, pools: &Vec<Pubkey>, trace: Trace
         warn!("MEV bot rate limit exceeded, skipping execution");
         return Ok(());
     }
+    trace.step(StepType::MevTxFired);
 
-    trace.step_with(StepType::MevTxFired, "path", format!("{:?}", pools));
     let wallet = get_wallet();
     let configs: Vec<_> = AnyPoolHolder::batch_get(pools)
         .await
         .into_iter()
         .flatten()
         .collect();
-    trace.step_with(StepType::MevTxReadyToBuild, "path", format!("{:?}", pools));
+    trace.step(StepType::MevTxReadyToBuild);
+
     build_and_send(
         &wallet,
         minor_mint,
