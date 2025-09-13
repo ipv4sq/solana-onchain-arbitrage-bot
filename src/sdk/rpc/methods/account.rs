@@ -1,5 +1,6 @@
 use crate::lined_err;
 use crate::sdk::rpc::client::rpc_client;
+use crate::sdk::rpc::methods::limiter::QueryRateLimiter;
 use crate::util::alias::AResult;
 use crate::util::traits::option::OptionExt;
 use anyhow::anyhow;
@@ -119,6 +120,8 @@ async fn every_batch(pipeline: &mut Receiver<Request>) {
     if current_batch.len() == 0 {
         return;
     }
+
+    let x = QueryRateLimiter.try_acquire_err();
 
     let public_keys = current_batch.keys().cloned().collect::<Vec<_>>();
     let response = rpc_client().get_multiple_accounts(&public_keys).await;
