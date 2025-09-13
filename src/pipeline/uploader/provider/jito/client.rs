@@ -7,6 +7,7 @@ use parking_lot::RwLock;
 use reqwest::Client;
 use serde_json::json;
 use solana_sdk::transaction::VersionedTransaction;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tracing::{info, warn};
 
@@ -32,6 +33,7 @@ impl JitoClient {
                 .expect("Failed to create HTTP client"),
             base_url,
             latest_tip_amounts: RwLock::new(None),
+            request_id_counter: AtomicU64::new(1),
         }
     }
 
@@ -51,8 +53,11 @@ impl JitoClient {
             signed_txs.push(encoded);
         }
 
+        let request_id = self.request_id_counter.fetch_add(1, Ordering::SeqCst);
+
         let bundle_payload = json!({
             "jsonrpc": "2.0",
+            "id": request_id,
             "method": "sendBundle",
             "params": [
                 signed_txs,
@@ -168,4 +173,5 @@ pub struct JitoClient {
     client: Client,
     base_url: String,
     latest_tip_amounts: RwLock<Option<TipFloorData>>,
+    request_id_counter: AtomicU64,
 }
