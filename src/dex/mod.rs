@@ -7,7 +7,7 @@ pub mod meteora_damm;
 pub mod meteora_damm_v2;
 pub mod meteora_dlmm;
 pub mod pump_amm;
-pub mod raydium_cl_amm;
+pub mod raydium_clmm;
 pub mod raydium_cpmm;
 mod verification;
 pub mod whirlpool;

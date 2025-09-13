@@ -24,7 +24,7 @@ pub struct RewardInfo {
 
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[repr(C)]
-pub struct RaydiumCammPoolData {
+pub struct RaydiumClmmPoolData {
     pub bump: [u8; 1],
     pub amm_config: Pubkey,
     pub owner: Pubkey,
@@ -73,7 +73,7 @@ pub struct RaydiumCammPoolData {
     pub padding2: [u64; 32],
 }
 
-impl PoolDataLoader for RaydiumCammPoolData {
+impl PoolDataLoader for RaydiumClmmPoolData {
     fn load_data(data: &[u8]) -> anyhow::Result<Self> {
         if data.len() < 8 {
             return Err(anyhow::anyhow!(
@@ -85,7 +85,7 @@ impl PoolDataLoader for RaydiumCammPoolData {
         let mut data_slice = &data[8..];
 
         // Use Borsh deserialize which doesn't require all bytes to be consumed
-        <RaydiumCammPoolData as BorshDeserialize>::deserialize(&mut data_slice)
+        <RaydiumClmmPoolData as BorshDeserialize>::deserialize(&mut data_slice)
             .map_err(|e| anyhow::anyhow!("Failed to parse account data: {}", e))
     }
 
@@ -126,8 +126,8 @@ mod test {
             .expect("Failed to decode base64");
 
         // Load pool data using the PoolDataLoader trait
-        let pool_data = RaydiumCammPoolData::load_data(&pool_data_bytes)
-            .expect("Failed to parse pool data");
+        let pool_data =
+            RaydiumClmmPoolData::load_data(&pool_data_bytes).expect("Failed to parse pool data");
 
         // Parse the JSON to verify against
         let json: Value = serde_json::from_str(POOL_DATA_JSON).expect("Failed to parse JSON");
@@ -188,7 +188,11 @@ mod test {
         );
         assert_eq!(
             pool_data.tick_spacing,
-            json["tick_spacing"]["data"].as_str().unwrap().parse::<u16>().unwrap(),
+            json["tick_spacing"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u16>()
+                .unwrap(),
             "Tick spacing mismatch"
         );
 
@@ -205,7 +209,11 @@ mod test {
         );
         assert_eq!(
             pool_data.tick_current,
-            json["tick_current"]["data"].as_str().unwrap().parse::<i32>().unwrap(),
+            json["tick_current"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<i32>()
+                .unwrap(),
             "Tick current mismatch"
         );
 
@@ -224,12 +232,20 @@ mod test {
         // Test protocol fees
         assert_eq!(
             pool_data.protocol_fees_token_0,
-            json["protocol_fees_token_0"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["protocol_fees_token_0"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Protocol fees token 0 mismatch"
         );
         assert_eq!(
             pool_data.protocol_fees_token_1,
-            json["protocol_fees_token_1"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["protocol_fees_token_1"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Protocol fees token 1 mismatch"
         );
 
@@ -255,7 +271,11 @@ mod test {
         );
         assert_eq!(
             reward_0.open_time,
-            json_reward_0["open_time"].as_str().unwrap().parse::<u64>().unwrap(),
+            json_reward_0["open_time"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Reward 0 open time mismatch"
         );
         assert_eq!(
@@ -267,24 +287,40 @@ mod test {
         // Test total fees
         assert_eq!(
             pool_data.total_fees_token_0,
-            json["total_fees_token_0"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["total_fees_token_0"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Total fees token 0 mismatch"
         );
         assert_eq!(
             pool_data.total_fees_token_1,
-            json["total_fees_token_1"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["total_fees_token_1"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Total fees token 1 mismatch"
         );
 
         // Test open time and recent epoch
         assert_eq!(
             pool_data.open_time,
-            json["open_time"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["open_time"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Open time mismatch"
         );
         assert_eq!(
             pool_data.recent_epoch,
-            json["recent_epoch"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            json["recent_epoch"]["data"]
+                .as_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
             "Recent epoch mismatch"
         );
 
