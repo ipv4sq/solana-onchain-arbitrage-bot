@@ -547,6 +547,11 @@ result.insert(item.key, value);
 - This provides cleaner, more readable code and consistent error handling
 - Example: `"So11111111111111111111111111111111111111112".to_pubkey()`
 
+### Error Handling
+
+- **Prefer `lined_err!` over `anyhow::anyhow!`** - Includes line numbers for better debugging
+- Example: `lined_err!("Failed to parse: {}", e)` instead of `anyhow::anyhow!("Failed to parse: {}", e)`
+
 ### Using Constants and Utilities
 
 **Never hardcode addresses** - use provided constants:
