@@ -81,11 +81,7 @@ impl WhirlpoolIxAccount {
     //         token_vault_a: pool_data.token_vault_a.to_writable(),
     //         token_owner_account_b: payer_ata_b.to_writable(),
     //         token_vault_b: pool_data.token_vault_b.to_writable(),
-    //         tick_arrays: vec![
-    //             tick_arrays[0].to_writable(),
-    //             tick_arrays[1].to_writable(),
-    //             tick_arrays[2].to_writable(),
-    //         ],
+    //         tick_arrays: tick_arrays.iter().map(|ta| ta.to_writable()).collect(),
     //         oracle: oracle.to_writable(),
     //     })
     // }
@@ -134,11 +130,7 @@ impl WhirlpoolIxAccount {
             token_vault_a: pool_data.token_vault_a.to_writable(),
             token_owner_account_b: payer_ata_b.to_writable(),
             token_vault_b: pool_data.token_vault_b.to_writable(),
-            tick_arrays: vec![
-                tick_arrays[0].to_writable(),
-                tick_arrays[1].to_writable(),
-                tick_arrays[2].to_writable(),
-            ],
+            tick_arrays: tick_arrays.iter().map(|ta| ta.to_writable()).collect(),
             oracle: oracle.to_writable(),
         })
     }
@@ -148,11 +140,11 @@ impl WhirlpoolIxAccount {
         current_tick: i32,
         tick_spacing: i32,
         a_to_b: bool,
-    ) -> AResult<[Pubkey; 3]> {
+    ) -> AResult<Vec<Pubkey>> {
         let (ta0_start, ta1_start_opt, ta2_start_opt) =
             Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, a_to_b);
 
-        Ok([
+        Ok(vec![
             Self::derive_tick_array_pda(pool, ta0_start),
             Self::derive_tick_array_pda(pool, ta1_start_opt.unwrap_or(ta0_start)),
             Self::derive_tick_array_pda(pool, ta2_start_opt.unwrap_or(ta1_start_opt.unwrap_or(ta0_start))),
@@ -163,13 +155,13 @@ impl WhirlpoolIxAccount {
         pool: &Pubkey,
         current_tick: i32,
         tick_spacing: i32,
-    ) -> AResult<[Pubkey; 3]> {
+    ) -> AResult<Vec<Pubkey>> {
         let tick_array_starts =
             Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, true);
         let tick_array_reverse_starts =
             Self::derive_tick_array_start_indexes(current_tick, tick_spacing as u16, false);
 
-        Ok([
+        Ok(vec![
             Self::derive_tick_array_pda(
                 pool,
                 tick_array_reverse_starts.1.unwrap_or(tick_array_reverse_starts.0),
