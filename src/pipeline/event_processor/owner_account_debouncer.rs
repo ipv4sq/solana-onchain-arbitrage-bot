@@ -71,6 +71,7 @@ async fn route_pool_update(update: WithTrace<GrpcAccountUpdate>) -> AResult<()> 
         PoolProgram::METEORA_DAMM_V2 => {}
         PoolProgram::PUMP_AMM => {}
         PoolProgram::RAYDIUM_CPMM => {}
+        PoolProgram::RAYDIUM_CLMM => {}
         _ => {}
     }
 
