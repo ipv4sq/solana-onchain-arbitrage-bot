@@ -24,7 +24,7 @@ use std::time::Duration;
 pub static OwnerAccountDebouncer: Lazy<
     Arc<BufferedDebouncer<Pubkey, WithTrace<GrpcAccountUpdate>>>,
 > = lazy_arc!(BufferedDebouncer::new(
-    Duration::from_millis(7),
+    Duration::from_millis(3),
     send_to_router,
 ));
 
