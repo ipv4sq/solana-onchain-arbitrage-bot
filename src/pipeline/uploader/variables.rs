@@ -30,12 +30,12 @@ pub static FireMevBotConsumer: Lazy<Arc<PubSubProcessor<MevBotFire>>> = lazy_arc
 });
 pub static MevBotRateLimiter: Lazy<Arc<RateLimiter>> = lazy_arc!({
     RateLimiter::new(
-        8,
+        15,
         Duration::from_secs(1),
-        10,
+        20,
         "MevBotRateLimiter".to_string(),
     )
 });
 
 pub static MevBotDeduplicator: Lazy<Arc<TxDeduplicator>> =
-    lazy_arc!(TxDeduplicator::new(Duration::from_secs(60)));
+    lazy_arc!(TxDeduplicator::new(Duration::from_secs(10)));

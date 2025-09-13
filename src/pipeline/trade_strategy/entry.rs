@@ -16,7 +16,7 @@ use solana_program::pubkey::Pubkey;
 use std::collections::HashSet;
 use tracing::{info, trace, warn};
 
-const MAX_OPPORTUNITIES: usize = 3;
+const MAX_OPPORTUNITIES: usize = 2;
 const MAX_PROCESSING_TIME_MS: u32 = 10_000;
 const WSOL_LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
@@ -377,6 +377,7 @@ async fn execute_opportunities(
     trace: Trace,
 ) {
     for (i, opportunity) in opportunities.iter().enumerate() {
+        let trace = trace.clone();
         let pools_for_mev = vec![opportunity.first_pool, opportunity.second_pool];
 
         info!(
@@ -402,7 +403,7 @@ async fn execute_opportunities(
             .publish(MevBotFire {
                 minor_mint,
                 pools: pools_for_mev,
-                trace: trace.clone(),
+                trace,
             })
             .await;
     }
