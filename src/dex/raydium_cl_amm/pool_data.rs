@@ -115,5 +115,191 @@ mod test {
     const POLL_DATA_BASE64: &str = "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";
 
     #[test]
-    pub fn test_load_data() {}
+    pub fn test_load_data() {
+        use super::*;
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        use serde_json::Value;
+
+        // Decode base64 to bytes
+        let pool_data_bytes = STANDARD
+            .decode(POLL_DATA_BASE64)
+            .expect("Failed to decode base64");
+
+        // Load pool data using the PoolDataLoader trait
+        let pool_data = RaydiumCammPoolData::load_data(&pool_data_bytes)
+            .expect("Failed to parse pool data");
+
+        // Parse the JSON to verify against
+        let json: Value = serde_json::from_str(POOL_DATA_JSON).expect("Failed to parse JSON");
+
+        // Test core fields
+        assert_eq!(
+            pool_data.bump[0],
+            json["bump"]["data"][0].as_u64().unwrap() as u8,
+            "Bump mismatch"
+        );
+
+        assert_eq!(
+            pool_data.amm_config.to_string(),
+            json["amm_config"]["data"].as_str().unwrap(),
+            "AMM config mismatch"
+        );
+
+        assert_eq!(
+            pool_data.owner.to_string(),
+            json["owner"]["data"].as_str().unwrap(),
+            "Owner mismatch"
+        );
+
+        // Test token mints
+        assert_eq!(
+            pool_data.token_mint_0.to_string(),
+            json["token_mint_0"]["data"].as_str().unwrap(),
+            "Token mint 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.token_mint_1.to_string(),
+            json["token_mint_1"]["data"].as_str().unwrap(),
+            "Token mint 1 mismatch"
+        );
+
+        // Test token vaults
+        assert_eq!(
+            pool_data.token_vault_0.to_string(),
+            json["token_vault_0"]["data"].as_str().unwrap(),
+            "Token vault 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.token_vault_1.to_string(),
+            json["token_vault_1"]["data"].as_str().unwrap(),
+            "Token vault 1 mismatch"
+        );
+
+        // Test decimals and tick spacing
+        assert_eq!(
+            pool_data.mint_decimals_0,
+            json["mint_decimals_0"]["data"].as_u64().unwrap() as u8,
+            "Mint decimals 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.mint_decimals_1,
+            json["mint_decimals_1"]["data"].as_u64().unwrap() as u8,
+            "Mint decimals 1 mismatch"
+        );
+        assert_eq!(
+            pool_data.tick_spacing,
+            json["tick_spacing"]["data"].as_str().unwrap().parse::<u16>().unwrap(),
+            "Tick spacing mismatch"
+        );
+
+        // Test liquidity and price
+        assert_eq!(
+            pool_data.liquidity.to_string(),
+            json["liquidity"]["data"].as_str().unwrap(),
+            "Liquidity mismatch"
+        );
+        assert_eq!(
+            pool_data.sqrt_price_x64.to_string(),
+            json["sqrt_price_x64"]["data"].as_str().unwrap(),
+            "Sqrt price mismatch"
+        );
+        assert_eq!(
+            pool_data.tick_current,
+            json["tick_current"]["data"].as_str().unwrap().parse::<i32>().unwrap(),
+            "Tick current mismatch"
+        );
+
+        // Test fee growth
+        assert_eq!(
+            pool_data.fee_growth_global_0_x64.to_string(),
+            json["fee_growth_global_0_x64"]["data"].as_str().unwrap(),
+            "Fee growth global 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.fee_growth_global_1_x64.to_string(),
+            json["fee_growth_global_1_x64"]["data"].as_str().unwrap(),
+            "Fee growth global 1 mismatch"
+        );
+
+        // Test protocol fees
+        assert_eq!(
+            pool_data.protocol_fees_token_0,
+            json["protocol_fees_token_0"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Protocol fees token 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.protocol_fees_token_1,
+            json["protocol_fees_token_1"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Protocol fees token 1 mismatch"
+        );
+
+        // Test swap amounts
+        assert_eq!(
+            pool_data.swap_in_amount_token_0.to_string(),
+            json["swap_in_amount_token_0"]["data"].as_str().unwrap(),
+            "Swap in amount token 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.swap_out_amount_token_1.to_string(),
+            json["swap_out_amount_token_1"]["data"].as_str().unwrap(),
+            "Swap out amount token 1 mismatch"
+        );
+
+        // Test reward info for first reward (active)
+        let reward_0 = &pool_data.reward_infos[0];
+        let json_reward_0 = &json["reward_infos"]["data"][0];
+        assert_eq!(
+            reward_0.reward_state,
+            json_reward_0["reward_state"].as_u64().unwrap() as u8,
+            "Reward 0 state mismatch"
+        );
+        assert_eq!(
+            reward_0.open_time,
+            json_reward_0["open_time"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Reward 0 open time mismatch"
+        );
+        assert_eq!(
+            reward_0.token_mint.to_string(),
+            json_reward_0["token_mint"].as_str().unwrap(),
+            "Reward 0 token mint mismatch"
+        );
+
+        // Test total fees
+        assert_eq!(
+            pool_data.total_fees_token_0,
+            json["total_fees_token_0"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Total fees token 0 mismatch"
+        );
+        assert_eq!(
+            pool_data.total_fees_token_1,
+            json["total_fees_token_1"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Total fees token 1 mismatch"
+        );
+
+        // Test open time and recent epoch
+        assert_eq!(
+            pool_data.open_time,
+            json["open_time"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Open time mismatch"
+        );
+        assert_eq!(
+            pool_data.recent_epoch,
+            json["recent_epoch"]["data"].as_str().unwrap().parse::<u64>().unwrap(),
+            "Recent epoch mismatch"
+        );
+
+        // Test trait methods work correctly
+        assert_eq!(pool_data.base_mint(), pool_data.token_mint_0);
+        assert_eq!(pool_data.quote_mint(), pool_data.token_mint_1);
+        assert_eq!(pool_data.base_vault(), pool_data.token_vault_0);
+        assert_eq!(pool_data.quote_vault(), pool_data.token_vault_1);
+
+        println!("✓ All fields match the JSON data!");
+        println!("✓ Pool: {}", POOL);
+        println!("✓ token_mint_0: {}", pool_data.token_mint_0);
+        println!("✓ token_mint_1: {}", pool_data.token_mint_1);
+        println!("✓ liquidity: {}", pool_data.liquidity);
+        println!("✓ sqrt_price_x64: {}", pool_data.sqrt_price_x64);
+        println!("✓ tick_current: {}", pool_data.tick_current);
+    }
 }
