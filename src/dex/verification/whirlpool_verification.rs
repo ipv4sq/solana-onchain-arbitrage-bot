@@ -133,18 +133,14 @@ mod tests {
             "  #10 Token vault B:         {}",
             accounts.token_vault_b.pubkey
         );
-        println!(
-            "  #11 Tick Array 0:          {}",
-            accounts.tick_array_0.pubkey
-        );
-        println!(
-            "  #12 Tick Array 1:          {}",
-            accounts.tick_array_1.pubkey
-        );
-        println!(
-            "  #13 Tick Array 2:          {}",
-            accounts.tick_array_2.pubkey
-        );
+        for (i, tick_array) in accounts.tick_arrays.iter().enumerate() {
+            println!(
+                "  #{} Tick Array {}:          {}",
+                11 + i,
+                i,
+                tick_array.pubkey
+            );
+        }
         println!("  #14 Oracle:                {}", accounts.oracle.pubkey);
 
         // Simulate actual swap to get real output (a->b direction)

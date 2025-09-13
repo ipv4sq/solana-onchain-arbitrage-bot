@@ -36,7 +36,7 @@ impl PoolConfig<WhirlpoolPoolData> for WhirlpoolConfig {
         let built =
             WhirlpoolIxAccount::build_bidirectional(payer, &self.pool_address, &self.pool_data)
                 .await?;
-        let accounts: Vec<AccountMeta> = vec![
+        let mut accounts: Vec<AccountMeta> = vec![
             PoolProgram::WHIRLPOOL.to_program(),
             self.pool_data.mint_pair().desired_mint()?.to_readonly(),
             built.memo_program,
@@ -44,10 +44,8 @@ impl PoolConfig<WhirlpoolPoolData> for WhirlpoolConfig {
             built.oracle,
             built.token_vault_a,
             built.token_vault_b,
-            built.tick_array_0,
-            built.tick_array_1,
-            built.tick_array_2,
         ];
+        accounts.extend(built.tick_arrays);
 
         Ok(accounts)
     }

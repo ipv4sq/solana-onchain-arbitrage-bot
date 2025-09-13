@@ -20,9 +20,7 @@ pub struct WhirlpoolIxAccount {
     pub token_vault_a: AccountMeta,
     pub token_owner_account_b: AccountMeta,
     pub token_vault_b: AccountMeta,
-    pub tick_array_0: AccountMeta,
-    pub tick_array_1: AccountMeta,
-    pub tick_array_2: AccountMeta,
+    pub tick_arrays: Vec<AccountMeta>,
     pub oracle: AccountMeta,
 }
 
@@ -83,9 +81,11 @@ impl WhirlpoolIxAccount {
     //         token_vault_a: pool_data.token_vault_a.to_writable(),
     //         token_owner_account_b: payer_ata_b.to_writable(),
     //         token_vault_b: pool_data.token_vault_b.to_writable(),
-    //         tick_array_0: tick_arrays[0].to_writable(),
-    //         tick_array_1: tick_arrays[1].to_writable(),
-    //         tick_array_2: tick_arrays[2].to_writable(),
+    //         tick_arrays: vec![
+    //             tick_arrays[0].to_writable(),
+    //             tick_arrays[1].to_writable(),
+    //             tick_arrays[2].to_writable(),
+    //         ],
     //         oracle: oracle.to_writable(),
     //     })
     // }
@@ -134,9 +134,11 @@ impl WhirlpoolIxAccount {
             token_vault_a: pool_data.token_vault_a.to_writable(),
             token_owner_account_b: payer_ata_b.to_writable(),
             token_vault_b: pool_data.token_vault_b.to_writable(),
-            tick_array_0: tick_arrays[0].to_writable(),
-            tick_array_1: tick_arrays[1].to_writable(),
-            tick_array_2: tick_arrays[2].to_writable(),
+            tick_arrays: vec![
+                tick_arrays[0].to_writable(),
+                tick_arrays[1].to_writable(),
+                tick_arrays[2].to_writable(),
+            ],
             oracle: oracle.to_writable(),
         })
     }
@@ -247,7 +249,7 @@ impl WhirlpoolIxAccount {
     }
 
     pub fn to_list(&self) -> Vec<AccountMeta> {
-        vec![
+        let mut accounts = vec![
             self.token_program_a.clone(),
             self.token_program_b.clone(),
             self.memo_program.clone(),
@@ -259,11 +261,10 @@ impl WhirlpoolIxAccount {
             self.token_vault_a.clone(),
             self.token_owner_account_b.clone(),
             self.token_vault_b.clone(),
-            self.tick_array_0.clone(),
-            self.tick_array_1.clone(),
-            self.tick_array_2.clone(),
-            self.oracle.clone(),
-        ]
+        ];
+        accounts.extend(self.tick_arrays.clone());
+        accounts.push(self.oracle.clone());
+        accounts
     }
 }
 
@@ -307,7 +308,7 @@ mod tests {
             .expect("Failed to build accounts");
 
         let accounts = ix_account.to_list();
-        assert_eq!(accounts.len(), 15);
+        assert_eq!(accounts.len(), 15); // 11 base accounts + 3 tick arrays + 1 oracle
 
         // Print all accounts with their properties
         println!("\nCalculated Accounts:");
@@ -386,7 +387,7 @@ mod tests {
                 .expect("Failed to build accounts for reverse swap");
 
         let accounts_reverse = ix_account_reverse.to_list();
-        assert_eq!(accounts_reverse.len(), 15);
+        assert_eq!(accounts_reverse.len(), 15); // 11 base accounts + 3 tick arrays + 1 oracle
 
         println!("\nCalculated Accounts (Reverse):");
         println!(
