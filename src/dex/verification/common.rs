@@ -811,15 +811,9 @@ pub async fn simulate_whirlpool_swap_and_get_balance_diff(
     let config = WhirlpoolConfig::from_address(pool_address).await?;
 
     // Build accounts based on swap direction
-    let accounts = WhirlpoolIxAccount::build_accounts_with_direction(
-        payer,
-        pool_address,
-        &config.pool_data,
-        from_mint,
-        to_mint,
-    )
-    .await?
-    .to_list();
+    let accounts = WhirlpoolIxAccount::build_bidirectional(payer, pool_address, &config.pool_data)
+        .await?
+        .to_list();
 
     // Build the swap instruction data for Whirlpool
     // Whirlpool swap discriminator [0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]

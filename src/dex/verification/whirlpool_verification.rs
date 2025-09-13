@@ -89,14 +89,8 @@ mod tests {
         println!("  Fee rate: {}", config.pool_data.fee_rate);
 
         // Build accounts to inspect them
-        let accounts = WhirlpoolIxAccount::build_accounts_with_direction(
-            &PAYER,
-            &POOL,
-            &config.pool_data,
-            &token_a_mint,
-            &token_b_mint,
-        )
-        .await?;
+        let accounts =
+            WhirlpoolIxAccount::build_bidirectional(&PAYER, &POOL, &config.pool_data).await?;
         println!("\nAccounts for simulation:");
         println!(
             "  #0  Token Program A:       {}",
