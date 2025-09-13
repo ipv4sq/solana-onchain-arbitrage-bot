@@ -23,7 +23,6 @@ pub async fn log_mev_simulation(
     let tx_size = bincode::serialize(tx)?.len() as i32;
     let simulation_status = get_simulation_status(result);
 
-
     let accounts = extract_transaction_accounts(tx);
 
     let (minor_mint_sym, desired_mint_sym) = fetch_mint_symbols(minor_mint, desired_mint).await?;
@@ -55,7 +54,6 @@ fn get_simulation_status(result: &SimulationResult) -> &'static str {
         "success"
     }
 }
-
 
 fn extract_transaction_accounts(tx: &VersionedTransaction) -> Vec<SimulationAccount> {
     let (account_keys, header) = match &tx.message {
@@ -128,4 +126,3 @@ fn build_simulation_log_params(
         trace: Some(trace.dump_json()),
     }
 }
-
