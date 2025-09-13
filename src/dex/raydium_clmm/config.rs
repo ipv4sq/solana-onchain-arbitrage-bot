@@ -27,7 +27,7 @@ impl PoolConfig<RaydiumClmmPoolData> for RaydiumClmmConfig {
 
     fn pase_swap_from_ix(ix: &Instruction) -> AResult<(DexType, PoolAddress)> {
         ix.expect_program_id(&RaydiumClmm.owner_program_id())?;
-        let address = ix.account_at(3)?.pubkey;
+        let address = ix.account_at(2)?.pubkey;
         Ok((RaydiumClmm, address))
     }
 

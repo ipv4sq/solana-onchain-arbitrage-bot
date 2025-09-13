@@ -9,3 +9,4 @@ mod pump_amm_verification;
 mod raydium_clmm_verification;
 #[cfg(test)]
 mod raydium_cpmm_verification;
+mod whirlpool_verification;
