@@ -33,14 +33,9 @@ impl PoolConfig<WhirlpoolPoolData> for WhirlpoolConfig {
     }
 
     async fn build_mev_bot_ix_accounts(&self, payer: &Pubkey) -> AResult<Vec<AccountMeta>> {
-        let built = WhirlpoolIxAccount::build_accounts_with_direction(
-            payer,
-            &self.pool_address,
-            &self.pool_data,
-            &self.base_mint,
-            &self.quote_mint,
-        )
-        .await?;
+        let built =
+            WhirlpoolIxAccount::build_bidirectional(payer, &self.pool_address, &self.pool_data)
+                .await?;
         let accounts: Vec<AccountMeta> = vec![
             PoolProgram::WHIRLPOOL.to_program(),
             self.pool_data.mint_pair().desired_mint()?.to_readonly(),

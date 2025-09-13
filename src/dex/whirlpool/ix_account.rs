@@ -90,6 +90,54 @@ impl WhirlpoolIxAccount {
         })
     }
 
+    pub async fn build_bidirectional(
+        payer: &Pubkey,
+        pool: &Pubkey,
+        pool_data: &WhirlpoolPoolData,
+    ) -> AResult<Self> {
+        use crate::database::mint_record::repository::MintRecordRepository;
+        use crate::util::solana::pda::ata;
+
+        // Get token programs from database (batch query)
+        let (mint_a_record, mint_b_record) =
+            MintRecordRepository::get_batch_as_tuple2(&pool_data.token_mint_a, &pool_data.token_mint_b).await?;
+
+        let token_program_a = mint_a_record.program.0;
+        let token_program_b = mint_b_record.program.0;
+
+        // Derive ATAs using the correct token programs
+        let payer_ata_a = ata(payer, &pool_data.token_mint_a, &token_program_a);
+        let payer_ata_b = ata(payer, &pool_data.token_mint_b, &token_program_b);
+
+        // Get bidirectional tick arrays (prev, current, next)
+        let tick_arrays = Self::get_tick_arrays_bidirectional(
+            pool,
+            pool_data.tick_current_index,
+            pool_data.tick_spacing as i32,
+        )?;
+
+        // Get oracle PDA
+        let oracle = Self::derive_oracle_pda(pool);
+
+        Ok(Self {
+            token_program_a: token_program_a.to_program(),
+            token_program_b: token_program_b.to_program(),
+            memo_program: Self::SPL_MEMO_PROGRAM.to_program(),
+            token_authority: payer.to_signer(),
+            whirlpool: pool.to_writable(),
+            token_mint_a: pool_data.token_mint_a.to_readonly(),
+            token_mint_b: pool_data.token_mint_b.to_readonly(),
+            token_owner_account_a: payer_ata_a.to_writable(),
+            token_vault_a: pool_data.token_vault_a.to_writable(),
+            token_owner_account_b: payer_ata_b.to_writable(),
+            token_vault_b: pool_data.token_vault_b.to_writable(),
+            tick_array_0: tick_arrays[0].to_writable(),
+            tick_array_1: tick_arrays[1].to_writable(),
+            tick_array_2: tick_arrays[2].to_writable(),
+            oracle: oracle.to_writable(),
+        })
+    }
+
 
     fn get_tick_arrays_for_swap(
         pool: &Pubkey,
@@ -97,12 +145,6 @@ impl WhirlpoolIxAccount {
         tick_spacing: i32,
         a_to_b: bool,
     ) -> AResult<[Pubkey; 3]> {
-        // Calculate the start tick index for the current tick array
-        let _current_array_start = Self::get_start_tick_index(current_tick, tick_spacing, 0)?;
-
-        // Get tick arrays based on swap direction
-        // For a_to_b (decreasing tick), we need current, current-1, current-2
-        // For b_to_a (increasing tick), we need current, current+1, current+2
         let offsets = if a_to_b { [0, -1, -2] } else { [0, 1, 2] };
 
         let mut tick_arrays = [Pubkey::default(); 3];
@@ -112,6 +154,22 @@ impl WhirlpoolIxAccount {
         }
 
         Ok(tick_arrays)
+    }
+
+    fn get_tick_arrays_bidirectional(
+        pool: &Pubkey,
+        current_tick: i32,
+        tick_spacing: i32,
+    ) -> AResult<[Pubkey; 3]> {
+        let current_start = Self::get_start_tick_index(current_tick, tick_spacing, 0)?;
+        let prev_start = Self::get_start_tick_index(current_tick, tick_spacing, -1)?;
+        let next_start = Self::get_start_tick_index(current_tick, tick_spacing, 1)?;
+
+        Ok([
+            Self::derive_tick_array_pda(pool, prev_start),
+            Self::derive_tick_array_pda(pool, current_start),
+            Self::derive_tick_array_pda(pool, next_start),
+        ])
     }
 
     fn get_start_tick_index(tick_index: i32, tick_spacing: i32, offset: i32) -> AResult<i32> {
