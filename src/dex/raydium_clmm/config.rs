@@ -46,7 +46,6 @@ impl PoolConfig<RaydiumClmmPoolData> for RaydiumClmmConfig {
             self.pool_address.to_writable(),
             built.amm_config,
             built.observation_state,
-            built.tickarray_bitmap_extension,
             self.pool_data.token_vault_0.to_writable(),
             self.pool_data.token_vault_1.to_writable(),
         ];

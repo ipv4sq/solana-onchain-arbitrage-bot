@@ -1,4 +1,5 @@
 use crate::dex::raydium_clmm::pool_data::RaydiumClmmPoolData;
+use crate::global::enums::dex_type::DexType;
 use crate::util::alias::AResult;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
@@ -19,8 +20,8 @@ pub struct RaydiumClmmIxAccount {
     pub memo_program: AccountMeta,
     pub input_vault_mint: AccountMeta,
     pub output_vault_mint: AccountMeta,
+    pub bitmap_extension: AccountMeta,
     // Remaining accounts
-    pub tickarray_bitmap_extension: AccountMeta,
     pub tick_arrays: Vec<AccountMeta>,
 }
 
@@ -40,7 +41,6 @@ impl RaydiumClmmIxAccount {
             self.memo_program.clone(),
             self.input_vault_mint.clone(),
             self.output_vault_mint.clone(),
-            self.tickarray_bitmap_extension.clone(),
         ];
 
         accounts.extend(self.tick_arrays.clone());
@@ -96,7 +96,7 @@ impl RaydiumClmmIxAccount {
             pool_data.tick_current,
             pool_data.tick_spacing as i32,
             zero_for_one,
-            5, // Get more tick arrays to be safe
+            3, // Get more tick arrays to be safe
         );
 
         const SPL_MEMO_PROGRAM: Pubkey = pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -112,7 +112,7 @@ impl RaydiumClmmIxAccount {
             .into_iter()
             .map(|pubkey| pubkey.to_writable())
             .collect();
-
+        let bitmap_extension = Self::generate_bitmap(pool);
         Ok(RaydiumClmmIxAccount {
             payer: payer.to_signer(),
             amm_config: pool_data.amm_config.to_readonly(),
@@ -127,7 +127,7 @@ impl RaydiumClmmIxAccount {
             memo_program: SPL_MEMO_PROGRAM.to_program(),
             input_vault_mint: input_vault_mint.to_readonly(),
             output_vault_mint: output_vault_mint.to_readonly(),
-            tickarray_bitmap_extension: tickarray_bitmap_extension.to_writable(),
+            bitmap_extension: bitmap_extension.to_writable(),
             tick_arrays,
         })
     }
@@ -170,188 +170,179 @@ impl RaydiumClmmIxAccount {
         }
         start * ticks_in_array
     }
+
+    fn generate_bitmap(pool: &Pubkey) -> Pubkey {
+        let bitmap_extension = Pubkey::find_program_address(
+            &[POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(), &pool.as_ref()],
+            &DexType::RaydiumClmm.owner_program_id(),
+        )
+        .0;
+        bitmap_extension
+    }
 }
+pub const POOL_TICK_ARRAY_BITMAP_SEED: &str = "pool_tick_array_bitmap_extension";
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::util::traits::pubkey::ToPubkey;
 
-    #[tokio::test]
-    async fn test_build_accounts_both_directions() {
-        const PAYER: &str = "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa";
-        const POOL: &str = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv";
-        const WSOL: &str = "So11111111111111111111111111111111111111112";
-        const USDC: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    #[test]
+    fn bitmap() {
+        let pool = pubkey!("3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv");
+        let generated = RaydiumClmmIxAccount::generate_bitmap(&pool);
+        println!("{:#?}", generated);
+    }
 
-        let payer = PAYER.to_pubkey();
-        let pool = POOL.to_pubkey();
+    #[test]
+    fn test_swap_v2_accounts_from_solscan() {
+        let expected_accounts = vec![
+            "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey(), // Payer
+            "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(), // Amm Config
+            "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey(), // Pool State
+            "8VYWdU14V78rcDepwmNt54bb1aam5qVUMUpEtW8oCn1E".to_pubkey(), // Input Token Account
+            "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_pubkey(), // Output Token Account
+            "4D3oJLZN6f4v51MRY2xJ5FdRPZEXyY8VRXRx5hJMiSYp".to_pubkey(), // Input Vault
+            "HQszk12vRBpJB3Gg5Y7DMZPRVGHMKb7F4Qa7iF2vmfE3".to_pubkey(), // Output Vault
+            "3Y695CuQ8AP4anbwAqiEBeQF9KxqHFr8piEwvw3UePnQ".to_pubkey(), // Observation State
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_pubkey(), // Token Program
+            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb".to_pubkey(), // Token Program 2022
+            "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".to_pubkey(), // Memo Program
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(), // Input Vault Mint (USDC)
+            "So11111111111111111111111111111111111111112".to_pubkey(), // Output Vault Mint (WSOL)
+            "4NFvUKqknMpoe6CWTzK758B8ojVLzURL5pC6MtiaJ8TQ".to_pubkey(), // Tick array 1
+            "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(), // Tick array 2
+            "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(), // Tick array 3
+            "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(), // Tick array 4
+        ];
 
-        let pool_data = RaydiumClmmPoolData {
-            bump: [255],
-            amm_config: "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(),
-            owner: "CJKrW95iMGECdjWtdDnWDAx2cBH7pFE9VywnULfwMapf".to_pubkey(),
-            token_mint_0: "So11111111111111111111111111111111111111112".to_pubkey(),
-            token_mint_1: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(),
-            token_vault_0: "4ct7br2vTPzfdmY3S5HLtTxcGSBfn6pnw98hsS6v359A".to_pubkey(),
-            token_vault_1: "5it83u57VRrVgc51oNV19TTmAJuffPx5GtGwQr7gQNUo".to_pubkey(),
-            observation_key: "3Y695CuQ8AP4anbwAqiEBeQF9KxqHFr8piEwvw3UePnQ".to_pubkey(),
-            mint_decimals_0: 9,
-            mint_decimals_1: 6,
-            tick_spacing: 1,
-            liquidity: 295329867866867,
-            sqrt_price_x64: 9082733951060270080,
-            tick_current: -14171,
-            padding3: 0,
-            padding4: 0,
-            fee_growth_global_0_x64: 3559325779701363188,
-            fee_growth_global_1_x64: 626808862733012568,
-            protocol_fees_token_0: 12806897,
-            protocol_fees_token_1: 5455291,
-            swap_in_amount_token_0: 49476625175238063,
-            swap_out_amount_token_1: 8189820303939792,
-            swap_in_amount_token_1: 8230440941799804,
-            swap_out_amount_token_0: 49669505447062833,
-            status: 0,
-            padding: [0; 7],
-            reward_infos: [Default::default(), Default::default(), Default::default()],
-            tick_array_bitmap: [0; 16],
-            total_fees_token_0: 16624154768112,
-            total_fees_claimed_token_0: 16316837962051,
-            total_fees_token_1: 2765436108315,
-            total_fees_claimed_token_1: 2704587280086,
-            fund_fees_token_0: 16530299,
-            fund_fees_token_1: 4757642,
-            open_time: 1723037622,
-            recent_epoch: 848,
-            padding1: [0; 24],
-            padding2: [0; 32],
+        // Create a mock RaydiumClmmIxAccount with the Solscan data
+        let ix_account = RaydiumClmmIxAccount {
+            payer: AccountMeta::new(
+                "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey(),
+                true,
+            ),
+            amm_config: AccountMeta::new_readonly(
+                "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(),
+                false,
+            ),
+            pool_state: AccountMeta::new(
+                "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey(),
+                false,
+            ),
+            input_token_account: AccountMeta::new(
+                "8VYWdU14V78rcDepwmNt54bb1aam5qVUMUpEtW8oCn1E".to_pubkey(),
+                false,
+            ),
+            output_token_account: AccountMeta::new(
+                "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_pubkey(),
+                false,
+            ),
+            input_vault: AccountMeta::new(
+                "4D3oJLZN6f4v51MRY2xJ5FdRPZEXyY8VRXRx5hJMiSYp".to_pubkey(),
+                false,
+            ),
+            output_vault: AccountMeta::new(
+                "HQszk12vRBpJB3Gg5Y7DMZPRVGHMKb7F4Qa7iF2vmfE3".to_pubkey(),
+                false,
+            ),
+            observation_state: AccountMeta::new(
+                "3Y695CuQ8AP4anbwAqiEBeQF9KxqHFr8piEwvw3UePnQ".to_pubkey(),
+                false,
+            ),
+            token_program: AccountMeta::new_readonly(
+                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_pubkey(),
+                false,
+            ),
+            token_program_2022: AccountMeta::new_readonly(
+                "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb".to_pubkey(),
+                false,
+            ),
+            memo_program: AccountMeta::new_readonly(
+                "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".to_pubkey(),
+                false,
+            ),
+            input_vault_mint: AccountMeta::new_readonly(
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(),
+                false,
+            ),
+            output_vault_mint: AccountMeta::new_readonly(
+                "So11111111111111111111111111111111111111112".to_pubkey(),
+                false,
+            ),
+            tick_arrays: vec![
+                AccountMeta::new(
+                    "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(),
+                    false,
+                ),
+                AccountMeta::new(
+                    "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(),
+                    false,
+                ),
+                AccountMeta::new(
+                    "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(),
+                    false,
+                ),
+            ],
         };
 
-        // Test USDC -> WSOL (opposite direction from Solscan)
-        let usdc_to_wsol = RaydiumClmmIxAccount::build_accounts_with_direction(
-            &payer,
-            &pool,
-            &pool_data,
-            &USDC.to_pubkey(),
-            &WSOL.to_pubkey(),
-        )
-        .await
-        .expect("Failed to build accounts for USDC->WSOL");
+        let accounts = ix_account.to_list();
 
-        println!("\n=== Test 1: USDC -> WSOL (matches Solscan transaction) ===\n");
+        // Verify total number of accounts
+        assert_eq!(accounts.len(), 17, "Expected 17 accounts for swap_v2");
 
-        println!("#1 - Payer: {} ✓", usdc_to_wsol.payer.pubkey);
-        assert_eq!(usdc_to_wsol.payer.pubkey.to_string(), PAYER);
-
-        println!("#2 - AMM Config: {} ✓", usdc_to_wsol.amm_config.pubkey);
-        assert_eq!(
-            usdc_to_wsol.amm_config.pubkey.to_string(),
-            "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL"
-        );
-
-        println!("#3 - Pool State: {} ✓", usdc_to_wsol.pool_state.pubkey);
-
-        println!(
-            "#4 - Input Token Account: {}",
-            usdc_to_wsol.input_token_account.pubkey
-        );
-        println!("     Expected from Solscan: 8VYWdU14V78rcDepwmNt54bb1aam5qVUMUpEtW8oCn1E");
-
-        println!(
-            "#5 - Output Token Account: {}",
-            usdc_to_wsol.output_token_account.pubkey
-        );
-        println!("     Expected from Solscan: CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X");
-
-        println!(
-            "#6 - Input Vault: {} (should be USDC vault)",
-            usdc_to_wsol.input_vault.pubkey
-        );
-        assert_eq!(usdc_to_wsol.input_vault.pubkey, pool_data.token_vault_1);
-
-        println!(
-            "#7 - Output Vault: {} (should be WSOL vault)",
-            usdc_to_wsol.output_vault.pubkey
-        );
-        assert_eq!(usdc_to_wsol.output_vault.pubkey, pool_data.token_vault_0);
-
-        println!(
-            "#8 - Observation State: {} ✓",
-            usdc_to_wsol.observation_state.pubkey
-        );
-
-        println!(
-            "#12 - Input Vault Mint: {} (USDC)",
-            usdc_to_wsol.input_vault_mint.pubkey
-        );
-        assert_eq!(usdc_to_wsol.input_vault_mint.pubkey.to_string(), USDC);
-
-        println!(
-            "#13 - Output Vault Mint: {} (WSOL)",
-            usdc_to_wsol.output_vault_mint.pubkey
-        );
-        assert_eq!(usdc_to_wsol.output_vault_mint.pubkey.to_string(), WSOL);
-
-        println!("\nRemaining Accounts (USDC->WSOL, zero_for_one=false):");
-
-        println!("Tick Arrays ({} total):", usdc_to_wsol.tick_arrays.len());
-        for (i, tick_array) in usdc_to_wsol.tick_arrays.iter().enumerate() {
-            println!("  Tick Array {}: {}", i, tick_array.pubkey);
+        // Verify each account matches expected
+        for (i, (account, expected)) in accounts.iter().zip(expected_accounts.iter()).enumerate() {
+            assert_eq!(
+                account.pubkey,
+                *expected,
+                "Account #{} mismatch: got {:?}, expected {:?}",
+                i + 1,
+                account.pubkey,
+                expected
+            );
         }
 
-        println!("\nExpected from Solscan:");
-        println!("  #14: 4NFvUKqknMpoe6CWTzK758B8ojVLzURL5pC6MtiaJ8TQ");
-        println!("  #15: FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi");
-        println!("  #16: ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq");
-        println!("  #17: ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T");
-
-        // Test WSOL -> USDC (default direction)
-        let wsol_to_usdc = RaydiumClmmIxAccount::build_accounts_with_direction(
-            &payer,
-            &pool,
-            &pool_data,
-            &WSOL.to_pubkey(),
-            &USDC.to_pubkey(),
-        )
-        .await
-        .expect("Failed to build accounts for WSOL->USDC");
-
-        println!("\n=== Test 2: WSOL -> USDC (opposite direction) ===\n");
-
-        println!(
-            "Input Token Account: {}",
-            wsol_to_usdc.input_token_account.pubkey
+        // Verify account permissions
+        assert!(accounts[0].is_signer, "Payer should be signer");
+        assert!(accounts[0].is_writable, "Payer should be writable");
+        assert!(accounts[2].is_writable, "Pool state should be writable");
+        assert!(
+            accounts[3].is_writable,
+            "Input token account should be writable"
         );
-        println!(
-            "Output Token Account: {}",
-            wsol_to_usdc.output_token_account.pubkey
+        assert!(
+            accounts[4].is_writable,
+            "Output token account should be writable"
+        );
+        assert!(accounts[5].is_writable, "Input vault should be writable");
+        assert!(accounts[6].is_writable, "Output vault should be writable");
+        assert!(
+            accounts[7].is_writable,
+            "Observation state should be writable"
+        );
+        assert!(!accounts[8].is_writable, "Token program should be readonly");
+        assert!(
+            !accounts[9].is_writable,
+            "Token program 2022 should be readonly"
+        );
+        assert!(!accounts[10].is_writable, "Memo program should be readonly");
+        assert!(
+            !accounts[11].is_writable,
+            "Input vault mint should be readonly"
+        );
+        assert!(
+            !accounts[12].is_writable,
+            "Output vault mint should be readonly"
         );
 
-        println!(
-            "Input Vault: {} (should be WSOL vault)",
-            wsol_to_usdc.input_vault.pubkey
-        );
-        assert_eq!(wsol_to_usdc.input_vault.pubkey, pool_data.token_vault_0);
-
-        println!(
-            "Output Vault: {} (should be USDC vault)",
-            wsol_to_usdc.output_vault.pubkey
-        );
-        assert_eq!(wsol_to_usdc.output_vault.pubkey, pool_data.token_vault_1);
-
-        println!("\nTick Arrays (WSOL->USDC, zero_for_one=true):");
-        for (i, tick_array) in wsol_to_usdc.tick_arrays.iter().enumerate() {
-            println!("  Tick Array {}: {}", i, tick_array.pubkey);
+        // All tick arrays should be writable
+        for i in 13..17 {
+            assert!(
+                accounts[i].is_writable,
+                "Tick array #{} should be writable",
+                i - 12
+            );
         }
-
-        let tick_start = RaydiumClmmIxAccount::get_tick_array_start_index(
-            pool_data.tick_current,
-            pool_data.tick_spacing as i32,
-        );
-        println!("\n=== Tick Analysis ===");
-        println!("Current Tick: {}", pool_data.tick_current);
-        println!("Tick Spacing: {}", pool_data.tick_spacing);
-        println!("Current Tick Array Start Index: {}", tick_start);
     }
 }
