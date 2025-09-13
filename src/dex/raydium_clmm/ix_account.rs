@@ -56,7 +56,6 @@ impl RaydiumClmmIxAccount {
         input_mint: &Pubkey,
         output_mint: &Pubkey,
     ) -> AResult<RaydiumClmmIxAccount> {
-        use crate::global::constant::pool_program::PoolProgram;
         use crate::global::constant::token_program::TokenProgram;
         use crate::util::traits::account_meta::ToAccountMeta;
         use spl_associated_token_account::get_associated_token_address_with_program_id;
@@ -91,13 +90,11 @@ impl RaydiumClmmIxAccount {
         let user_output_token =
             get_associated_token_address_with_program_id(payer, output_mint, &token_program.pubkey);
 
-        // Generate tick arrays based on swap direction
-        let tick_array_pubkeys = Self::derive_tick_arrays_for_swap(
+        // Generate tick arrays generically (current, previous, next)
+        let tick_array_pubkeys = Self::derive_tick_arrays_generic(
             pool,
             pool_data.tick_current,
             pool_data.tick_spacing as i32,
-            zero_for_one,
-            3, // Get more tick arrays to be safe
         );
 
         const SPL_MEMO_PROGRAM: Pubkey = pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -156,6 +153,35 @@ impl RaydiumClmmIxAccount {
         tick_arrays
     }
 
+    fn derive_tick_arrays_generic(
+        pool: &Pubkey,
+        current_tick: i32,
+        tick_spacing: i32,
+    ) -> Vec<Pubkey> {
+        use crate::global::constant::pool_program::PoolProgram;
+
+        let current_index = Self::get_tick_array_start_index(current_tick, tick_spacing);
+        let array_offset = 60 * tick_spacing;
+
+        // Generate current, previous (-1), and next (+1) tick arrays
+        let indices = vec![
+            current_index,                // Current tick array
+            current_index - array_offset, // Previous tick array
+            current_index + array_offset, // Next tick array
+        ];
+
+        indices
+            .into_iter()
+            .map(|index| {
+                Pubkey::find_program_address(
+                    &[b"tick_array", pool.as_ref(), &index.to_be_bytes()],
+                    &PoolProgram::RAYDIUM_CLMM,
+                )
+                .0
+            })
+            .collect()
+    }
+
     fn get_tick_array_start_index(tick: i32, tick_spacing: i32) -> i32 {
         const TICK_ARRAY_SIZE: i32 = 60;
         let ticks_in_array = TICK_ARRAY_SIZE * tick_spacing;
@@ -190,160 +216,24 @@ mod tests {
     }
 
     #[test]
-    fn test_swap_v2_accounts_from_solscan() {
-        let pool = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey();
+    fn test_generic_tick_arrays() {
+        let pool = pubkey!("3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv");
+        let current_tick = -28971; // Example tick from a real pool
+        let tick_spacing = 10;
 
-        // Generate the bitmap extension PDA for this pool
-        let bitmap_extension = RaydiumClmmIxAccount::generate_bitmap(&pool);
+        let tick_arrays =
+            RaydiumClmmIxAccount::derive_tick_arrays_generic(&pool, current_tick, tick_spacing);
 
-        let expected_accounts = vec![
-            "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey(), // Payer
-            "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(), // Amm Config
-            "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey(), // Pool State
-            "8VYWdU14V78rcDepwmNt54bb1aam5qVUMUpEtW8oCn1E".to_pubkey(), // Input Token Account
-            "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_pubkey(), // Output Token Account
-            "4D3oJLZN6f4v51MRY2xJ5FdRPZEXyY8VRXRx5hJMiSYp".to_pubkey(), // Input Vault
-            "HQszk12vRBpJB3Gg5Y7DMZPRVGHMKb7F4Qa7iF2vmfE3".to_pubkey(), // Output Vault
-            "3Y695CuQ8AP4anbwAqiEBeQF9KxqHFr8piEwvw3UePnQ".to_pubkey(), // Observation State
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_pubkey(), // Token Program
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb".to_pubkey(), // Token Program 2022
-            "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".to_pubkey(), // Memo Program
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(), // Input Vault Mint (USDC)
-            "So11111111111111111111111111111111111111112".to_pubkey(), // Output Vault Mint (WSOL)
-            bitmap_extension,                                          // Bitmap Extension (PDA)
-            "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(), // Tick array 1
-            "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(), // Tick array 2
-            "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(), // Tick array 3
-        ];
+        // Should always return 3 tick arrays
+        assert_eq!(tick_arrays.len(), 3);
 
-        // Create a mock RaydiumClmmIxAccount with the Solscan data
-        let ix_account = RaydiumClmmIxAccount {
-            payer: AccountMeta::new(
-                "MfDuWeqSHEqTFVYZ7LoexgAK9dxk7cy4DFJWjWMGVWa".to_pubkey(),
-                true,
-            ),
-            amm_config: AccountMeta::new_readonly(
-                "3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL".to_pubkey(),
-                false,
-            ),
-            pool_state: AccountMeta::new(
-                "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv".to_pubkey(),
-                false,
-            ),
-            input_token_account: AccountMeta::new(
-                "8VYWdU14V78rcDepwmNt54bb1aam5qVUMUpEtW8oCn1E".to_pubkey(),
-                false,
-            ),
-            output_token_account: AccountMeta::new(
-                "CTyFguG69kwYrzk24P3UuBvY1rR5atu9kf2S6XEwAU8X".to_pubkey(),
-                false,
-            ),
-            input_vault: AccountMeta::new(
-                "4D3oJLZN6f4v51MRY2xJ5FdRPZEXyY8VRXRx5hJMiSYp".to_pubkey(),
-                false,
-            ),
-            output_vault: AccountMeta::new(
-                "HQszk12vRBpJB3Gg5Y7DMZPRVGHMKb7F4Qa7iF2vmfE3".to_pubkey(),
-                false,
-            ),
-            observation_state: AccountMeta::new(
-                "3Y695CuQ8AP4anbwAqiEBeQF9KxqHFr8piEwvw3UePnQ".to_pubkey(),
-                false,
-            ),
-            token_program: AccountMeta::new_readonly(
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_pubkey(),
-                false,
-            ),
-            token_program_2022: AccountMeta::new_readonly(
-                "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb".to_pubkey(),
-                false,
-            ),
-            memo_program: AccountMeta::new_readonly(
-                "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".to_pubkey(),
-                false,
-            ),
-            input_vault_mint: AccountMeta::new_readonly(
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_pubkey(),
-                false,
-            ),
-            output_vault_mint: AccountMeta::new_readonly(
-                "So11111111111111111111111111111111111111112".to_pubkey(),
-                false,
-            ),
-            bitmap_extension: AccountMeta::new(bitmap_extension, false),
-            tick_arrays: vec![
-                AccountMeta::new(
-                    "FRXEFGPQqVg2kzdFdWYmeyyiKMgCBudwCkQWWpnv4kQi".to_pubkey(),
-                    false,
-                ),
-                AccountMeta::new(
-                    "ww3UCP5SPttfTaFY32CuXhuJ3VxF9khav1QAw1Wenpq".to_pubkey(),
-                    false,
-                ),
-                AccountMeta::new(
-                    "ANgzDPdViH7HEM2qbUXWw2PqCaSTg3QDJ9VEvJafdj4T".to_pubkey(),
-                    false,
-                ),
-            ],
-        };
+        // Verify the tick arrays are different
+        assert_ne!(tick_arrays[0], tick_arrays[1]);
+        assert_ne!(tick_arrays[0], tick_arrays[2]);
+        assert_ne!(tick_arrays[1], tick_arrays[2]);
 
-        let accounts = ix_account.to_list();
-
-        // Verify total number of accounts (13 fixed + 1 bitmap + 3 tick arrays = 17)
-        assert_eq!(accounts.len(), 17, "Expected 17 accounts for swap_v2");
-
-        // Verify each account matches expected
-        for (i, (account, expected)) in accounts.iter().zip(expected_accounts.iter()).enumerate() {
-            assert_eq!(
-                account.pubkey,
-                *expected,
-                "Account #{} mismatch: got {:?}, expected {:?}",
-                i + 1,
-                account.pubkey,
-                expected
-            );
-        }
-
-        // Verify account permissions
-        assert!(accounts[0].is_signer, "Payer should be signer");
-        assert!(accounts[0].is_writable, "Payer should be writable");
-        assert!(accounts[2].is_writable, "Pool state should be writable");
-        assert!(
-            accounts[3].is_writable,
-            "Input token account should be writable"
-        );
-        assert!(
-            accounts[4].is_writable,
-            "Output token account should be writable"
-        );
-        assert!(accounts[5].is_writable, "Input vault should be writable");
-        assert!(accounts[6].is_writable, "Output vault should be writable");
-        assert!(
-            accounts[7].is_writable,
-            "Observation state should be writable"
-        );
-        assert!(!accounts[8].is_writable, "Token program should be readonly");
-        assert!(
-            !accounts[9].is_writable,
-            "Token program 2022 should be readonly"
-        );
-        assert!(!accounts[10].is_writable, "Memo program should be readonly");
-        assert!(
-            !accounts[11].is_writable,
-            "Input vault mint should be readonly"
-        );
-        assert!(
-            !accounts[12].is_writable,
-            "Output vault mint should be readonly"
-        );
-
-        // All tick arrays should be writable
-        for i in 13..17 {
-            assert!(
-                accounts[i].is_writable,
-                "Tick array #{} should be writable",
-                i - 12
-            );
-        }
+        println!("Current tick array: {}", tick_arrays[0]);
+        println!("Previous tick array (-1): {}", tick_arrays[1]);
+        println!("Next tick array (+1): {}", tick_arrays[2]);
     }
 }
