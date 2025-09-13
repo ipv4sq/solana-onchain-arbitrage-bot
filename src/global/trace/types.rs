@@ -25,7 +25,7 @@ pub struct Trace {
 pub struct Step {
     pub sequence: u32,
     pub step_type: StepType,
-    pub attributes: HashMap<String, String>,
+    pub attributes: HashMap<String, serde_json::Value>,
     pub happened_at: DateTime<Utc>,
 }
 
@@ -79,7 +79,7 @@ impl Trace {
         attr_value: Pubkey,
     ) {
         let mut attributes = HashMap::new();
-        attributes.insert(attr_name.into(), attr_value.to_string());
+        attributes.insert(attr_name.into(), json!(attr_value.to_string()));
 
         let mut steps = self.steps.lock().unwrap();
         let sequence = steps.len() as u32;
@@ -98,8 +98,64 @@ impl Trace {
         attr_value: impl Into<String>,
     ) {
         let mut attributes = HashMap::new();
-        attributes.insert(attr_name.into(), attr_value.into());
+        attributes.insert(attr_name.into(), json!(attr_value.into()));
 
+        let mut steps = self.steps.lock().unwrap();
+        let sequence = steps.len() as u32;
+        steps.push(Step {
+            sequence,
+            step_type,
+            attributes,
+            happened_at: Utc::now(),
+        });
+    }
+
+    pub fn step_with_json(
+        &self,
+        step_type: StepType,
+        attr_name: impl Into<String>,
+        attr_value: serde_json::Value,
+    ) {
+        let mut attributes = HashMap::new();
+        attributes.insert(attr_name.into(), attr_value);
+
+        let mut steps = self.steps.lock().unwrap();
+        let sequence = steps.len() as u32;
+        steps.push(Step {
+            sequence,
+            step_type,
+            attributes,
+            happened_at: Utc::now(),
+        });
+    }
+
+    pub fn step_with_struct<T: Serialize>(
+        &self,
+        step_type: StepType,
+        attr_name: impl Into<String>,
+        attr_value: &T,
+    ) {
+        let mut attributes = HashMap::new();
+        attributes.insert(
+            attr_name.into(),
+            serde_json::to_value(attr_value).unwrap_or(json!(null)),
+        );
+
+        let mut steps = self.steps.lock().unwrap();
+        let sequence = steps.len() as u32;
+        steps.push(Step {
+            sequence,
+            step_type,
+            attributes,
+            happened_at: Utc::now(),
+        });
+    }
+
+    pub fn step_with_attrs(
+        &self,
+        step_type: StepType,
+        attributes: HashMap<String, serde_json::Value>,
+    ) {
         let mut steps = self.steps.lock().unwrap();
         let sequence = steps.len() as u32;
         steps.push(Step {
