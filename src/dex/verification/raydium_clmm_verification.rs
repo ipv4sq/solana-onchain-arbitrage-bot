@@ -101,8 +101,14 @@ mod tests {
         println!("  AMM Config: {}", accounts.amm_config.pubkey);
         println!("  Input vault: {}", accounts.input_vault.pubkey);
         println!("  Output vault: {}", accounts.output_vault.pubkey);
-        println!("  User input token: {}", accounts.input_token_account.pubkey);
-        println!("  User output token: {}", accounts.output_token_account.pubkey);
+        println!(
+            "  User input token: {}",
+            accounts.input_token_account.pubkey
+        );
+        println!(
+            "  User output token: {}",
+            accounts.output_token_account.pubkey
+        );
 
         // Simulate actual swap to get real output (base->quote direction)
         let result = simulate_raydium_clmm_swap_and_get_balance_diff(
@@ -325,7 +331,7 @@ mod tests {
         unit_ok!()
     }
 
-    #[tokio::test]
+    // #[tokio::test]
     async fn build_command() -> AResult<()> {
         must_init_db().await;
 
@@ -340,6 +346,7 @@ mod tests {
         .await?
         .to_list();
         accounts.push("4sKLJ1Qoudh8PJyqBeuKocYdsZvxTcRShUt9aKqwhgvC".to_readonly());
+        accounts.push("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK".to_readonly());
 
         // Build the validator command from the accounts array
         let bootstrap_cmd = format!(

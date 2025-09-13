@@ -40,6 +40,21 @@ impl MintRecordRepository {
             .await
             .and_then(|record| record.decimals.try_into().ok())
     }
+
+    pub async fn get_batch(mints: &[Pubkey]) -> Result<Vec<MintRecord>> {
+        use futures::future::try_join_all;
+
+        let futures = mints.iter().map(|mint| Self::get_mint_or_err(mint));
+        try_join_all(futures).await
+    }
+
+    pub async fn get_batch_as_tuple2(mint_a: &Pubkey, mint_b: &Pubkey) -> Result<(MintRecord, MintRecord)> {
+        let records = Self::get_batch(&[*mint_a, *mint_b]).await?;
+        match records.as_slice() {
+            [a, b] => Ok((a.clone(), b.clone())),
+            _ => Err(lined_err!("Expected exactly 2 mint records")),
+        }
+    }
 }
 
 impl MintRecordRepository {

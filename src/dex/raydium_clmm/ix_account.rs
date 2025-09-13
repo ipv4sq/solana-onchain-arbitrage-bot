@@ -56,9 +56,9 @@ impl RaydiumClmmIxAccount {
         input_mint: &Pubkey,
         output_mint: &Pubkey,
     ) -> AResult<RaydiumClmmIxAccount> {
-        use crate::global::constant::token_program::TokenProgram;
+        use crate::database::mint_record::repository::MintRecordRepository;
+        use crate::util::solana::pda::ata;
         use crate::util::traits::account_meta::ToAccountMeta;
-        use spl_associated_token_account::get_associated_token_address_with_program_id;
 
         let token_0_mint = &pool_data.token_mint_0;
         let token_1_mint = &pool_data.token_mint_1;
@@ -83,12 +83,16 @@ impl RaydiumClmmIxAccount {
             )
         };
 
-        let token_program = TokenProgram::SPL_TOKEN.to_program();
+        // Get token programs from database (batch query)
+        let (input_mint_record, output_mint_record) =
+            MintRecordRepository::get_batch_as_tuple2(input_mint, output_mint).await?;
 
-        let user_input_token =
-            get_associated_token_address_with_program_id(payer, input_mint, &token_program.pubkey);
-        let user_output_token =
-            get_associated_token_address_with_program_id(payer, output_mint, &token_program.pubkey);
+        let input_token_program = input_mint_record.program.0;
+        let output_token_program = output_mint_record.program.0;
+
+        // Derive ATAs using the correct token programs
+        let user_input_token = ata(payer, input_mint, &input_token_program);
+        let user_output_token = ata(payer, output_mint, &output_token_program);
 
         // Generate tick arrays generically (current, previous, next)
         let tick_array_pubkeys = Self::derive_tick_arrays_generic(
@@ -105,6 +109,9 @@ impl RaydiumClmmIxAccount {
             .map(|pubkey| pubkey.to_writable())
             .collect();
         let bitmap_extension = Self::generate_bitmap(pool);
+        // Raydium CLMM always needs both token programs in the accounts
+        use crate::global::constant::token_program::TokenProgram;
+
         Ok(RaydiumClmmIxAccount {
             payer: payer.to_signer(),
             amm_config: pool_data.amm_config.to_readonly(),
@@ -114,7 +121,7 @@ impl RaydiumClmmIxAccount {
             input_vault: input_vault.to_writable(),
             output_vault: output_vault.to_writable(),
             observation_state: pool_data.observation_key.to_writable(),
-            token_program,
+            token_program: TokenProgram::SPL_TOKEN.to_program(),
             token_program_2022: TokenProgram::TOKEN_2022.to_program(),
             memo_program: SPL_MEMO_PROGRAM.to_program(),
             input_vault_mint: input_vault_mint.to_readonly(),
