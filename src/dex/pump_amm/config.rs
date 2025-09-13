@@ -44,17 +44,6 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             &self.pool_data,
         )
         .await?;
-        let fee_program = pubkey!("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ");
-        let pump_program = pubkey!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
-        let pump_amm_program = pubkey!("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
-
-        let (pump_fee_config_pda, _) =
-            Pubkey::find_program_address(&[b"fee_config", &pump_program.as_ref()], &fee_program);
-
-        let (pump_amm_fee_config_pda, _) = Pubkey::find_program_address(
-            &[b"fee_config", &pump_amm_program.as_ref()],
-            &fee_program,
-        );
 
         let mut accounts: Vec<AccountMeta> = vec![
             built.program,
@@ -72,14 +61,8 @@ impl PoolConfig<PumpAmmPoolData> for PumpAmmConfig {
             built.user_volume_accumulator.unwrap(),
         ];
 
-        let cutoff_timestamp =
-            chrono::DateTime::parse_from_rfc3339("2025-09-01T20:00:00Z")?.timestamp();
-        let current_timestamp = Utc::now().timestamp();
-
-        if current_timestamp >= cutoff_timestamp {
-            accounts.push(pump_fee_config_pda.to_readonly());
-            accounts.push(pump_amm_fee_config_pda.to_readonly());
-        }
+        accounts.push("5PHirr8joyTMp9JMm6nW7hNDVyEYdkzDqazxPD7RaTjx".to_readonly());
+        accounts.push("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ".to_readonly());
 
         Ok(accounts)
     }
