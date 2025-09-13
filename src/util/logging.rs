@@ -65,7 +65,7 @@ where
 pub fn init() -> Result<String> {
     std::env::set_var("RUST_BACKTRACE", "full");
 
-    let logs_dir = Path::new("../../logs");
+    let logs_dir = Path::new("logs");
     if !logs_dir.exists() {
         fs::create_dir(logs_dir)?;
     }
