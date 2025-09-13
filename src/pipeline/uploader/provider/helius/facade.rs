@@ -38,16 +38,14 @@ pub fn build_helius_swqos_tip_ix(payer: &Pubkey) -> (Vec<Instruction>, f64) {
 }
 
 pub async fn send_helius_swqos(tx: &VersionedTransaction) -> AResult<()> {
-    HeliusSwqosHolder
-        .read()
-        .clone()
-        .send_transaction(tx)
-        .await?;
+    let client = HeliusSwqosHolder.read().clone();
+    client.send_transaction(tx).await?;
     unit_ok!()
 }
 
 pub async fn send_helius_jito(tx: &VersionedTransaction) -> AResult<()> {
-    HeliusJitoHolder.read().clone().send_transaction(tx).await?;
+    let client = HeliusJitoHolder.read().clone();
+    client.send_transaction(tx).await?;
     unit_ok!()
 }
 
